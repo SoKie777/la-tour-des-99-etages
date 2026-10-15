@@ -20,6 +20,17 @@ func _init(id: String, seed_value: int = 0) -> void:
 		rng.randomize()
 
 
+## Compteurs de garantie (sauvegardés dans le profil, partagés entre bannières).
+func get_state() -> Dictionary:
+	return {"pity_5": pity_5, "pity_4": pity_4, "total_pulls": total_pulls}
+
+
+func set_state(s: Dictionary) -> void:
+	pity_5 = int(s.get("pity_5", 0))
+	pity_4 = int(s.get("pity_4", 0))
+	total_pulls = int(s.get("total_pulls", 0))
+
+
 func pull() -> Dictionary:
 	pity_5 += 1
 	pity_4 += 1

@@ -1,0 +1,26 @@
+{
+  "_comment": "Ascension de la Tour. 'power' multiplie PV, ATK et DEF des ennemis (1.0 = stats de niveau max, comme les personnages du joueur). Récompenses : 'first' à la première victoire, 'each' à chaque victoire. Réglé par la simulation de tests/run_tests.gd.",
+  "universes": [
+    {
+      "id": "cite_acier", "name": "Cité d'Acier", "first_floor": 1,
+      "floors": [
+        {"enemies": ["espion_lumiere", "issa"], "power": 1.0},
+        {"enemies": ["nidhogg", "espion_lumiere", "issa"], "power": 0.85},
+        {"enemies": ["general_metal", "issa"], "power": 1.1},
+        {"enemies": ["ymir", "nidhogg", "espion_lumiere"], "power": 1.0},
+        {"enemies": ["moussa", "issa", "mohamed"], "power": 0.8},
+        {"enemies": ["don_diego", "general_metal"], "power": 1.1, "elite": true},
+        {"enemies": ["eirikr", "ymir", "nidhogg"], "power": 1.05},
+        {"enemies": ["general_metal", "espion_lumiere", "don_diego"], "power": 0.95},
+        {"enemies": ["mohamed", "issa", "moussa"], "power": 1.05},
+        {"enemies": ["eirikr", "don_diego", "issa"], "power": 0.95},
+        {"enemies": ["general_metal", "mohamed", "nidhogg"], "power": 1.25},
+        {"enemies": ["don_diego", "general_metal", "moussa"], "power": 1.15, "boss": "Gardien de la Cité d'Acier"}
+      ]
+    }
+  ],
+  "rewards": {
+    "each": {"pieces_base": 300, "pieces_per_floor": 60, "relics": 1},
+    "first": {"eclat_de_voeu": 3, "eclat_de_voeu_elite": 6, "eclat_de_voeu_boss": 10}
+  }
+}

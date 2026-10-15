@@ -24,19 +24,23 @@ Le même pipeline que **Coup d'État** (dépôt `SoKie777/coup-detat`), déjà v
 ## Déjà en place
 
 - `assets/mixamo/ybot_idle.fbx` : le mannequin Y Bot, utilisé tant qu'un personnage n'a pas son modèle.
-- `assets/mixamo/anims/` : 7 animations reprises de Coup d'État :
+- `assets/models/<id>.fbx` : les 9 personnages du roster (MPFB), avec leurs textures extraites par Godot
+  (`<id>_N.png`, limitées à 1024 px et compressées par `set_retarget.py`).
+- `assets/mixamo/anims/` : 24 animations. Celles de Coup d'État (coups de poing et de pied, provocation,
+  blocage, coups reçus, KO, victoire) et 7 téléchargées de Mixamo pour ce projet :
 
-  | Fichier | Utilisé pour |
+  | Fichier | Animation Mixamo |
   |---|---|
-  | `idle` | Attente |
-  | `cross` | Compétence 1 |
-  | `punch_combo` | Compétence 2 |
-  | `hurricane_kick` | Ultime |
-  | `hit` | Coup reçu |
-  | `ko` | Mort |
-  | `victory` | Victoire |
+  | `cast_attack` | Standing 1H Magic Attack 01 |
+  | `cast_area` | Standing 2H Magic Area Attack 01 |
+  | `cast_buff` | Standing 2H Cast Spell 01 |
+  | `heal` | Magic Heal (soin à une main) |
+  | `idle_caster` | Standing Idle (attente des lanceurs de sorts) |
+  | `roar` | Yelling Out (cri des tanks) |
+  | `jump_attack` | Mutant Jump Attack |
 
-  La correspondance est dans `MAP`, dans `scripts/ui/character_model.gd`.
+  Correspondance action → animation : `MAP` (par défaut) et `CHAR_MAP` (par personnage, selon son kit)
+  dans `scripts/ui/character_model.gd`.
 - `assets/mixamo/mixamo_bonemap.tres` : la correspondance entre les os Mixamo et le profil humanoïde de Godot, générée par `tools/make_bonemap.gd`.
 
 ## Créer un personnage
@@ -64,6 +68,15 @@ Les autres (peaux caucasienne et asiatique, `Female casualsuit01`, `Long01`, `Po
 3. L'associer à une action dans `MAP` (`scripts/ui/character_model.gd`).
 
 Tu peux aussi copier n'importe quelle animation de `coup-detat/assets/mixamo/anims/`, avec son `.import` : 32 sont disponibles (coups de pied, chopes, provocation…).
+
+## Outils de contrôle
+
+| Commande (`godot --path . --script res://tools/…`) | Rôle |
+|---|---|
+| `lineup.gd -- sortie.png [action] [secondes]` | Photo de groupe des 9 personnages, dans une action donnée |
+| `shot.gd -- res://scenes/x.tscn sortie.png` | Capture d'un écran du jeu |
+| `playtest.gd -- --save=user://profil_test.json <dossier>` | Parcours complet sur un profil de test, avec captures |
+| `tune_tower.gd` (headless) | Taux de victoire par étage selon la puissance des ennemis |
 
 ## Tests
 

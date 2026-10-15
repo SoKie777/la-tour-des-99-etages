@@ -17,7 +17,9 @@ func _init() -> void:
 	test_passives()
 	test_gacha()
 	test_relics()
+	test_profile()
 	simulate_balance(sims)
+	simulate_tower(maxi(20, sims / 4))
 	print("\n%d vérifications, %d échec(s)." % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -199,6 +201,58 @@ func test_relics() -> void:
 	var u := Relics.make_unit("mohamed", gear)
 	check(u.set_specials.has("lifesteal_20"), "Vampirisme transmis au combat")
 	check(u.base["spd"] > 108 * 1.12 - 0.01, "Set Vitesse : +12 % VIT")
+
+
+func test_profile() -> void:
+	print("Profil, Tour et sauvegarde")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3
+	var p := Profile.new_game()
+	check(p.owned_ids().size() == 3 and p.team.size() == 3, "Nouveau joueur : 3 personnages dans l'équipe")
+	check(p.amount("eclat_de_voeu") == 20, "Nouveau joueur : 20 Éclats de Vœu")
+	check(p.add_pull({"id": "eirikr", "rarity": 5})["new"], "Nouveau 5★ ajouté à la collection")
+	check(p.add_pull({"id": "eirikr", "rarity": 5})["fragments"] == 40 and p.amount("fragments_etage") == 40, "Doublon 5★ → 40 Fragments")
+	p.add_pull({"id": "recrue_orion", "rarity": 3})
+	check(p.amount("fragments_etage") == 41 and not "recrue_orion" in p.owned_ids(), "Recrue 3★ → 1 Fragment")
+	check(not p.set_team(["eirikr", "ymir"]), "Équipe refusée avec un personnage non possédé")
+	check(p.set_team(["eirikr", "issa"]), "Équipe de 2 acceptée")
+	check(p.can_enter_floor(1) and not p.can_enter_floor(2), "Seul l'étage 1 est ouvert au départ")
+	var rw := p.win_floor(1, rng)
+	check(rw["first_clear"] and p.tower_cleared == 1 and p.can_enter_floor(2), "Victoire à l'étage 1 : étage 2 ouvert")
+	check(p.amount("eclat_de_voeu") == 23 and p.relics.size() == 1, "Récompenses : 3 Éclats + 1 relique")
+	check(not p.win_floor(1, rng)["first_clear"] and p.amount("eclat_de_voeu") == 23, "Rejouer : pas de nouveaux Éclats")
+	var r: Dictionary = p.relics[0]
+	var uid := int(r["uid"])
+	check(p.equip("eirikr", uid) and p.owner_of(uid) == "eirikr", "Relique équipée")
+	check(p.equip("issa", uid) and p.owner_of(uid) == "issa" and p.equipped_relics("eirikr").is_empty(), "Relique passée à un autre porteur")
+	var pieces := p.amount("pieces")
+	check(p.level_relic(uid, rng) and int(r["level"]) == 1 and p.amount("pieces") == pieces - 100, "Montée +1 : coût 100 Pièces")
+	var u := p.make_unit("issa")
+	check(u.base["hp"] != GameData.character("issa")["stats"]["hp"] or u.base["atk"] != GameData.character("issa")["stats"]["atk"] \
+		or u.base["def"] != GameData.character("issa")["stats"]["def"] or r["main"]["stat"] in ["cr", "cd", "acc", "res", "spd"], "La relique change les stats")
+	var back := Profile.from_dict(JSON.parse_string(JSON.stringify(p.to_dict())))
+	check(back.owner_of(uid) == "issa" and back.tower_cleared == 2 - 1 and back.amount("fragments_etage") == 41, "Sauvegarde relue à l'identique")
+	check(back.team == p.team and int(back.relic(uid)["level"]) == 1, "Équipe et niveau de relique conservés")
+
+
+## Taux de victoire étage par étage (IA des deux côtés), sans reliques.
+func simulate_tower(n: int) -> void:
+	var teams := {"Départ (Nidhogg, Espion, Issa)": ["nidhogg", "espion_lumiere", "issa"],
+		"Mixte (Eiríkr, Issa, Don Diego)": ["eirikr", "issa", "don_diego"]}
+	print("\nTour, sans reliques (%d combats par étage) :" % n)
+	for name: String in teams:
+		var line: Array[String] = []
+		for f in range(1, Tower.floor_count() + 1):
+			var wins := 0
+			for k in n:
+				var players: Array[BattleUnit] = []
+				for id: String in teams[name]:
+					players.append(BattleUnit.new(GameData.character(id), 0, players.size()))
+				var e := BattleEngine.new(players, Tower.enemy_units(f), 7000 + k)
+				if e.run_auto() == 0:
+					wins += 1
+			line.append("%d:%d%%" % [f, roundi(100.0 * wins / n)])
+		print("  %-32s %s" % [name, " ".join(line)])
 
 
 func simulate_balance(n: int) -> void:

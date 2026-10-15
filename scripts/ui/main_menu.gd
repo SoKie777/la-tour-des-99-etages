@@ -1,114 +1,66 @@
 extends Control
-## Menu MVP : lancer un combat de test et essayer l'invocation.
+## Hub : équipe en 3D, accès à la Tour, à l'équipe, à la collection et à l'invocation.
 
-const MATCHUPS := [
-	["Nation A (Orion) vs Nation B (Grande Ourse)", "A", "B"],
-	["Nation B (Grande Ourse) vs Nation C (Sirius)", "B", "C"],
-	["Nation C (Sirius) vs Nation A (Orion)", "C", "A"],
-]
-const RARITY_COLORS := {3: Color("8fa3c0"), 4: Color("b07de0"), 5: Color("e8b84a")}
+const TEST_MATCHUPS := [["A contre B", "A", "B"], ["B contre C", "B", "C"], ["C contre A", "C", "A"]]
 
-var pity_label: Label
-var results_grid: GridContainer
+var reset_armed := false
 
 
 func _ready() -> void:
-	var bg := ColorRect.new()
-	bg.color = Color("14121f")
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
-	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 32)
-	add_child(margin)
+	var content := UiKit.screen(self, "LA TOUR DES 99 ÉTAGES", "")
 	var cols := HBoxContainer.new()
-	cols.add_theme_constant_override("separation", 48)
-	margin.add_child(cols)
+	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	cols.add_theme_constant_override("separation", 24)
+	content.add_child(cols)
 
 	var left := VBoxContainer.new()
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left.add_theme_constant_override("separation", 12)
 	cols.add_child(left)
-	var title := Label.new()
-	title.text = "LA TOUR DES 99 ÉTAGES"
-	title.add_theme_font_size_override("font_size", 40)
-	title.add_theme_color_override("font_color", Color("c9a24a"))
-	left.add_child(title)
-	var sub := Label.new()
-	sub.text = "MVP · combat 3 contre 3 à barre d'action"
-	left.add_child(sub)
-	left.add_child(HSeparator.new())
-	for m in MATCHUPS:
-		var b := Button.new()
-		b.text = m[0]
-		b.custom_minimum_size.y = 48
-		b.pressed.connect(_start_battle.bind(m[1], m[2]))
-		left.add_child(b)
-	var auto := CheckButton.new()
-	auto.text = "Combat automatique"
-	auto.button_pressed = Session.auto_battle
-	auto.toggled.connect(func(on: bool) -> void: Session.auto_battle = on)
-	left.add_child(auto)
+	left.add_child(UiKit.label("Ton équipe", 18, UiKit.DIM))
+	var view := UiKit.model_view(Session.profile.team, Vector2i(620, 470))
+	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	left.add_child(view)
+	var names: Array[String] = []
+	for id in Session.profile.team:
+		names.append(UiKit.char_name(id))
+	left.add_child(UiKit.label("  ·  ".join(names), 16))
 
 	var right := VBoxContainer.new()
-	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right.custom_minimum_size.x = 420
 	right.add_theme_constant_override("separation", 12)
 	cols.add_child(right)
-	var gtitle := Label.new()
-	gtitle.text = Session.gacha.banner["name"]
-	gtitle.add_theme_font_size_override("font_size", 28)
-	right.add_child(gtitle)
+	var p := Session.profile
+	var next_floor := mini(p.tower_cleared + 1, Tower.floor_count())
+	var tower := UiKit.button("Ascension de la Tour\nÉtage %d / %d" % [next_floor, Tower.floor_count()], _go.bind("tower"), Vector2(400, 96))
+	tower.add_theme_font_size_override("font_size", 22)
+	right.add_child(tower)
+	right.add_child(UiKit.button("Équipe", _go.bind("team"), Vector2(400, 60)))
+	right.add_child(UiKit.button("Collection et reliques (%d)" % p.relics.size(), _go.bind("collection"), Vector2(400, 60)))
+	right.add_child(UiKit.button("Invocation", _go.bind("summon"), Vector2(400, 60)))
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	right.add_child(spacer)
+
+	right.add_child(UiKit.label("Combat libre (test, équipes de nation)", 13, UiKit.DIM))
 	var row := HBoxContainer.new()
 	right.add_child(row)
-	for n in [1, 10]:
-		var b := Button.new()
-		b.text = "Invoquer x%d" % n
-		b.custom_minimum_size = Vector2(160, 48)
-		b.pressed.connect(_pull.bind(n))
-		row.add_child(b)
-	pity_label = Label.new()
-	right.add_child(pity_label)
-	results_grid = GridContainer.new()
-	results_grid.columns = 5
-	results_grid.add_theme_constant_override("h_separation", 8)
-	results_grid.add_theme_constant_override("v_separation", 8)
-	right.add_child(results_grid)
-	_update_pity()
+	for m in TEST_MATCHUPS:
+		row.add_child(UiKit.button(m[0], _test_battle.bind(m[1], m[2]), Vector2(128, 40)))
+	var reset := UiKit.button("Recommencer le profil", func() -> void: pass, Vector2(400, 36))
+	reset.pressed.connect(func() -> void:
+		if not reset_armed:
+			reset_armed = true
+			reset.text = "Confirmer : tout effacer ?"
+			return
+		Session.reset_profile()
+		get_tree().reload_current_scene())
+	right.add_child(reset)
 
 
-func _start_battle(a: String, b: String) -> void:
-	Session.player_team.assign(GameData.character_ids_by_nation(a))
-	Session.enemy_team.assign(GameData.character_ids_by_nation(b))
+func _go(screen: String) -> void:
+	get_tree().change_scene_to_file("res://scenes/%s.tscn" % screen)
+
+
+func _test_battle(a: String, b: String) -> void:
+	Session.battle = {"mode": "test", "player": GameData.character_ids_by_nation(a), "enemy": GameData.character_ids_by_nation(b)}
 	get_tree().change_scene_to_file("res://scenes/battle.tscn")
-
-
-func _pull(n: int) -> void:
-	var results := Session.gacha.pull_many(n)
-	Session.record_pulls(results)
-	for c in results_grid.get_children():
-		c.queue_free()
-	for r in results:
-		var p := PanelContainer.new()
-		var s := StyleBoxFlat.new()
-		s.bg_color = Color(RARITY_COLORS[r["rarity"]], 0.25)
-		s.border_color = RARITY_COLORS[r["rarity"]]
-		s.set_border_width_all(2)
-		s.set_corner_radius_all(6)
-		s.set_content_margin_all(8)
-		p.add_theme_stylebox_override("panel", s)
-		p.custom_minimum_size = Vector2(120, 70)
-		var l := Label.new()
-		var id: String = r["id"]
-		var label_name: String = GameData.character(id)["name"] if GameData.characters().has(id) else id.capitalize()
-		l.text = "%s\n%s" % ["★".repeat(r["rarity"]), label_name]
-		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		p.add_child(l)
-		results_grid.add_child(p)
-	_update_pity()
-
-
-func _update_pity() -> void:
-	var g := Session.gacha
-	pity_label.text = "Invocations : %d · Légendaire garanti dans %d · Épique garanti dans %d" % [
-		g.total_pulls, int(g.banner["hard_pity_5"]) - g.pity_5, int(g.banner["guarantee_4_every"]) - g.pity_4]

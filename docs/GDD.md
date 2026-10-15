@@ -34,7 +34,7 @@ Piliers :
 | Capitaine : bonus passif du chef d'équipe | « Chef d'escouade » : 1 bonus d'équipe par personnage | À concevoir |
 | Niveau plafonné par les étoiles (30/40/50/60), promotion par sacrifice | Paliers 30/40/50/60, promotion par « Fragments d'étage » | À concevoir |
 | Ascension 1 à 6 par matériau élémentaire, stats + amélioration de compétence | Ascension par « Éclats de constellation » (Orion, Grande Ourse ou Sirius) | À concevoir |
-| Histoire : 12 chapitres, 4 difficultés (Facile, Difficile, Purgatoire, Enfer) | Ascension : 8 univers, 99 étages, 4 difficultés | À concevoir |
+| Histoire : 12 chapitres, 4 difficultés (Facile, Difficile, Purgatoire, Enfer) | Ascension : 8 univers, 99 étages, 4 difficultés | **Codé** : univers 01 (12 étages), 1 difficulté |
 | Ritual Miracle (boss à reliques) | 3 boss de butin, un par constellation | Règles posées |
 | Sonic Miracle (matériaux élémentaires, rotation quotidienne) | Sanctuaires de constellation (matériaux d'ascension) | À concevoir |
 | Cube Miracle (donjon roguelite) | Archives des Mille Vérités : labyrinthe à choix | Plus tard |
@@ -124,16 +124,40 @@ l'instant des « recrues » génériques, une par nation, à créer.
   critique, +10 % de PA (une fois par tour) ». Il sert les DPS rapides et reste dans l'esprit
   « vitesse » d'Orion.
 
-## 9. Invocation et économie (proposition)
+## 9. Invocation et économie (v0.2, réglable dans `data/progression.json` et `data/tower.json`)
 
-- Monnaie premium : **Éclats de Vœu** (1 invocation = 1 éclat, ou 160 gemmes).
+- Monnaie premium : **Éclats de Vœu** (1 invocation = 1 éclat). Gagnés à la **première victoire** de chaque
+  étage : 3, 6 pour un étage Élite, 10 pour un boss.
+- **Pièces** : gagnées à chaque victoire (300 + 60 × étage). Elles servent à monter les reliques
+  (100 + 100 × niveau actuel, soit 12 000 pour aller de +0 à +15).
+- **Reliques** : 1 relique aléatoire (set et emplacement) à chaque victoire, même en rejouant un étage.
+- **Nouveau joueur** : Nidhogg, Espion de Lumière et Issa (les trois 4★, un par nation), 20 Éclats
+  (deux invocations x10), 2 000 Pièces.
 - Bannières : standard + vedette (taux de la vedette x2 parmi les 5★). Garanties : Légendaire à
-  120, Épique au moins toutes les 20. Le compteur Légendaire est conservé d'une bannière vedette à
-  l'autre.
+  120, Épique au moins toutes les 20. Les compteurs sont communs à toutes les bannières et sauvegardés.
 - Mesuré sur 100 000 invocations simulées : 3★ 88,4 % · 4★ 10,2 % · 5★ 1,42 % (le 1 % affiché
   monte à environ 1,4 % réel grâce à la garantie).
-- Doublons → « Fragments d'étage » (promotion). Échange en boutique contre une monnaie de doublons.
+- Doublons et 3★ → **Fragments d'étage** (1 par 3★, 10 par doublon 4★, 40 par doublon 5★), pour la
+  promotion (v0.4). Les 3★ sont pour l'instant des « recrues » sans kit : 90 % des invocations ne donnent
+  donc que des Fragments. **À traiter** : créer de vraies recrues 3★ jouables (voir §12).
 - Revenu gratuit à cibler : environ 1 Légendaire par mois pour un joueur actif (à chiffrer).
+
+### Ascension de la Tour (univers 01, Cité d'Acier)
+
+12 étages ; l'étage 6 est Élite, l'étage 12 est le boss « Gardien de la Cité d'Acier ». Les ennemis sont
+des personnages du roster dont PV, ATK et DEF sont multipliés par la **puissance** de l'étage. Les
+personnages du joueur ont leurs stats de niveau max (pas encore de niveaux), d'où des puissances autour
+de 1. La difficulté dépend surtout de la composition adverse : quelques % de puissance font basculer un
+combat. Réglage mesuré (IA des deux côtés, sans reliques, `tests/run_tests.gd`) :
+
+| Équipe | 1-4 | 5 | 6 (Élite) | 7 | 8-12 |
+|---|---|---|---|---|---|
+| Départ (Nidhogg, Espion, Issa) | 90-100 % | 30 % | 38 % | 93 % | 0 % |
+| Mixte (Eiríkr, Issa, Don Diego) | 98-100 % | 100 % | 100 % | 90 % | 100 → 33 % (boss) |
+
+Intention : l'équipe de départ bute aux étages 5-6 (il faut invoquer ou s'équiper), le haut de l'univers
+demande une bonne composition et le boss demande des reliques. `tools/tune_tower.gd` mesure les taux pour
+plusieurs puissances.
 
 ## 10. Résultats de simulation (IA simple des deux côtés, 400 combats par duel)
 
@@ -176,7 +200,10 @@ Ymir. Ces chiffres sont des tendances ; il faut les refaire après chaque régla
 3. Zéro perte (Moussa) : trop fort ? À mesurer en simulation (avec et sans le passif).
 4. Capitaine, promotion, ascension : à valider avant de les coder.
 5. Rééquilibrage de la nation A (tank Tormund en 2e vague ?).
-6. Style visuel : MakeHuman donne un rendu réaliste et des vêtements de ville. C'est proche de
+6. **Recrues 3★** : leur donner un kit simple et un modèle (une par nation), ou les remplacer par des
+   objets utiles (Pièces, reliques). Aujourd'hui elles ne rapportent qu'1 Fragment, ce qui rend 90 % des
+   invocations décevantes.
+7. Style visuel : MakeHuman donne un rendu réaliste et des vêtements de ville. C'est proche de
    Dislyte (urbain moderne), mais les tenues de la Tour (armures, tenues d'univers) demanderont des
    vêtements sur mesure.
 
@@ -184,8 +211,10 @@ Ymir. Ces chiffres sont des tendances ; il faut les refaire après chaque régla
 
 1. **v0.1 (fait)** : moteur de combat, 9 kits, gacha, reliques, combat jouable avec des capsules,
    tests et simulation.
-2. **v0.2** : premiers modèles 3D (pipeline MakeHuman → Mixamo → Godot), écran d'équipe, collection
-   et équipement des reliques, sauvegarde locale.
-3. **v0.3** : Ascension de la Tour (univers 01, 12 étages), 3 boss de butin, énergie.
+2. **v0.2 (fait)** : modèles 3D des 9 personnages (MPFB) et animations selon le rôle (Mixamo), profil
+   sauvegardé, écrans Tour, Équipe, Collection (fiche, reliques) et Invocation, univers 01 de la Tour
+   (12 étages) avec récompenses.
+3. **v0.3** : 3 boss de butin (sets de reliques ciblés), énergie, recrues 3★, rééquilibrage (triangle,
+   nation A), effets visuels des compétences.
 4. **v0.4** : progression (niveau, promotion, ascension), capitaine, premier tutoriel.
 5. **v0.5** : guerre de territoire (PvP asynchrone), serveur.

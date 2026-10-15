@@ -21,7 +21,8 @@ var done := false
 
 
 func _ready() -> void:
-	engine = BattleEngine.new(Session.player_team, Session.enemy_team)
+	var teams := Session.battle_teams()
+	engine = BattleEngine.new(teams[0], teams[1])
 	engine.battle_event.connect(_on_battle_event)
 	_build_world()
 	_build_ui()
@@ -241,7 +242,9 @@ func _build_ui() -> void:
 		if team == 1:
 			col.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 			col.offset_left = -246
+			col.offset_right = -16
 			col.offset_top = 60
+			col.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 		root.add_child(col)
 		for u in engine.units:
 			if u.team == team:
@@ -269,11 +272,15 @@ func _build_ui() -> void:
 	action_box.add_theme_constant_override("separation", 10)
 	bottom.add_child(action_box)
 
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(center)
 	result_panel = PanelContainer.new()
-	result_panel.set_anchors_preset(Control.PRESET_CENTER)
-	result_panel.add_theme_stylebox_override("panel", _panel_style(UI_BG))
+	result_panel.add_theme_stylebox_override("panel", UiKit.panel_style(Color(UI_BG, 0.95), UI_ACCENT, 2, 10))
+	result_panel.custom_minimum_size.x = 460
 	result_panel.visible = false
-	root.add_child(result_panel)
+	center.add_child(result_panel)
 
 
 func _make_card(u: BattleUnit) -> Control:
@@ -386,10 +393,30 @@ func _show_result() -> void:
 	title.add_theme_color_override("font_color", UI_ACCENT)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(title)
-	var b := Button.new()
-	b.text = "Retour au menu"
-	b.pressed.connect(_back_to_menu)
-	v.add_child(b)
+	var floor_n := int(Session.battle.get("floor", 0))
+	var in_tower: bool = Session.battle.get("mode", "") == "tower"
+	if in_tower and engine.winner == 0 and not Session.smoke_test:
+		var rw := Session.profile.win_floor(floor_n, Session.rng)
+		Session.save()
+		var lines: Array[String] = ["Étage %d franchi !" % floor_n if rw["first_clear"] else "Étage %d" % floor_n]
+		lines.append("+%d Pièces" % rw["currencies"]["pieces"])
+		if rw["currencies"].has("eclat_de_voeu"):
+			lines.append("+%d Éclats de Vœu (première victoire)" % rw["currencies"]["eclat_de_voeu"])
+		for r: Dictionary in rw["relics"]:
+			lines.append("Relique : " + UiKit.relic_title(r))
+		var l := Label.new()
+		l.text = "\n".join(lines)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(l)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 10)
+	v.add_child(row)
+	if in_tower and engine.winner == 0 and Session.profile.can_enter_floor(floor_n + 1) and floor_n < Tower.floor_count():
+		row.add_child(UiKit.button("Étage suivant", Session.start_tower_floor.bind(floor_n + 1)))
+	if in_tower:
+		row.add_child(UiKit.button("Rejouer", Session.start_tower_floor.bind(floor_n)))
+	row.add_child(UiKit.button("Retour", _back_to_menu))
 	result_panel.add_child(v)
 	result_panel.visible = true
 	for u in engine.units:
@@ -402,4 +429,5 @@ func _show_result() -> void:
 
 
 func _back_to_menu() -> void:
-	get_tree().change_scene_to_file("res://scenes/main.tscn")
+	var tower: bool = Session.battle.get("mode", "") == "tower"
+	get_tree().change_scene_to_file("res://scenes/tower.tscn" if tower else "res://scenes/main.tscn")

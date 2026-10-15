@@ -29,6 +29,14 @@ static func relics() -> Dictionary:
 	return load_json("res://data/relics.json")
 
 
+static func tower() -> Dictionary:
+	return load_json("res://data/tower.json")
+
+
+static func progression() -> Dictionary:
+	return load_json("res://data/progression.json")
+
+
 static func characters() -> Dictionary:
 	if _characters_by_id.is_empty():
 		for c: Dictionary in load_json("res://data/characters.json")["characters"]:
