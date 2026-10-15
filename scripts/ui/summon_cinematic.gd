@@ -20,6 +20,15 @@ var done := false
 var skip_requested := false
 var marble_white: StandardMaterial3D
 var marble_black: StandardMaterial3D
+var promos: Array[Node3D] = []      # pièces de promotion préparées à l'avance
+var flash_lights: Array[OmniLight3D] = []
+var reveal_model: CharacterModel = null
+var white: ColorRect                # flash plein écran
+var cam_pos := Vector3.ZERO
+var cam_look := Vector3.ZERO
+var trauma := 0.0
+
+const GAME_FONT := preload("res://assets/fonts/LilitaOne-Regular.ttf")
 
 
 func _ready() -> void:
@@ -30,6 +39,7 @@ func _ready() -> void:
 			results.assign(Gacha.new("featured_montana", 3).pull_many(10))
 	_build_world()
 	_build_ui()
+	_prepare()
 	_play()
 
 
@@ -117,6 +127,8 @@ func _square(file: int, rank: int) -> Vector3:
 
 
 func _cam_at(pos: Vector3, look: Vector3) -> void:
+	cam_pos = pos
+	cam_look = look
 	cam.position = pos
 	cam.look_at(look)
 
@@ -169,6 +181,7 @@ func _piece(kind: String, glow: Color) -> Node3D:
 				add.call(_sph(0.05), Vector3(cos(a) * 0.24, 1.3, sin(a) * 0.24))
 			add.call(_sph(0.09), Vector3(0, 1.38, 0))
 			add.call(_sph(0.045), Vector3(0, 1.5, 0))
+	root.set_meta("mat", mat)
 	return root
 
 
@@ -205,12 +218,20 @@ func _wait(t: float) -> void:
 func _tween_cam(pos: Vector3, look: Vector3, t: float) -> void:
 	if skip_requested:
 		return
-	var from_pos := cam.position
-	var from_look := cam.position + (-cam.global_transform.basis.z) * 10.0
+	var from_pos := cam_pos
+	var from_look := cam_look
 	var tw := create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tw.tween_method(func(k: float) -> void:
-		_cam_at(from_pos.lerp(pos, k), from_look.lerp(look, k)), 0.0, 1.0, t)
+		cam_pos = from_pos.lerp(pos, k)
+		cam_look = from_look.lerp(look, k), 0.0, 1.0, t)
 	await tw.finished
+
+
+func _process(delta: float) -> void:
+	trauma = maxf(0.0, trauma - delta * 2.0)
+	var shake := Vector3(randf_range(-1, 1), randf_range(-1, 1), 0) * trauma * trauma * 0.3
+	cam.position = cam_pos + shake
+	cam.look_at(cam_look + shake * 0.3)
 
 
 func _lane_of(r: Dictionary) -> String:
@@ -218,32 +239,64 @@ func _lane_of(r: Dictionary) -> String:
 	return GameData.constellation_of(GameData.character(id)["nation"]) if GameData.characters().has(id) else "orion"
 
 
+## Tout ce qui est lourd est préparé pendant le fondu d'entrée (pièces de promotion, lumières, personnage,
+## matériaux) : le moment de la promotion ne fait plus que révéler des objets prêts. Pas de saccade.
+func _prepare() -> void:
+	var per_lane := {"orion": 0, "grande_ourse": 0, "sirius": 0}
+	var single := results.size() == 1
+	for i in results.size():
+		var r: Dictionary = results[i]
+		var rar: int = r["rarity"]
+		var lane := _lane_of(r)
+		var n: int = per_lane[lane]
+		per_lane[lane] = n + 1
+		var file := LANES.find(lane) * 3 + (1 if single else n % 3)
+		var rank := 6 - (n / 3)  # au-delà de 3 pions dans un couloir : une rangée plus bas
+		var pawn := _piece("pawn", Color(0, 0, 0, 0))
+		pawn.position = _square(file, rank)
+		pawn.visible = false
+		add_child(pawn)
+		pawns.append(pawn)
+		var kind: String = PIECE_FOR.get(rar, "knight" if randf() < 0.5 else "bishop")
+		var piece := _piece(kind, RARITY_GLOW[rar])
+		piece.position = pawn.position + Vector3(0, 0, -1.0)
+		piece.scale = Vector3.ONE * 0.001  # dessinée une fois, minuscule : ses matériaux sont prêts
+		add_child(piece)
+		promos.append(piece)
+		var o := OmniLight3D.new()
+		o.light_color = RARITY_GLOW[rar]
+		o.omni_range = 3.0 + rar
+		o.light_energy = 0.0
+		o.position = piece.position + Vector3(0, 1.2, 0)
+		add_child(o)
+		flash_lights.append(o)
+	if single and GameData.characters().has(results[0]["id"]):
+		reveal_model = CharacterModel.new()
+		add_child(reveal_model)
+		reveal_model.setup(results[0]["id"], UiKit.char_color(results[0]["id"]), 1.75)
+		reveal_model.position = promos[0].position + Vector3(0, -3.0, 0)  # sous le plateau, invisible
+	# un éclat et une onde jetables pour compiler leurs matériaux maintenant plutôt qu'à la promotion
+	BattleFx.burst(self, Vector3(0, -4, 0), Color.WHITE, 4, 1.0, 0.05, 0.2)
+	BattleFx.shockwave(self, Vector3(0, -4, 0), Color.WHITE, 1.0, 0.2)
+
+
 func _play() -> void:
 	var single := results.size() == 1
 	# 1. le plateau se révèle
 	_cam_at(Vector3(0, 13, 12), Vector3(0, 0, -0.5))
 	await _tween_cam(Vector3(0, 7.5, 7.5), Vector3(0, 0, -2.0), 1.3)
-	# 2. les pions sur l'avant-dernière case de leur couloir
-	var per_lane := {"orion": 0, "grande_ourse": 0, "sirius": 0}
-	for i in results.size():
-		var r: Dictionary = results[i]
-		var lane := _lane_of(r)
-		var li := LANES.find(lane)
-		var n: int = per_lane[lane]
-		per_lane[lane] = n + 1
-		var file := li * 3 + (1 if single else n % 3)
-		var rank := 6 - (n / 3)  # au-delà de 3 pions dans un couloir : une rangée plus bas
-		var pawn := _piece("pawn", Color(0, 0, 0, 0))
-		pawn.position = _square(file, rank)
+	# 2. les pions apparaissent sur l'avant-dernière case de leur couloir
+	for i in pawns.size():
+		var pawn := pawns[i]
+		pawn.visible = true
 		pawn.scale = Vector3.ONE * 0.01
-		add_child(pawn)
-		pawns.append(pawn)
 		var tw := create_tween()
-		tw.tween_property(pawn, "scale", Vector3.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		_light_lane(lane)
+		tw.tween_property(pawn, "scale", Vector3.ONE, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		BattleFx.burst(self, pawn.position + Vector3(0, 0.2, 0), Color.WHITE, 8, 1.5, 0.05, 0.4, true)
+		_light_lane(_lane_of(results[i]))
 		await _wait(0.12 if not single else 0.4)
-	await _wait(0.4)
-	# 3. l'avancée vers la promotion (dernière rangée)
+	await _wait(0.35)
+	# 3. l'avancée : les pions brillent de plus en plus à la couleur de leur rareté (anticipation)
 	var focus := _square(4, 7)
 	if single:
 		focus = Vector3(pawns[0].position.x, 0, _square(0, 7).z)
@@ -251,36 +304,110 @@ func _play() -> void:
 	for i in pawns.size():
 		var target := pawns[i].position
 		target.z -= 1.0  # une case en avant : la rangée de devant atteint la promotion
-		adv.tween_property(pawns[i], "position", target, 1.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
-	_tween_cam(focus + Vector3(0, 3.0 if single else 5.0, 4.2 if single else 6.5), focus + Vector3(0, 0.6, 0), 1.2)
+		adv.tween_property(pawns[i], "position", target, 1.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+		var mat: StandardMaterial3D = pawns[i].get_meta("mat")
+		var rar: int = results[i]["rarity"]
+		mat.emission_enabled = true
+		mat.emission = RARITY_GLOW[rar] if rar >= 4 else Color(0.8, 0.85, 1.0)
+		mat.emission_energy_multiplier = 0.0
+		adv.tween_property(mat, "emission_energy_multiplier", 0.25 + 0.35 * (rar - 3), 1.2)
+	_tween_cam(focus + Vector3(0, 2.8 if single else 5.0, 4.0 if single else 6.5), focus + Vector3(0, 0.6, 0), 1.25)
 	if not skip_requested:
 		await adv.finished
-	await _wait(0.25)
-	# 4. la promotion : la pièce dit la rareté
+	# 4. la tension : le pion du meilleur tirage tremble avant de se transformer
 	var best := 0
+	for r: Dictionary in results:
+		best = maxi(best, int(r["rarity"]))
+	if best >= 4 and not skip_requested:
+		var shake_t := 0.7 if best == 5 else 0.35
+		for i in pawns.size():
+			if int(results[i]["rarity"]) == best:
+				_tremble(pawns[i], shake_t)
+		await _wait(shake_t)
+	# 5. la promotion : flash, onde, gerbe, rebond — la pièce dit la rareté
 	for i in results.size():
-		var r: Dictionary = results[i]
-		var rar: int = r["rarity"]
-		best = maxi(best, rar)
-		var kind: String = PIECE_FOR.get(rar, "knight" if randf() < 0.5 else "bishop")
-		var piece := _piece(kind, RARITY_GLOW[rar])
-		piece.position = pawns[i].position
-		add_child(piece)
-		pawns[i].queue_free()
-		pawns[i] = piece
-		_flash(piece.position, RARITY_GLOW[rar], rar, 1.0 if single else 0.3)
-		piece.scale = Vector3.ONE * 0.6
-		var tw := create_tween()
-		tw.tween_property(piece, "scale", Vector3.ONE * (1.25 if rar == 5 else 1.0), 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		if rar == 5:  # la dame tourne sur elle-même
-			tw.parallel().tween_property(piece, "rotation_degrees:y", 360.0, 1.2)
-		await _wait(0.12 if not single else (1.3 if rar == 5 else 0.6))
-	# 5. l'apparition
+		var rar: int = results[i]["rarity"]
+		await _promote(i, rar, single)
+		await _wait(0.1 if not single else (0.0 if rar == 5 else 0.35))
+	# 6. l'apparition
 	if single:
-		await _reveal(results[0], pawns[0])
+		await _reveal(results[0], promos[0])
 	else:
-		await _wait(0.9 if best == 5 else 0.5)
+		await _wait(1.0 if best == 5 else 0.6)
 	_finish()
+
+
+func _tremble(n: Node3D, t: float) -> void:
+	var base := n.position
+	var tw := create_tween()
+	var steps := int(t / 0.04)
+	for k in steps:
+		var amp := 0.02 + 0.05 * float(k) / steps  # de plus en plus fort
+		tw.tween_property(n, "position", base + Vector3(randf_range(-amp, amp), 0, randf_range(-amp, amp)), 0.04)
+	tw.tween_property(n, "position", base, 0.04)
+
+
+func _promote(i: int, rar: int, single: bool) -> void:
+	var pawn := pawns[i]
+	var piece := promos[i]
+	piece.position = pawn.position
+	pawn.visible = false
+	var power := 1.0 if single else 0.35
+	var col: Color = RARITY_GLOW[rar]
+	# flash plein écran (doré pour un Légendaire)
+	white.color = Color(col.lightened(0.5) if rar == 5 else Color(1, 1, 1), 0.85 * power if single else 0.25)
+	create_tween().tween_property(white, "color:a", 0.0, 0.35 if rar < 5 else 0.6)
+	var o: OmniLight3D = flash_lights[i]
+	o.position = piece.position + Vector3(0, 1.2, 0)
+	var lt := create_tween()
+	lt.tween_property(o, "light_energy", (4.0 + rar * 3.0) * power, 0.1)
+	lt.tween_property(o, "light_energy", (1.2 if rar == 5 else 0.0) * power, 0.8 + rar * 0.2)
+	BattleFx.shockwave(self, piece.position, col, 1.6 + rar * 0.5, 0.6)
+	BattleFx.burst(self, piece.position + Vector3(0, 0.6, 0), col, 18 + rar * 8 if single else 10, 3.0 + rar * 0.4, 0.08, 0.7)
+	trauma = minf(1.0, trauma + (0.25 + 0.15 * (rar - 3)) * (1.0 if single else 0.5))
+	piece.scale = Vector3.ONE * 0.4
+	var tw := create_tween()
+	tw.tween_property(piece, "scale", Vector3.ONE * (1.3 if rar == 5 else 1.08), 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(piece, "scale", Vector3.ONE * (1.2 if rar == 5 else 1.0), 0.15)
+	if rar == 5:
+		_legendary(piece, single)
+		if single:
+			await _wait(1.6)
+
+
+## Légendaire : colonne de lumière dorée, étincelles qui montent, la caméra tourne autour de la dame.
+func _legendary(piece: Node3D, single: bool) -> void:
+	var pillar := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.35
+	cyl.bottom_radius = 0.55
+	cyl.height = 1.0
+	pillar.mesh = cyl
+	var pm := BattleFx.glow_material(RARITY_GLOW[5], 3.0)
+	pm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	pm.albedo_color = Color(RARITY_GLOW[5], 0.45)
+	pillar.material_override = pm
+	pillar.position = piece.position + Vector3(0, 0.5, 0)
+	pillar.scale = Vector3(1, 0.01, 1)
+	add_child(pillar)
+	var tw := create_tween()
+	tw.tween_property(pillar, "scale", Vector3(1, 14, 1), 0.35).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(pillar, "position:y", piece.position.y + 7.0, 0.35)
+	tw.tween_property(pm, "albedo_color:a", 0.0, 1.4)
+	tw.parallel().tween_property(pillar, "scale:x", 0.2, 1.4)
+	tw.parallel().tween_property(pillar, "scale:z", 0.2, 1.4)
+	tw.tween_callback(pillar.queue_free)
+	for k in 3:
+		get_tree().create_timer(0.2 * k).timeout.connect(func() -> void:
+			BattleFx.burst(self, piece.position + Vector3(0, 0.3, 0), Color("ffe08a"), 16, 2.5, 0.07, 1.4, true))
+	var spin := create_tween()
+	spin.tween_property(piece, "rotation_degrees:y", 360.0, 1.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	if single:  # la caméra tourne autour de la dame
+		var c := piece.position
+		var orbit := create_tween()
+		orbit.tween_method(func(a: float) -> void:
+			cam_pos = c + Vector3(sin(a) * 3.2, 1.8, cos(a) * 3.2)
+			cam_look = c + Vector3(0, 0.9, 0), -0.6, 0.6, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
 func _light_lane(lane: String) -> void:
@@ -290,34 +417,45 @@ func _light_lane(lane: String) -> void:
 	tw.tween_property(l["strip"], "emission_energy_multiplier", 1.4, 0.4)
 
 
-func _flash(pos: Vector3, col: Color, rarity: int, power: float) -> void:
-	var o := OmniLight3D.new()
-	o.light_color = col
-	o.omni_range = 3.0 + rarity
-	o.position = pos + Vector3(0, 1.2, 0)
-	o.light_energy = 0.0
-	add_child(o)
-	var tw := create_tween()
-	tw.tween_property(o, "light_energy", (4.0 + rarity * 3.0) * power, 0.12)
-	tw.tween_property(o, "light_energy", (1.0 if rarity == 5 else 0.0) * power, 0.8 + rarity * 0.2)
-
-
 func _reveal(r: Dictionary, piece: Node3D) -> void:
-	var id: String = r["id"]
-	if not GameData.characters().has(id):
+	if reveal_model == null:
 		return
-	var m := CharacterModel.new()
-	add_child(m)
-	m.setup(id, UiKit.char_color(id), 1.75)
-	m.position = piece.position + Vector3(0, -1.8, 0)
-	m.rotation_degrees.y = 0.0
+	var m := reveal_model
+	var rar: int = r["rarity"]
+	m.position = piece.position + Vector3(0, -1.9, 0)
+	m.rotation_degrees.y = -360.0
 	m.play("victory")
 	var tw := create_tween().set_parallel()
-	tw.tween_property(piece, "scale", Vector3.ONE * 0.01, 0.5)
-	tw.tween_property(m, "position", piece.position + Vector3(0, 0.05, 0), 0.9 if r["rarity"] == 5 else 0.6) \
+	tw.tween_property(piece, "scale", Vector3.ONE * 0.01, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	tw.tween_property(m, "position", piece.position + Vector3(0, 0.05, 0), 0.8 if rar == 5 else 0.55) \
 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(m, "rotation_degrees:y", 0.0, 0.9).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	BattleFx.burst(self, piece.position + Vector3(0, 0.4, 0), RARITY_GLOW[rar], 30, 3.0, 0.08, 1.0, true)
+	BattleFx.shockwave(self, piece.position, RARITY_GLOW[rar], 3.0, 0.8)
+	m.flash(Color(RARITY_GLOW[rar], 0.8), 0.7)
 	_tween_cam(piece.position + Vector3(0, 1.5, 3.6), piece.position + Vector3(0, 1.0, 0), 0.9)
-	await _wait(1.6 if r["rarity"] == 5 else 1.1)
+	_name_card(r)
+	await _wait(1.7 if rar == 5 else 1.2)
+
+
+## Carte de présentation qui glisse : rareté, nom, étoiles.
+func _name_card(r: Dictionary) -> void:
+	var rar: int = r["rarity"]
+	var col: Color = UiKit.RARITY_COLORS[rar]
+	var box := VBoxContainer.new()
+	box.position = Vector2(-520, 470)
+	ui.add_child(box)
+	var rl := UiKit.label(["", "", "", "RARE", "ÉPIQUE", "LÉGENDAIRE"][rar], 22, col)
+	rl.add_theme_font_override("font", GAME_FONT)
+	box.add_child(rl)
+	var nl := UiKit.label(UiKit.char_name(r["id"]), 46, Color.WHITE)
+	nl.add_theme_font_override("font", GAME_FONT)
+	nl.add_theme_constant_override("outline_size", 10)
+	nl.add_theme_color_override("font_outline_color", Color(0.05, 0.02, 0.08))
+	box.add_child(nl)
+	box.add_child(UiKit.label("★".repeat(rar) + ("   NOUVEAU !" if r.get("new", false) else ""), 24, col))
+	var tw := create_tween()
+	tw.tween_property(box, "position:x", 60.0, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 # --- Interface ---------------------------------------------------------------
@@ -325,6 +463,11 @@ func _reveal(r: Dictionary, piece: Node3D) -> void:
 func _build_ui() -> void:
 	ui = CanvasLayer.new()
 	add_child(ui)
+	white = ColorRect.new()
+	white.set_anchors_preset(Control.PRESET_FULL_RECT)
+	white.color = Color(1, 1, 1, 0)
+	white.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ui.add_child(white)
 	var skip := UiKit.button("Passer", func() -> void:
 		skip_requested = true
 		_finish(), Vector2(120, 44))
@@ -358,7 +501,10 @@ func _finish() -> void:
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 8)
 	v.add_child(grid)
-	for r: Dictionary in results:
+	var sorted := results.duplicate()  # les meilleurs tirages d'abord
+	sorted.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["rarity"]) > int(b["rarity"]))
+	for k in sorted.size():
+		var r: Dictionary = sorted[k]
 		var rar: int = r["rarity"]
 		var col: Color = UiKit.RARITY_COLORS[rar]
 		var p := PanelContainer.new()
@@ -369,6 +515,12 @@ func _finish() -> void:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		p.add_child(l)
 		grid.add_child(p)
+		# les cartes apparaissent une à une avec un rebond
+		p.scale = Vector2.ZERO
+		p.resized.connect(func() -> void: p.pivot_offset = p.size / 2.0)
+		var tw := p.create_tween()
+		tw.tween_interval(0.05 * k)
+		tw.tween_property(p, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_child(row)
