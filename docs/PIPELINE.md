@@ -34,7 +34,7 @@ Ce que tu dois télécharger ou installer :
    ```
    Dans Blender : activer l'add-on « Blender MCP », puis dans la vue 3D, touche N → onglet
    BlenderMCP → *Start MCP Server*.
-6. Cloner ce dépôt et ouvrir `tour-des-99-etages/project.godot` dans Godot une fois.
+6. Cloner ce dépôt et ouvrir `project.godot` dans Godot une fois.
 
 ## Personnages : MakeHuman → Mixamo → Godot
 
@@ -69,7 +69,7 @@ personnages. Pas besoin d'envoyer chaque modèle sur Mixamo.
 ## Tests (n'importe où)
 
 ```
-godot --headless --path tour-des-99-etages --import
-godot --headless --path tour-des-99-etages --script res://tests/run_tests.gd -- --sims=400
-godot --headless --path tour-des-99-etages res://scenes/battle.tscn -- --smoke
+godot --headless --path . --import
+godot --headless --path . --script res://tests/run_tests.gd -- --sims=400
+godot --headless --path . res://scenes/battle.tscn -- --smoke
 ```
