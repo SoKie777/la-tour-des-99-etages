@@ -10,8 +10,16 @@
   "effect_chance_min": 15,
   "effect_chance_max": 100,
   "triangle": {
-    "beats": {"orion": "grande_ourse", "grande_ourse": "sirius", "sirius": "orion"},
-    "nation_constellation": {"A": "orion", "B": "grande_ourse", "C": "sirius"},
+    "beats": {
+      "orion": "grande_ourse",
+      "grande_ourse": "sirius",
+      "sirius": "orion"
+    },
+    "nation_constellation": {
+      "A": "orion",
+      "B": "grande_ourse",
+      "C": "sirius"
+    },
     "dominant_crit_bonus": 20,
     "dominated_damage_mult": 0.85,
     "dominated_miss_chance": 0,
@@ -26,41 +34,207 @@
   "ai_avoid_sleeping": true,
   "max_actions": 300,
   "effects": {
-    "burn":      {"kind": "debuff", "dot_on": "turn_start", "dot_pct_caster_atk": 35},
-    "poison":    {"kind": "cc",     "dot_on": "after_action", "dot_pct_caster_atk": 40},
-    "curse":     {"kind": "cc",     "dot_on": "turn_start", "dot_pct_caster_atk": 40},
-    "slow":      {"kind": "debuff", "stat": "spd", "pct": -30},
-    "def_break": {"kind": "debuff", "stat": "def", "pct": -20},
-    "disorient": {"kind": "debuff", "stat": "atk", "pct": -25},
-    "atk_down":  {"kind": "debuff", "stat": "atk", "pct_from_value": -1},
-    "silence":   {"kind": "debuff"},
-    "sleep":     {"kind": "cc", "skip_turn": true, "wake_on_hit": true, "hard_cc": true},
-    "stun":      {"kind": "cc", "skip_turn": true, "hard_cc": true},
-    "freeze":    {"kind": "cc", "skip_turn": true, "hard_cc": true, "blocks_ap_gain": true},
-    "taunt":     {"kind": "buff"},
-    "immunity":  {"kind": "buff"},
-    "atk_up":    {"kind": "buff", "stat": "atk", "pct_from_value": 1},
-    "def_up":    {"kind": "buff", "stat": "def", "pct_from_value": 1},
-    "spd_up":    {"kind": "buff", "stat": "spd", "pct_from_value": 1},
-    "cr_up":     {"kind": "buff", "stat": "cr", "flat_from_value": 1},
-    "cd_up":     {"kind": "buff", "stat": "cd", "flat_from_value": 1},
-    "shield":    {"kind": "buff"},
-    "spd_down":  {"kind": "debuff", "stat": "spd", "pct_from_value": -1},
-    "def_down":  {"kind": "debuff", "stat": "def", "pct_from_value": -1},
-    "res_down":  {"kind": "debuff", "stat": "res", "flat_from_value": -1},
-    "acc_up":    {"kind": "buff", "stat": "acc", "flat_from_value": 1},
-    "vulnerable": {"kind": "debuff", "dmg_taken_from_value": 1},
-    "aging":     {"kind": "debuff", "dot_on": "turn_start", "dot_pct_target_max_hp_from_value": 1},
-    "dmg_reduce": {"kind": "buff", "dmg_taken_from_value": -1},
-    "aura_spd":  {"kind": "aura", "stat": "spd", "pct_from_value": 1},
-    "aura_dmg_reduce": {"kind": "aura", "dmg_taken_from_value": -1},
-    "aura_chill": {"kind": "aura", "stat": "spd", "pct_from_value": -1},
-    "guarded":   {"kind": "aura"},
-    "bastion":   {"kind": "stance", "skip_turn": true, "dmg_taken_from_value": -1, "release_pct": 150},
-    "invincible": {"kind": "buff", "invincible": true},
-    "block":     {"kind": "debuff", "blocks_buffs": true},
-    "no_heal":   {"kind": "debuff", "blocks_heal": true},
-    "regen":     {"kind": "buff", "regen_pct_max_hp": 15},
-    "entrave":   {"kind": "debuff", "stat": "spd", "pct": -60}
+    "burn": {
+      "kind": "debuff",
+      "dot_on": "turn_start",
+      "dot_pct_caster_atk": 35,
+      "desc": "Dégâts à chaque début de tour."
+    },
+    "poison": {
+      "kind": "cc",
+      "dot_on": "after_action",
+      "dot_pct_caster_atk": 40,
+      "desc": "Dégâts après chaque action."
+    },
+    "curse": {
+      "kind": "cc",
+      "dot_on": "turn_start",
+      "dot_pct_caster_atk": 40,
+      "desc": "Dégâts à chaque début de tour."
+    },
+    "slow": {
+      "kind": "debuff",
+      "stat": "spd",
+      "pct": -30,
+      "desc": "−30 % VIT."
+    },
+    "def_break": {
+      "kind": "debuff",
+      "stat": "def",
+      "pct": -20,
+      "desc": "−20 % DEF."
+    },
+    "disorient": {
+      "kind": "debuff",
+      "stat": "atk",
+      "pct": -25,
+      "desc": "−25 % ATK."
+    },
+    "atk_down": {
+      "kind": "debuff",
+      "stat": "atk",
+      "pct_from_value": -1,
+      "desc": "ATK réduite."
+    },
+    "silence": {
+      "kind": "debuff",
+      "desc": "Ne peut pas utiliser son ultime."
+    },
+    "sleep": {
+      "kind": "cc",
+      "skip_turn": true,
+      "wake_on_hit": true,
+      "hard_cc": true,
+      "desc": "Passe son tour ; se réveille quand il est touché (le premier coup fait +25 %)."
+    },
+    "stun": {
+      "kind": "cc",
+      "skip_turn": true,
+      "hard_cc": true,
+      "desc": "Passe son tour."
+    },
+    "freeze": {
+      "kind": "cc",
+      "skip_turn": true,
+      "hard_cc": true,
+      "blocks_ap_gain": true,
+      "desc": "Passe son tour, figé."
+    },
+    "taunt": {
+      "kind": "buff",
+      "desc": "Les ennemis doivent le viser."
+    },
+    "immunity": {
+      "kind": "buff",
+      "desc": "Immunisé aux débuffs."
+    },
+    "atk_up": {
+      "kind": "buff",
+      "stat": "atk",
+      "pct_from_value": 1,
+      "desc": "ATK augmentée."
+    },
+    "def_up": {
+      "kind": "buff",
+      "stat": "def",
+      "pct_from_value": 1,
+      "desc": "DEF augmentée."
+    },
+    "spd_up": {
+      "kind": "buff",
+      "stat": "spd",
+      "pct_from_value": 1,
+      "desc": "VIT augmentée."
+    },
+    "cr_up": {
+      "kind": "buff",
+      "stat": "cr",
+      "flat_from_value": 1,
+      "desc": "TC augmenté."
+    },
+    "cd_up": {
+      "kind": "buff",
+      "stat": "cd",
+      "flat_from_value": 1,
+      "desc": "DC augmentés."
+    },
+    "shield": {
+      "kind": "buff",
+      "desc": "Absorbe des dégâts."
+    },
+    "spd_down": {
+      "kind": "debuff",
+      "stat": "spd",
+      "pct_from_value": -1,
+      "desc": "VIT réduite."
+    },
+    "def_down": {
+      "kind": "debuff",
+      "stat": "def",
+      "pct_from_value": -1,
+      "desc": "DEF réduite."
+    },
+    "res_down": {
+      "kind": "debuff",
+      "stat": "res",
+      "flat_from_value": -1,
+      "desc": "RÉS réduite."
+    },
+    "acc_up": {
+      "kind": "buff",
+      "stat": "acc",
+      "flat_from_value": 1,
+      "desc": "PRÉ augmentée."
+    },
+    "vulnerable": {
+      "kind": "debuff",
+      "dmg_taken_from_value": 1,
+      "desc": "Subit plus de dégâts."
+    },
+    "aging": {
+      "kind": "debuff",
+      "dot_on": "turn_start",
+      "dot_pct_target_max_hp_from_value": 1,
+      "desc": "Perd des PV chaque tour."
+    },
+    "dmg_reduce": {
+      "kind": "buff",
+      "dmg_taken_from_value": -1,
+      "desc": "Subit moins de dégâts."
+    },
+    "aura_spd": {
+      "kind": "aura",
+      "stat": "spd",
+      "pct_from_value": 1,
+      "desc": "VIT augmentée (aura)."
+    },
+    "aura_dmg_reduce": {
+      "kind": "aura",
+      "dmg_taken_from_value": -1,
+      "desc": "Subit moins de dégâts (aura)."
+    },
+    "aura_chill": {
+      "kind": "aura",
+      "stat": "spd",
+      "pct_from_value": -1,
+      "desc": "VIT réduite (aura)."
+    },
+    "guarded": {
+      "kind": "aura",
+      "desc": "Une partie des dégâts va au Titan."
+    },
+    "bastion": {
+      "kind": "stance",
+      "skip_turn": true,
+      "dmg_taken_from_value": -1,
+      "release_pct": 150,
+      "desc": "Immobile, accumule les dégâts pour les renvoyer."
+    },
+    "invincible": {
+      "kind": "buff",
+      "invincible": true,
+      "desc": "Ne subit aucun dégât."
+    },
+    "block": {
+      "kind": "debuff",
+      "blocks_buffs": true,
+      "desc": "Ne peut plus recevoir de buffs."
+    },
+    "no_heal": {
+      "kind": "debuff",
+      "blocks_heal": true,
+      "desc": "Ne peut plus être soigné."
+    },
+    "regen": {
+      "kind": "buff",
+      "regen_pct_max_hp": 15,
+      "desc": "Récupère 15 % PV à chaque tour."
+    },
+    "entrave": {
+      "kind": "debuff",
+      "stat": "spd",
+      "pct": -60,
+      "desc": "−60 % VIT."
+    }
   }
 }

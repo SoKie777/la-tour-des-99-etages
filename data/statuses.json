@@ -20,7 +20,8 @@
           "value": 10
         }
       ]
-    }
+    },
+    "desc": "−25 % VIT ; Montana vole 10 % de jauge à chaque tour de la cible ; sa Poursuite fait +15 %. Non purgeable."
   },
   "vieillissement": {
     "name": "Vieillissement",
@@ -48,7 +49,8 @@
           "do": "clear"
         }
       ]
-    }
+    },
+    "desc": "−8 % ATK et −8 % DEF par cumul (5 max). À 5 cumuls : Étourdissement."
   },
   "givre": {
     "name": "Givre",
@@ -73,7 +75,8 @@
           "do": "clear"
         }
       ]
-    }
+    },
+    "desc": "−10 % VIT par cumul, Gel plus probable. À 3 cumuls : Gel garanti."
   },
   "clone": {
     "name": "Clone",
@@ -84,7 +87,8 @@
     "clone": {
       "absorb_reflect_pct_atk": 30,
       "copy_pct": 40
-    }
+    },
+    "desc": "Chaque clone absorbe un coup (et renvoie 30 % ATK) ou copie les attaques de Nyssa à 40 %."
   },
   "inertie": {
     "name": "Inertie",
@@ -115,7 +119,8 @@
           "value": 20
         }
       ]
-    }
+    },
+    "desc": "+4 % DEF et +2 RÉS par coup reçu (6 max), jusqu'à son tour. À 6 : bouclier de 20 % PV."
   },
   "garde_de_fer": {
     "name": "Garde de fer",
@@ -133,7 +138,8 @@
           "do": "clear"
         }
       ]
-    }
+    },
+    "desc": "−12 % de dégâts subis par cumul (4 max). À 4 : contre-attaque à 120 % ATK."
   },
   "visage": {
     "name": "Visage",
@@ -163,7 +169,8 @@
           "value": 2
         }
       ]
-    }
+    },
+    "desc": "+6 DC et +4 % ATK par cumul (6 max). À 6 : l'attaque suivante ignore 30 % DEF."
   },
   "rage": {
     "name": "Rage",
@@ -195,7 +202,8 @@
           "do": "clear"
         }
       ]
-    }
+    },
+    "desc": "+5 % ATK et −3 % DEF par cumul (8 max). À 8 : explosion de zone à 150 % ATK."
   },
   "dette": {
     "name": "Dette",
@@ -216,7 +224,8 @@
           "if_holder_has": "curse"
         }
       ]
-    }
+    },
+    "desc": "2 % des PV max par cumul à la fin de chaque tour ; plus de dégâts si Maudite."
   },
   "benediction": {
     "name": "Bénédiction",
@@ -243,7 +252,8 @@
           }
         ]
       }
-    }
+    },
+    "desc": "+10 % de soins reçus et +8 RÉS par cumul. Sous 30 % PV : soin de 25 %."
   },
   "espera": {
     "name": "Espéra",
@@ -262,7 +272,8 @@
           "do": "clear"
         }
       ]
-    }
+    },
+    "desc": "+5 % de dégâts subis par cumul (5 max). À 5 : la zone suivante de Noor-El frappe deux fois."
   },
   "gravite": {
     "name": "Gravité",
@@ -287,7 +298,8 @@
           "turns": 1
         }
       ]
-    }
+    },
+    "desc": "−15 % VIT par cumul, plus de bonus de VIT. Sans jauge : entravé."
   },
   "vide": {
     "name": "Vide",
@@ -304,7 +316,8 @@
           "value": 1
         }
       ]
-    }
+    },
+    "desc": "Ne peut plus recevoir de buffs ni être soigné. Non purgeable."
   },
   "revele": {
     "name": "Révélé",
@@ -330,7 +343,8 @@
           "value": 5
         }
       ]
-    }
+    },
+    "desc": "Perd son Immunité, +10 % de dégâts subis par cumul ; ses attaquants gagnent 5 % de jauge."
   },
   "lien": {
     "name": "Lien",
@@ -355,7 +369,8 @@
           "do": "remove"
         }
       ]
-    }
+    },
+    "desc": "Partage 30 % de ses dégâts avec Don Selah, +10 % ATK. Si Don tombe : bouclier de 20 %."
   },
   "scellement": {
     "name": "Scellement",
@@ -372,7 +387,8 @@
           "pct_max_hp": 15
         }
       ]
-    }
+    },
+    "desc": "Immunisé aux débuffs, −30 % de dégâts subis. À la fin : contrecoup de 15 % PV aux ennemis."
   },
   "clef": {
     "name": "Clef",
@@ -380,7 +396,8 @@
     "max_stacks": 5,
     "duration": 3,
     "dmg_taken_per_stack": 8,
-    "resistable": false
+    "resistable": false,
+    "desc": "+8 % de dégâts subis par Clef (5 max). Purgeable."
   },
   "venin_solaire": {
     "name": "Venin solaire",
@@ -394,6 +411,7 @@
           "pct_max_hp": 20
         }
       ]
-    }
+    },
+    "desc": "Explose à la fin (20 % des PV max), sauf si on le purge."
   }
 }

@@ -40,6 +40,8 @@ var cam_look := CAM_LOOK
 var trauma := 0.0
 var active_ring: MeshInstance3D
 var hitstop_used := false
+var info_panel: PanelContainer
+var ui_root: Control
 var stars := {}       # BattleUnit -> étoiles qui tournent au-dessus de la tête (Étourdissement)
 var zz_timer := {}    # BattleUnit -> temps avant le prochain « Z » (Sommeil)
 
@@ -526,6 +528,11 @@ func _build_ui() -> void:
 	turn_label = UiKit.label("", 17, UI_ACCENT)
 	turn_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(turn_label)
+	ui_root = root
+	var infos := Button.new()
+	infos.text = "Infos"
+	infos.pressed.connect(_toggle_info)
+	top.add_child(infos)
 	var journal := Button.new()
 	journal.text = "Journal"
 	journal.pressed.connect(func() -> void: log_panel.visible = not log_panel.visible)
@@ -699,6 +706,81 @@ func _refresh() -> void:
 		c["panel"].modulate = Color(1, 1, 1, 1.0 if u.is_alive() else 0.4)
 	if engine.current != null:
 		turn_label.text = "Au tour de : %s" % engine.current.display_name
+
+
+## Fiche des combattants : stats, compétences (recharges) et effets actifs avec leur explication.
+func _toggle_info() -> void:
+	if info_panel != null:
+		info_panel.queue_free()
+		info_panel = null
+		return
+	info_panel = PanelContainer.new()
+	info_panel.add_theme_stylebox_override("panel", UiKit.panel_style(Color(UI_BG, 0.96), UI_ACCENT, 2, 12))
+	info_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	for side in ["left", "right"]:
+		info_panel.set("offset_" + side, 60 if side == "left" else -60)
+	info_panel.offset_top = 52
+	info_panel.offset_bottom = -20
+	ui_root.add_child(info_panel)
+	var v := VBoxContainer.new()
+	info_panel.add_child(v)
+	var head := HBoxContainer.new()
+	v.add_child(head)
+	var t := UiKit.label("Combattants", 22, UI_ACCENT)
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(t)
+	head.add_child(UiKit.button("Fermer", _toggle_info, Vector2(110, 40)))
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	v.add_child(scroll)
+	var cols := HBoxContainer.new()
+	cols.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cols.add_theme_constant_override("separation", 16)
+	scroll.add_child(cols)
+	for team in 2:
+		var col := VBoxContainer.new()
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		col.add_theme_constant_override("separation", 10)
+		cols.add_child(col)
+		col.add_child(UiKit.label("Ton équipe" if team == 0 else "Adversaires", 17, Color("cfc8e8")))
+		for u in engine.units:
+			if u.team == team:
+				col.add_child(_unit_info(u))
+
+
+func _unit_info(u: BattleUnit) -> Control:
+	var p := UiKit.panel(_col(u))
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 3)
+	p.add_child(v)
+	var cls: String = UiKit.CLASS_NAMES.get(u.data.get("class", ""), "Boss")
+	v.add_child(UiKit.label("%s  ·  %s%s" % [u.display_name, cls, "" if u.is_alive() else "  (hors combat)"], 16, _col(u).lightened(0.4)))
+	v.add_child(UiKit.label("PV %d/%d   ATK %d   DEF %d   VIT %d   TC %d %%   DC %d %%   PRÉ %d   RÉS %d" % [
+		int(u.hp), int(u.max_hp()), int(u.stat("atk")), int(u.stat("def")), int(u.stat("spd")), int(u.stat("cr")),
+		int(u.stat("cd")), int(u.stat("acc")), int(u.stat("res"))], 12, Color("cfc8e8")))
+	for i in 3:
+		var sk := u.skill(i)
+		var state := "passif" if u.is_passive(i) else ("prête" if u.cooldowns[i] == 0 else "recharge %d" % u.cooldowns[i])
+		var sl := UiKit.label("%s · %s  (%s)" % [["S1", "S2", "Ultime"][i], sk["name"], state], 13, Color.WHITE if state != "passif" else Color("b8b0d8"))
+		v.add_child(sl)
+		var d := UiKit.label(UiKit.skill_text(sk), 11, UiKit.DIM)
+		d.autowrap_mode = TextServer.AUTOWRAP_WORD
+		v.add_child(d)
+	if u.effects.is_empty():
+		v.add_child(UiKit.label("Aucun effet actif.", 12, UiKit.DIM))
+	for e in u.effects:
+		var def: Dictionary = GameData.rules()["effects"][e["id"]]
+		var kind: String = def["kind"]
+		var col := Color("7fd8a0") if kind == "buff" or kind == "aura" else (Color("ff8a7a") if kind in ["debuff", "cc", "mark"] else Color("e0c060"))
+		var turns := int(e["turns"])
+		var st := int(e.get("stacks", 1))
+		var txt := "%s%s%s : %s" % [BattleLog.effect_name(e["id"]), " x%d" % st if st > 1 else "",
+			"" if turns > 99 else " (%d t)" % turns, def.get("desc", "")]
+		var el := UiKit.label(txt, 12, col)
+		el.autowrap_mode = TextServer.AUTOWRAP_WORD
+		v.add_child(el)
+	return p
 
 
 func _clear_actions() -> void:

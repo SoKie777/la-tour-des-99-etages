@@ -21,6 +21,9 @@ func _initialize() -> void:
 				e._try_apply(u, u, {"id": pair[1], "turns": 3, "no_roll": true, "self_cost": true})
 				sc._status_look(u)
 	await create_timer(1.6).timeout
+	if "--info" in OS.get_cmdline_user_args():
+		sc._toggle_info()
+		await create_timer(0.4).timeout
 	root.get_texture().get_image().save_png(out)
 	print("SHOT ", out)
 	quit()
