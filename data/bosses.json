@@ -1,0 +1,28 @@
+{
+  "_comment": "Boss des étages (fiche, partie 2). Neutres (pas de triangle). traits.boss : 'final' (Gel impossible) ou 'mid' (Gel moitié moins probable) ; Étourdissement et Sommeil réussissent deux fois moins. phases : changements à un seuil de PV. revive_self_once : résurrection à X % des PV. Paliers de difficulté : 'difficulties' (multiplient PV, ATK et DEF).",
+  "difficulties": {
+    "facile": {"name": "Facile", "power": 1.0},
+    "difficile": {"name": "Difficile", "power": 1.3},
+    "purgatoire": {"name": "Purgatoire", "power": 1.7},
+    "enfer": {"name": "Enfer", "power": 2.2}
+  },
+  "bosses": {
+    "promethee": {
+      "id": "promethee", "name": "Prométhée", "constellation": "neutre", "class": "boss", "rarity": 0, "voie": "Techno-humanisme",
+      "height_m": 2.3,
+      "stats": {"hp": 60000, "atk": 1250, "def": 650, "spd": 125, "cr": 15, "cd": 60, "acc": 40, "res": 50},
+      "traits": {"boss": "final", "revive_self_once": 20, "predictive": true,
+        "phases": [{"at_hp_pct": 50, "name": "Surcharge", "self_burn_pct": 2, "dmg_bonus_pct": 30}]},
+      "skills": [
+        {"name": "Ignis Divinus", "target": "enemy", "hits": [{"scale": "atk", "mult": 0.95, "repeat": 2,
+          "on_hit": [{"id": "strip_buffs", "count": 1, "chance": 50}, {"id": "clef", "chance": 100}]}],
+          "desc": "Frappe 2 fois. Chaque coup : 50 % de chance de supprimer 1 buff, et pose une Clef."},
+        {"name": "Aletheia", "cd": 3, "target": "enemy", "target_pref": "repeated_skill",
+          "effects": [{"id": "freeze", "turns": 1, "cannot_resist": true, "if": "target_repeated_skill"}],
+          "desc": "Désactive un héros 1 tour (comme le Gel), seulement s'il a utilisé la même compétence deux tours de suite. Sinon, échoue."},
+        {"name": "Surcharge", "target": "all_enemies", "hits": [{"scale": "atk", "mult": 0.55, "repeat": 3}],
+          "desc": "Frappe toute l'équipe 3 fois. Chaque Clef augmente les dégâts subis."}
+      ]
+    }
+  }
+}

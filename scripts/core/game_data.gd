@@ -44,6 +44,14 @@ static func progression() -> Dictionary:
 	return load_json("res://data/progression.json")
 
 
+static func bosses() -> Dictionary:
+	return load_json("res://data/bosses.json")
+
+
+static func boss(id: String) -> Dictionary:
+	return bosses()["bosses"][id]
+
+
 static func characters() -> Dictionary:
 	if _characters_by_id.is_empty():
 		for c: Dictionary in load_json("res://data/characters.json")["characters"]:

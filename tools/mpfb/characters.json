@@ -1207,5 +1207,59 @@
     0.12
    ]
   }
+ },
+ "promethee": {
+  "macros": {
+   "gender": 1.0,
+   "age": 0.6,
+   "muscle": 1.0,
+   "weight": 0.62,
+   "proportions": 0.55,
+   "height": 1.0
+  },
+  "race": {
+   "african": 0.0,
+   "asian": 0.0,
+   "caucasian": 1.0
+  },
+  "skin": "Middleage caucasian male",
+  "hair": "Short01",
+  "eyebrows": "Eyebrow005",
+  "clothes": [
+   "Male worksuit01",
+   "Shoes04"
+  ],
+  "paint": {
+   "top": [
+    0.42,
+    0.45,
+    0.5
+   ],
+   "sleeve": [
+    0.95,
+    0.42,
+    0.08
+   ],
+   "cuff": [
+    1.0,
+    0.75,
+    0.2
+   ],
+   "bottom": [
+    0.12,
+    0.12,
+    0.14
+   ],
+   "shoes": [
+    0.08,
+    0.08,
+    0.09
+   ],
+   "hair": [
+    0.85,
+    0.85,
+    0.85
+   ]
+  }
  }
 }

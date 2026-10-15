@@ -23,10 +23,19 @@ static func floor_info(number: int) -> Dictionary:
 	return {}
 
 
-static func enemy_units(number: int) -> Array[BattleUnit]:
+## Ennemis d'un étage. Étage de boss : le boss (data/bosses.json), renforcé selon le palier de difficulté.
+static func enemy_units(number: int, difficulty := "facile") -> Array[BattleUnit]:
 	var f := floor_info(number)
 	var power := float(f["power"])
 	var out: Array[BattleUnit] = []
+	if f.has("boss_unit"):
+		var data := GameData.boss(f["boss_unit"])
+		var stats: Dictionary = data["stats"].duplicate()
+		var dp := float(GameData.bosses()["difficulties"][difficulty]["power"]) * power
+		for k in ["hp", "atk", "def"]:
+			stats[k] = roundf(float(stats[k]) * dp)
+		out.append(BattleUnit.new(data, 1, 0, stats))
+		return out
 	for id: String in f["enemies"]:
 		var data := GameData.character(id)
 		var stats: Dictionary = data["stats"].duplicate()

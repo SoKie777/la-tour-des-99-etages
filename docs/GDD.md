@@ -139,7 +139,14 @@ Espion de Lumière, Moussa, Issa, Mohamed). Ils sont nettement plus faibles que 
 
 ### Ascension de la Tour (univers 01, Cité d'Acier)
 
-12 étages ; l'étage 6 est Élite, l'étage 12 est le boss « Gardien de la Cité d'Acier ». Les ennemis sont
+12 étages ; l'étage 6 est Élite, l'étage 12 est le boss **Prométhée** (`data/bosses.json`, fiche partie 2) :
+Ignis Divinus (2 coups, retire des buffs, pose des Clefs : +8 % de dégâts subis par Clef, purgeables),
+Aletheia (désactive 1 tour un héros qui a utilisé la même compétence deux tours de suite, sinon échoue),
+Surcharge (3 coups sur toute l'équipe) ; ressuscite une fois à 20 % ; phase 2 sous 50 % PV (−2 % PV par
+tour, +30 % de dégâts). Règles des boss : Gel impossible sur un boss final, Étourdissement et Sommeil
+deux fois moins probables. Paliers Facile / Difficile / Purgatoire / Enfer (×1 / 1,3 / 1,7 / 2,2), la Tour
+utilise Facile. Réglage (`tools/tune_boss.gd`, sans reliques) : les Rares seuls perdent toujours, une
+équipe d'Épiques ou de Légendaires gagne environ 2 fois sur 3. Les ennemis sont
 des personnages du roster dont PV, ATK et DEF sont multipliés par la **puissance** de l'étage. Les
 personnages du joueur ont leurs stats de niveau max (pas encore de niveaux), d'où des puissances autour
 de 1. La difficulté dépend surtout de la composition adverse : quelques % de puissance font basculer un

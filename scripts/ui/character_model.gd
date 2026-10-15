@@ -39,6 +39,8 @@ const CHAR_MAP := {
 	"ezra": {"attack": "elbow", "skill": "kick_high", "ultimate": "flying_kick"},
 	"flint": {"idle": "idle_caster", "attack": "cast_attack", "skill": "heal", "ultimate": "cast_buff"},
 	"don_selah": {"attack": "punch_combo", "skill": "roar", "ultimate": "jump_attack"},
+	# boss
+	"promethee": {"attack": "punch_combo", "skill": "cast_attack", "ultimate": "cast_area"},
 }
 const HOLD_AT_END := ["ko"]
 

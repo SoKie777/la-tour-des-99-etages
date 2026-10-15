@@ -15,7 +15,7 @@
         {"enemies": ["mohamed", "issa", "moussa"], "power": 1.05},
         {"enemies": ["eirikr", "don_diego", "issa"], "power": 0.95},
         {"enemies": ["general_metal", "mohamed", "nidhogg"], "power": 1.25},
-        {"enemies": ["don_diego", "general_metal", "moussa"], "power": 1.15, "boss": "Gardien de la Cité d'Acier"}
+        {"enemies": [], "boss_unit": "promethee", "power": 1.0, "boss": "Prométhée"}
       ]
     }
   ],

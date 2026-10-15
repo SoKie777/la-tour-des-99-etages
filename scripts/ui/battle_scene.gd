@@ -100,6 +100,10 @@ func _on_battle_event(ev: Dictionary) -> void:
 			_float_text(ev["target"], "Résiste", Color("a0a0b8"))
 		"miss":
 			_float_text(ev["target"], "Raté", Color("a0a0b8"))
+		"phase":
+			_float_text(ev["target"], ev["name"].to_upper(), Color("ff8a3d"))
+		"boss_revive":
+			_float_text(ev["target"], "RÉSURRECTION", Color("ff8a3d"))
 		"clone_absorb":
 			_float_text(ev["target"], "Clone !", Color("b07de0"))
 		"effect":
@@ -143,7 +147,8 @@ func _build_world() -> void:
 	for u in engine.units:
 		var p := _make_pawn(u)
 		var side := -1.0 if u.team == 0 else 1.0
-		p.position = Vector3(side * 3.2, 0, (u.slot - 1) * 2.0)
+		var alone := engine.units.filter(func(x: BattleUnit) -> bool: return x.team == u.team).size() == 1
+		p.position = Vector3(side * 3.2, 0, 0.0 if alone else (u.slot - 1) * 2.0)  # un boss seul se tient au centre
 		p.rotation_degrees.y = 90.0 if u.team == 0 else -90.0
 		add_child(p)
 		pawns[u] = p
@@ -154,7 +159,7 @@ func _make_pawn(u: BattleUnit) -> Node3D:
 	if CharacterModel.available():
 		var model := CharacterModel.new()
 		root.add_child(model)
-		model.setup(u.id, COLORS[u.constellation])
+		model.setup(u.id, _col(u), float(u.data.get("height_m", 1.75)))
 		models[u] = model
 	else:
 		var mesh := MeshInstance3D.new()
@@ -164,7 +169,7 @@ func _make_pawn(u: BattleUnit) -> Node3D:
 		mesh.mesh = capsule
 		mesh.position.y = 0.85
 		var mat := StandardMaterial3D.new()
-		mat.albedo_color = COLORS[u.constellation]
+		mat.albedo_color = _col(u)
 		mesh.material_override = mat
 		root.add_child(mesh)
 	var label := Label3D.new()
@@ -173,9 +178,13 @@ func _make_pawn(u: BattleUnit) -> Node3D:
 	label.position.y = 2.15
 	label.font_size = 40
 	label.outline_size = 8
-	label.modulate = COLORS[u.constellation].lightened(0.4)
+	label.modulate = _col(u).lightened(0.4)
 	root.add_child(label)
 	return root
+
+
+func _col(u: BattleUnit) -> Color:
+	return COLORS.get(u.constellation, Color("b8a890"))  # boss neutre
 
 
 func _play_anim(u: BattleUnit, action: String) -> void:
@@ -297,7 +306,7 @@ func _build_ui() -> void:
 
 func _make_card(u: BattleUnit) -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _panel_style(Color(UI_BG, 0.85), COLORS[u.constellation]))
+	panel.add_theme_stylebox_override("panel", _panel_style(Color(UI_BG, 0.85), _col(u)))
 	var v := VBoxContainer.new()
 	panel.add_child(v)
 	var name_label := Label.new()

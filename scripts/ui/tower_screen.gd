@@ -68,7 +68,11 @@ func _floor_row(f: Dictionary) -> Control:
 	var names: Array[String] = []
 	for id: String in f["enemies"]:
 		names.append(UiKit.char_name(id))
-	var info := UiKit.label("%s%s\nPuissance %d %%" % [str(f["boss"]) + " : " if f.has("boss") else "", ", ".join(names), roundi(float(f["power"]) * 100.0)], 14, UiKit.DIM)
+	var txt := "%s\nPuissance %d %%" % [", ".join(names), roundi(float(f["power"]) * 100.0)]
+	if f.has("boss_unit"):
+		var b := GameData.boss(f["boss_unit"])
+		txt = "%s · %s\n%s" % [b["name"], b.get("voie", ""), b["skills"][1]["desc"]]
+	var info := UiKit.label(txt, 14, UiKit.DIM)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD
 	h.add_child(info)

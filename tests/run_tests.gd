@@ -17,6 +17,7 @@ func _init() -> void:
 	test_passives()
 	test_kits_v2()
 	test_generic_effects()
+	test_boss()
 	test_gacha()
 	test_relics()
 	test_profile()
@@ -448,6 +449,50 @@ func test_generic_effects() -> void:
 	var e4 := BattleEngine.new(["issa", "issa"], ["mohamed"], 6)
 	var first := e4.next_turn()
 	check(first.slot == 0 and first.team == 0, "Égalité de VIT : la première position joue d'abord")
+
+
+## Prométhée (étage 12) : phases, résurrection, Aletheia prédictive, résistance aux contrôles.
+func test_boss() -> void:
+	print("Boss : Prométhée")
+	var e := BattleEngine.new(["mello", "mikhaila"], Tower.enemy_units(12), 8)
+	var pro: BattleUnit = e.units[2]
+	var mel := unit_of(e, "mello")
+	check(pro.id == "promethee" and pro.constellation == "neutre", "Étage 12 : Prométhée, neutre")
+	check(not e._try_apply(mel, pro, {"id": "freeze", "turns": 1, "no_roll": true}), "Boss final : immunisé au Gel")
+	var stuns := 0
+	for i in 200:
+		pro.effects.clear()
+		if e._try_apply(mel, pro, {"id": "stun", "turns": 1, "no_roll": true}):
+			stuns += 1
+	check(stuns > 70 and stuns < 130, "Boss : Étourdissement deux fois moins probable (%d / 200)" % stuns)
+	pro.effects.clear()
+	e._apply_damage(pro, pro.max_hp() * 0.55, mel, {})
+	check(pro.flags.has("dmg_bonus_pct") and pro.flags.has("self_burn_pct"), "Phase 2 sous 50 % PV")
+	var hp := pro.hp
+	e._start_turn(pro)
+	approx(hp - pro.hp, roundf(pro.max_hp() * 0.02), "Phase 2 : perd 2 % de ses PV max par tour", 1.0)
+	e._apply_damage(pro, 999999.0, mel, {})
+	check(pro.is_alive() and is_equal_approx(pro.hp_ratio(), 0.2), "Laboratoire infini : ressuscite à 20 % PV")
+	e._apply_damage(pro, 999999.0, mel, {})
+	check(not pro.is_alive(), "Laboratoire infini : une seule fois")
+	# Aletheia : seulement contre un héros qui répète la même compétence
+	var e2 := BattleEngine.new(["mello", "mikhaila"], Tower.enemy_units(12), 8)
+	var p2: BattleUnit = e2.units[2]
+	var m2 := unit_of(e2, "mello")
+	var k2 := unit_of(e2, "mikhaila")
+	m2.skill_history.assign([0, 2])
+	k2.skill_history.assign([0, 2])
+	check(not e2.ai_choose(p2)["skill"] == 1 or p2.cooldowns[1] > 0, "Aletheia : pas lancée sans héros prévisible")
+	e2.execute(p2, p2.skill(1), m2, 1)
+	check(not m2.has_effect("freeze"), "Aletheia : échoue si le héros a varié ses compétences")
+	k2.skill_history.assign([0, 0])
+	p2.cooldowns = [0, 0, 0]
+	var c := e2.ai_choose(p2)
+	check(c["skill"] == 2 or (c["skill"] == 1 and c["target"] == k2), "Aletheia : vise le héros prévisible")
+	e2.execute(p2, p2.skill(1), k2, 1)
+	check(k2.has_effect("freeze"), "Aletheia : désactive un héros qui répète sa compétence")
+	e2.execute(p2, p2.skill(0), m2, 0)
+	check(m2.status_stacks("clef") == 2, "Ignis Divinus : une Clef par coup")
 
 
 func test_gacha() -> void:

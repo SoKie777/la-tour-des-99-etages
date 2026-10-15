@@ -26,6 +26,11 @@ func _ready() -> void:
 		battle_speed = 3.0
 		profile = Profile.new_game()  # le test ne touche pas à la sauvegarde
 		battle = {"mode": "tower", "floor": 1}
+		if "--boss" in OS.get_cmdline_user_args():  # Prométhée (étage 12) : -- --smoke --boss
+			for id in ["mikhaila", "ghost", "montana"]:
+				profile.owned[id] = 1
+			profile.set_team(["montana", "mikhaila", "ghost"])
+			battle = {"mode": "tower", "floor": 12}
 		if "--v2" in OS.get_cmdline_user_args():  # combat du roster v2 : -- --smoke --v2
 			battle = {"mode": "test", "player": GameData.nation_team("A"), "enemy": GameData.nation_team("C")}
 		get_tree().create_timer(120.0).timeout.connect(func() -> void:

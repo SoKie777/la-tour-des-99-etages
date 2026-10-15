@@ -3,19 +3,21 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://0hy2ytcuasnt"
-path="res://.godot/imported/mohamed_0.png-1326ee707927a65f11f5c20bc33e545d.ctex"
+path.s3tc="res://.godot/imported/mohamed_0.png-1326ee707927a65f11f5c20bc33e545d.s3tc.ctex"
+path.etc2="res://.godot/imported/mohamed_0.png-1326ee707927a65f11f5c20bc33e545d.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://assets/models/mohamed_0.png"
-dest_files=["res://.godot/imported/mohamed_0.png-1326ee707927a65f11f5c20bc33e545d.ctex"]
+dest_files=["res://.godot/imported/mohamed_0.png-1326ee707927a65f11f5c20bc33e545d.s3tc.ctex", "res://.godot/imported/mohamed_0.png-1326ee707927a65f11f5c20bc33e545d.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -36,5 +38,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=1024
 detect_3d/compress_to=1

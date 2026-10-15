@@ -28,6 +28,8 @@ var traits: Dictionary = {}
 var max_hp_loss := 0.0
 ## Drapeaux du combat : une fois par combat, contre-attaque déjà faite ce tour, coup critique reçu…
 var flags: Dictionary = {}
+## Index des compétences utilisées, dans l'ordre (Aletheia de Prométhée lit les deux dernières).
+var skill_history: Array[int] = []
 
 
 func _init(char_data: Dictionary, team_idx: int, slot_idx: int, stats_override: Dictionary = {}) -> void:

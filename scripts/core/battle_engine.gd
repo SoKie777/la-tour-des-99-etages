@@ -139,6 +139,8 @@ func compute_damage(att: BattleUnit, tgt: BattleUnit, raw: float, opts: Dictiona
 		dmg *= float(rules["triangle"]["dominated_damage_mult"])
 	if att.has_passive("fury"):
 		dmg *= 1.0 + 0.08 * att.stack("fury")
+	if att.flags.has("dmg_bonus_pct"):  # phase de boss
+		dmg *= 1.0 + float(att.flags["dmg_bonus_pct"]) / 100.0
 	if opts.has("low_hp_bonus") and tgt.hp_ratio() < 0.5:
 		dmg *= 1.0 + float(opts["low_hp_bonus"])
 	return dmg * _taken_mult(tgt)
@@ -215,6 +217,7 @@ func skip_turn(u: BattleUnit) -> void:
 func use_skill(u: BattleUnit, idx: int, target: BattleUnit = null) -> void:
 	assert(idx in usable_skills(u), "Compétence indisponible")
 	var sk := u.skill(idx)
+	u.skill_history.append(idx)
 	execute(u, sk, target, idx)
 	u.cooldowns[idx] = u.skill_cd(idx)
 	if sk.has("lock_skill"):  # « ne peut pas utiliser S2 au tour suivant »
@@ -430,6 +433,9 @@ func _condition(cond: String, u: BattleUnit, t: BattleUnit) -> bool:
 			return t.is_hard_cc()
 		"target_slowed":
 			return t.is_slowed()
+		"target_repeated_skill":  # Aletheia : même compétence deux tours de suite
+			var h := t.skill_history
+			return h.size() >= 2 and h[-1] == h[-2]
 	return true
 
 
@@ -437,6 +443,8 @@ func _condition(cond: String, u: BattleUnit, t: BattleUnit) -> bool:
 func ai_choose(u: BattleUnit) -> Dictionary:
 	var skills := usable_skills(u)
 	skills.reverse()
+	skills = skills.filter(func(i: int) -> bool:
+		return u.skill(i).get("target_pref", "") != "repeated_skill" 			or valid_targets(u, i).any(func(t: BattleUnit) -> bool: return _condition("target_repeated_skill", u, t)))
 	var idx: int = skills[0]
 	var target: BattleUnit = _ai_target(u, idx) if needs_target(u, idx) else null
 	return {"skill": idx, "target": target}
@@ -467,6 +475,10 @@ func _ai_target(u: BattleUnit, idx: int) -> BattleUnit:
 func _ai_target_for(u: BattleUnit, sk: Dictionary, valid: Array[BattleUnit]) -> BattleUnit:
 	valid = valid.duplicate()
 	valid.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.hp_ratio() < b.hp_ratio())
+	if sk.get("target_pref", "") == "repeated_skill":
+		var pred := valid.filter(func(t: BattleUnit) -> bool: return _condition("target_repeated_skill", u, t))
+		if not pred.is_empty():
+			return pred[0]
 	# Ne pas réveiller un ennemi endormi s'il y a une autre cible (réglage « ai_avoid_sleeping »).
 	if rules.get("ai_avoid_sleeping", false) and sk.has("hits"):
 		var awake := valid.filter(func(t: BattleUnit) -> bool: return t.team == u.team or not t.has_effect("sleep"))
@@ -487,6 +499,10 @@ func _start_turn(u: BattleUnit) -> void:
 	u.flags.erase("countered")
 	if u.has_passive("breeze"):
 		_heal(_lowest_hp(allies_of(u)), _lowest_hp(allies_of(u)).max_hp() * 0.10, u)
+	if u.flags.has("self_burn_pct"):  # phase 2 de Prométhée : la surcharge brûle ses circuits
+		_apply_damage(u, u.max_hp() * float(u.flags["self_burn_pct"]) / 100.0, u, {"dot": "surcharge"})
+		if not u.is_alive():
+			return
 	if u.get_trait("clone_per_turn", false):  # Clones temporels (Nyssa)
 		_try_apply(u, u, {"id": "clone"})
 	for e in u.effects.duplicate():
@@ -672,10 +688,15 @@ func _apply_damage(tgt: BattleUnit, dmg: float, source: BattleUnit, info: Dictio
 			tgt.flags["survived"] = true
 			tgt.hp = 1.0
 			_emit({"type": "survive", "target": tgt})
+		elif tgt.get_trait("revive_self_once") != null and not tgt.flags.has("self_revived"):
+			tgt.flags["self_revived"] = true  # Laboratoire infini : le réseau de Clefs le relève
+			tgt.hp = roundf(tgt.max_hp() * float(tgt.get_trait("revive_self_once")) / 100.0)
+			_emit({"type": "boss_revive", "target": tgt})
 	var ev := {"type": "damage", "target": tgt, "source": source, "amount": dmg}
 	ev.merge(info)
 	_emit(ev)
 	if tgt.is_alive():
+		_check_phases(tgt)
 		if direct:
 			if tgt.has_effect("sleep"):
 				_remove_effect(tgt, "sleep")
@@ -700,6 +721,20 @@ func _apply_damage(tgt: BattleUnit, dmg: float, source: BattleUnit, info: Dictio
 		_emit({"type": "death", "target": tgt})
 		_on_death(tgt)
 	return dmg
+
+
+## Phases de boss : au passage d'un seuil de PV, une seule fois chacune.
+func _check_phases(u: BattleUnit) -> void:
+	var phases: Array = u.get_trait("phases", [])
+	for i in phases.size():
+		var ph: Dictionary = phases[i]
+		if u.flags.has("phase_%d" % i) or u.hp_ratio() * 100.0 > float(ph["at_hp_pct"]):
+			continue
+		u.flags["phase_%d" % i] = true
+		for k in ["self_burn_pct", "dmg_bonus_pct"]:
+			if ph.has(k):
+				u.flags[k] = float(ph[k])
+		_emit({"type": "phase", "target": u, "name": ph.get("name", "Phase %d" % (i + 2))})
 
 
 ## Mort d'un personnage : ses auras disparaissent, ses statuts posés sur les autres réagissent (Lien).
@@ -801,6 +836,8 @@ func _apply_action(caster: BattleUnit, tgt: BattleUnit, ef: Dictionary, ctx: Dic
 			_emit({"type": "ap", "target": tgt, "amount": value})
 			return 1
 		"strip_buffs":
+			if ef.has("chance") and rng.randf() * 100.0 >= float(ef["chance"]):
+				return 0
 			var removed := 0
 			for e in tgt.effects.duplicate():
 				if _dispellable(e, "buff") and (int(ef.get("count", 0)) == 0 or removed < int(ef["count"])):
@@ -888,6 +925,14 @@ func _try_apply(caster: BattleUnit, tgt: BattleUnit, ef: Dictionary, attacker: B
 		var cis: Variant = ef.get("certain_if_stack")
 		if cis != null and tgt.marks(cis["stack"]) >= int(cis["min"]):
 			certain = true
+		var boss: String = str(tgt.get_trait("boss", ""))
+		if boss != "" and eid in ["freeze", "stun", "sleep"]:
+			if eid == "freeze" and boss == "final":
+				_emit({"type": "immune", "target": tgt, "effect": eid})
+				return false
+			if rng.randf() >= 0.5:  # deux fois moins de chances sur un boss, même pour un effet certain
+				_emit({"type": "resist", "target": tgt, "effect": eid})
+				return false
 		if not certain:
 			var chance := float(ef.get("chance", 100.0))
 			if eid == "freeze" and tgt.has_effect("givre"):
