@@ -18,6 +18,7 @@
   "skill2_cd_default": 3,
   "skill3_cd_default": 5,
   "skill3_initial_cd": 2,
+  "ai_avoid_sleeping": true,
   "max_actions": 300,
   "effects": {
     "burn":      {"kind": "debuff", "dot_on": "turn_start", "dot_pct_caster_atk": 35},
