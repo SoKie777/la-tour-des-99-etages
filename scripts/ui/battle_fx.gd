@@ -209,3 +209,37 @@ static func _box(s: Vector3) -> BoxMesh:
 	var b := BoxMesh.new()
 	b.size = s
 	return b
+
+
+## Projectile lumineux (sorts) : une sphère qui file vers la cible avec sa lumière.
+static func projectile(parent: Node3D, from: Vector3, to: Vector3, c: Color, duration: float) -> void:
+	var orb := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 0.16
+	sm.height = 0.32
+	orb.mesh = sm
+	orb.material_override = glow_material(c.lightened(0.3), 4.0)
+	orb.position = from
+	parent.add_child(orb)
+	var light := OmniLight3D.new()
+	light.light_color = c
+	light.light_energy = 2.0
+	light.omni_range = 2.5
+	orb.add_child(light)
+	var tw := orb.create_tween()
+	tw.tween_property(orb, "position", to, duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_callback(orb.queue_free)
+
+
+## Onde au sol qui s'élargit et s'efface (attaques de zone, soins de groupe).
+static func shockwave(parent: Node3D, center: Vector3, c: Color, radius: float, duration: float) -> void:
+	var ring := flat_ring(c, 1.0, 0.12, 3.0)
+	ring.position = center + Vector3(0, 0.05, 0)
+	ring.scale = Vector3(0.2, 0.05, 0.2)
+	var mat: StandardMaterial3D = ring.material_override
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	parent.add_child(ring)
+	var tw := ring.create_tween().set_parallel()
+	tw.tween_property(ring, "scale", Vector3(radius, 0.05, radius), duration).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	tw.tween_property(mat, "albedo_color:a", 0.0, duration)
+	tw.chain().tween_callback(ring.queue_free)

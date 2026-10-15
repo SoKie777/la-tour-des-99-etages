@@ -125,7 +125,10 @@ func _perform(actor: BattleUnit, skill_idx: int, target: BattleUnit) -> void:
 		tw.tween_property(pawn, "position", dest, 0.2 / Session.battle_speed)
 		await tw.finished
 	else:
-		await _pause(0.25)
+		await _pause(0.12)
+		await _skill_vfx(actor, sk, focus)
+	if melee and sk.get("target", "") == "all_enemies":
+		BattleFx.shockwave(self, _home(focus) * Vector3(0, 0, 1), _col(actor), 4.5, 0.5 / Session.battle_speed)
 	engine.use_skill(actor, skill_idx, target)
 	_refresh()
 	if melee:
@@ -166,6 +169,28 @@ func _ultimate_intro(actor: BattleUnit, skill_name: String) -> void:
 	out.tween_property(dim, "color:a", 0.0, 0.3)
 	out.tween_property(banner, "modulate:a", 0.0, 0.3)
 	out.tween_property(banner_sub, "modulate:a", 0.0, 0.3)
+
+
+## Effet visuel d'une compétence lancée à distance : projectile, onde de zone ou cercle de soutien.
+func _skill_vfx(actor: BattleUnit, sk: Dictionary, focus: BattleUnit) -> void:
+	var col := _col(actor)
+	var from := _home(actor) + Vector3(0, 1.3, 0)
+	var kind: String = sk.get("target", "enemy")
+	var dur := 0.28 / Session.battle_speed
+	if kind == "enemy" and focus != null and focus.team != actor.team:
+		BattleFx.projectile(self, from, _home(focus) + Vector3(0, 1.1, 0), col, dur)
+		await get_tree().create_timer(dur).timeout
+	elif kind == "all_enemies":
+		var line_z := -3.0 if actor.team == 0 else 2.3
+		for t in engine.enemies_of(actor):
+			BattleFx.projectile(self, from, _home(t) + Vector3(0, 1.1, 0), col, dur)
+		await get_tree().create_timer(dur).timeout
+		BattleFx.shockwave(self, Vector3(0, 0, line_z), col, 4.5, 0.5 / Session.battle_speed)
+		_shake(0.2)
+	elif kind in ["all_allies", "ally", "other_ally", "self"]:
+		var line_z := 2.3 if actor.team == 0 else -3.0
+		BattleFx.shockwave(self, Vector3(0, 0, line_z), col.lightened(0.4), 4.0, 0.6 / Session.battle_speed)
+		await _pause(0.2)
 
 
 func _cam_to(pos: Vector3, look: Vector3, t: float) -> void:
