@@ -111,9 +111,40 @@ Changer `VERSION`, puis committer et pousser sur `main`. On obtient :
 À relancer après chaque remodelage d'un personnage. `UiKit.portrait(id, taille)` affiche l'icône.
 
 ## Icônes d'effets et image de bannière
-- `python tools/status_icons.py` : une icône par effet de `data/rules.json` et `data/statuses.json`
-  (carré bleu à symbole blanc = bonus, rouge = malus) → `assets/status_icons/<id>.png`, affichées au-dessus
-  de la tête des combattants avec les tours restants. Symbole et légende : table `ICONS` du script.
+- `python tools/ui_icons.py` : toutes les icônes vectorielles (SVG 64 × 64, importées par Godot).
+  `assets/icons/<id>.svg` : glyphes ivoire des ressources, stats, classes, ensembles de reliques et boutons
+  (règle UI : zéro texte superflu, voir `UiKit.icon`, `UiKit.amount`, `UiKit.bb` et `UiKit.iconize`).
+  `assets/status_icons/<id>.svg` : un carré par effet de `data/rules.json` et `data/statuses.json`
+  (bleu minéral = bonus non dissipable, or ancien = bonus dissipable, rouge sceau = malus).
+  Planche de contrôle : `godot --path . --script res://tools/icon_sheet.gd -- planche.png`.
 - `godot --path . --script res://tools/banner_shot.gd -- <photo.png> [vedette]` puis
   `python tools/make_banner.py <photo.png> [titre] [sous-titre]` → `assets/ui/banner_legendaires.png`
   (clé `art` de la bannière dans `data/gacha.json`).
+
+## Décors de combat (Bible D.A.)
+`scripts/ui/battle_decor.gd` construit chaque décor sans texture : silhouettes de papier découpé en dégradé
+(bokashi), ciel, sol qui se fond dans la brume, arène à échiquier discret (`arena_checker.gdshader`),
+accessoires 3D et particules. Le décor vient des données : `decor` / `boss_decor` d'un univers
+(`data/tower.json`), `decor` d'un boss de butin (`data/loot_bosses.json`).
+
+| id | Lieu |
+|---|---|
+| `dojo` | cour de temple au crépuscule (combats libres) |
+| `acier` | Cité d'Acier : pagodes d'acier, cheminées, engrenage géant (étages 1 à 11) |
+| `forge` | sommet de Prométhée : éclipse, volcan, chaînes, braseros (étage 12) |
+| `orion` | sanctuaire du Chronophage : horloges flottantes, sabliers, Orion |
+| `givre` | lac gelé du Wyrm : monts enneigés, côtes de dragon, Grande Ourse |
+| `sirius` | désert du Serpent solaire : dunes, pyramides, serpent géant, obélisques |
+
+- Photo d'un décor : `godot --path . --script res://tools/decor_shot.gd -- <id> sortie.png`.
+- Forcer un décor en combat : `res://scenes/battle.tscn -- --smoke --decor=<id>` ; `--manual` garde la main
+  au joueur (captures des boutons de compétences).
+- Effets figés à mi-course : `godot --path . --script res://tools/fx_shot.gd -- sortie.png [décor]`.
+
+## Rendu (Bible D.A.)
+- Caméra de combat : FOV 40, reculée ; léger flou du lointain (`BattleDecor.camera_blur`) ; glow en lumière
+  douce, contraste 1,18, saturation 1,2, ombres ambiantes teintées de bleu minéral.
+- Personnages : `assets/materials/shaders/toon_ukiyoe.gdshader` (deux tons, ombre bleu minéral, liseré d'or),
+  contour couleur encre `#332C29` (`CharacterModel.ukiyoe_material`).
+- Effets : tranchant d'encre à défilement d'UV (`ink_slash.gdshader`, `BattleFx.ink_slash`), sceau doré sous
+  chaque unité (`unit_seal.gdshader`), frame d'impact noir et blanc sur les ultimes (`impact_flash.gdshader`).

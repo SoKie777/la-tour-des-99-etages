@@ -16,7 +16,7 @@ var roster_grid: GridContainer
 func _ready() -> void:
 	var owned := Session.profile.owned_ids()
 	selected = Session.profile.team[0] if not Session.profile.team.is_empty() else owned[0]
-	var content := UiKit.screen(self, "Collection et reliques")
+	var content := UiKit.screen(self, "Collection")
 	var cols := HBoxContainer.new()
 	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	cols.add_theme_constant_override("separation", 16)
@@ -28,7 +28,7 @@ func _ready() -> void:
 	var left_col := VBoxContainer.new()
 	left_col.custom_minimum_size.x = 360
 	cols.add_child(left_col)
-	left_col.add_child(UiKit.progress("Collection", Session.profile.owned_ids().size(), GameData.characters().size(), UiKit.ACCENT, 350))
+	left_col.add_child(UiKit.progress("★", Session.profile.owned_ids().size(), GameData.characters().size(), UiKit.ACCENT, 350))
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -69,7 +69,7 @@ func _select(id: String) -> void:
 	var d := GameData.character(id)
 	var cons := GameData.constellation_of(d["nation"])
 	view_box.add_child(UiKit.label(d["name"], 24, UiKit.RARITY_COLORS[int(d["rarity"])]))
-	view_box.add_child(UiKit.label("%s · %s\n%s · Voie : %s" % ["★".repeat(int(d["rarity"])), UiKit.CLASS_NAMES[d["class"]],
+	view_box.add_child(UiKit.rich("%s   %s\n%s · %s" % ["★".repeat(int(d["rarity"])), UiKit.bb(str(d["class"]), 18, UiKit.CONST_COLORS[cons]),
 		UiKit.CONST_NAMES[cons], d["voie"]], 14, UiKit.CONST_COLORS[cons]))
 	_refresh_details()
 
@@ -89,7 +89,7 @@ func _build_roster() -> void:
 		card.disabled = not owns
 		roster_grid.add_child(card)
 		if id in fresh:
-			UiKit.badge(card, "NOUVEAU")
+			UiKit.badge(card, "+")
 
 
 func _build_stats() -> void:
@@ -100,27 +100,25 @@ func _build_stats() -> void:
 	var grid := GridContainer.new()
 	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 18)
-	stats_box.add_child(UiKit.label("Stats (base → avec reliques)", 16, UiKit.ACCENT))
 	stats_box.add_child(grid)
 	for s: String in SHOWN_STATS:
 		var base := float(d["stats"][s])
 		var final := float(unit.base[s])
 		var pct := s in ["cr", "cd", "acc", "res"]
-		grid.add_child(UiKit.label(UiKit.STAT_NAMES[s], 15, UiKit.DIM))
+		grid.add_child(UiKit.icon(s, 20, UiKit.DIM))
 		var txt := "%d%s" % [int(final), " %" if pct else ""]
 		if int(final) != int(base):
 			txt = "%d → %s" % [int(base), txt]
-		grid.add_child(UiKit.label(txt, 15, UiKit.ACCENT if int(final) != int(base) else Color.WHITE))
+		grid.add_child(UiKit.label(txt, 15, UiKit.ACCENT if int(final) != int(base) else UiKit.PAPER))
 	if not unit.set_specials.is_empty():
-		stats_box.add_child(UiKit.label("Effets de sets : " + ", ".join(unit.set_specials), 13, UiKit.DIM))
+		var sp := UiKit.rich("%s  %s" % [UiKit.bb("relique", 16, UiKit.ACCENT), ", ".join(unit.set_specials)], 13, UiKit.DIM, true)
+		stats_box.add_child(sp)
 	stats_box.add_child(HSeparator.new())
 	stats_box.add_child(UiKit.label("Compétences", 16, UiKit.ACCENT))
 	for i in 3:
 		var sk: Dictionary = d["skills"][i]
-		stats_box.add_child(UiKit.label(["S1", "S2", "Ultime"][i] + " · " + sk["name"], 15))
-		var desc := UiKit.label(UiKit.skill_text(sk), 13, UiKit.DIM)
-		desc.autowrap_mode = TextServer.AUTOWRAP_WORD
-		stats_box.add_child(desc)
+		stats_box.add_child(UiKit.rich(("[color=#%s]◆[/color] " % UiKit.VERMILION.lightened(0.3).to_html(false) if i == 2 else "◇ ") + sk["name"], 15))
+		stats_box.add_child(UiKit.rich(UiKit.skill_text(sk), 13, UiKit.DIM, true))
 
 
 func _build_relics() -> void:
@@ -135,9 +133,9 @@ func _build_relics() -> void:
 	var worn: Dictionary = p.equipped.get(selected, {})
 	for slot in range(1, 7):
 		var r := p.relic(int(worn[str(slot)])) if worn.has(str(slot)) else {}
-		var txt := "%s · vide" % UiKit.roman(slot) if r.is_empty() else "%s %s\n%s +%d" % [UiKit.roman(slot),
-			UiKit.SET_NAMES.get(r["set"], r["set"]), UiKit.stat_text(r["main"]["stat"], float(r["main"]["value"])), int(r["level"])]
-		var b := UiKit.button(txt, _pick_slot.bind(slot), Vector2(150, 58))
+		var txt := UiKit.roman(slot) if r.is_empty() else "%s %s  %s" % [UiKit.roman(slot),
+			UiKit.bb("set_" + str(r["set"]), 16, UiKit.ACCENT), UiKit.stat_text(r["main"]["stat"], float(r["main"]["value"]))]
+		var b := UiKit.rich_button(txt, _pick_slot.bind(slot), Vector2(150, 58), 14)
 		if slot == slot_selected:
 			b.add_theme_stylebox_override("normal", UiKit.panel_style(Color(UiKit.ACCENT, 0.25), UiKit.ACCENT))
 		slots.add_child(b)
@@ -145,17 +143,15 @@ func _build_relics() -> void:
 	if not active.is_empty():
 		var names: Array[String] = []
 		for s: String in active:
-			names.append("%s (%d pièces)" % [UiKit.SET_NAMES.get(s, s), active[s]])
-		relic_box.add_child(UiKit.label("Sets actifs : " + ", ".join(names), 14, UiKit.ACCENT))
+			names.append("%s ×%d" % [UiKit.bb("set_" + s, 18, UiKit.ACCENT), active[s]])
+		relic_box.add_child(UiKit.rich("   ".join(names), 15, UiKit.ACCENT))
 
-	relic_box.add_child(UiKit.label("Reliques de l'emplacement %s (gagnées dans la Tour)" % UiKit.roman(slot_selected), 15, UiKit.DIM))
+	relic_box.add_child(UiKit.rich("%s %s" % [UiKit.bb("relique", 18), UiKit.roman(slot_selected)], 15, UiKit.DIM))
 	var candidates: Array[Dictionary] = []
 	for r in p.relics:
 		if int(r["slot"]) == slot_selected:
 			candidates.append(r)
 	candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["level"]) > int(b["level"]))
-	if candidates.is_empty():
-		relic_box.add_child(UiKit.label("Aucune pour l'instant.", 14, UiKit.DIM))
 	for r in candidates:
 		relic_box.add_child(_relic_row(r))
 
@@ -171,10 +167,8 @@ func _relic_row(r: Dictionary) -> Control:
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
-	v.add_child(UiKit.label(UiKit.relic_title(r), 15))
-	var sub := UiKit.label(UiKit.relic_subs(r) + ("" if owner == "" else "   · porté par " + UiKit.char_name(owner)), 12, UiKit.DIM)
-	sub.autowrap_mode = TextServer.AUTOWRAP_WORD
-	v.add_child(sub)
+	v.add_child(UiKit.rich(UiKit.relic_title(r), 15))
+	v.add_child(UiKit.rich(UiKit.relic_subs(r) + ("" if owner == "" else "   ‹ " + UiKit.char_name(owner)), 12, UiKit.DIM, true))
 	if owner == selected:
 		h.add_child(UiKit.button("Retirer", func() -> void:
 			p.unequip(selected, int(r["slot"]))
@@ -185,21 +179,21 @@ func _relic_row(r: Dictionary) -> Control:
 			_changed(), Vector2(96, 44)))
 	var maxed := int(r["level"]) >= int(GameData.relics()["max_level"])
 	var cost := p.relic_level_cost(r)
-	var up := UiKit.button("Max" if maxed else "+1\n%d P." % cost, func() -> void:
+	var up := UiKit.rich_button("MAX" if maxed else "+1  %s %s" % [UiKit.bb("pieces", 14), UiKit.thousands(cost)], func() -> void:
 		p.level_relic(uid, Session.rng)
-		_changed(), Vector2(84, 44))
+		_changed(), Vector2(110, 44), 13)
 	up.disabled = maxed or p.amount("pieces") < cost
 	h.add_child(up)
 	# recyclage intégral (fiche, partie 5) : deux appuis, car la relique disparaît
 	var gain := int(GameData.progression()["relic_recycle_base"]) + p.relic_invested(r)
-	var rec := UiKit.button("Recycler\n+%d P." % gain if recycle_armed != uid else "Sûr ?\n+%d P." % gain, func() -> void:
+	var rec := UiKit.rich_button("%s %s +%s" % [UiKit.bb("close", 14) if recycle_armed != uid else "?", UiKit.bb("pieces", 14), UiKit.thousands(gain)], func() -> void:
 		if recycle_armed != uid:
 			recycle_armed = uid
 			_build_relics()
 			return
 		recycle_armed = -1
 		p.recycle_relic(uid)
-		_changed(), Vector2(92, 44))
+		_changed(), Vector2(110, 44), 13)
 	h.add_child(rec)
 	return panel
 

@@ -922,7 +922,7 @@ static func _givre(p: Node3D) -> void:
 			var root := dir * f
 			for s: float in [-1.0, 1.0]:
 				flake.append(_seg_xform(root, root + dir.rotated(s * 0.8) * 1.1, 0.012, 0.05))
-	_multi(p, _box(Vector3(1, 0.02, 1)), BattleFx.glow_material(Color("e8f6ff"), 1.3), flake)
+	_multi(p, _box(Vector3(1, 0.02, 1)), BattleFx.glow_material(Color("cfe6f6"), 0.5), flake)
 	# côtes et échine d'un dragon pris dans la glace
 	var bone := _toon(Color("dfe9f2"), 0.12, 0.5)
 	for i in 4:

@@ -20,19 +20,21 @@ func _build() -> void:
 	var featured: Array[String] = []
 	for id: String in g.banner["featured"]:
 		featured.append(UiKit.char_name(id))
-	info.add_child(UiKit.label("Vedette : %s (chances doublées parmi les 5★)" % ", ".join(featured), 15))
+	info.add_child(UiKit.label("★ %s" % ", ".join(featured), 15))
 	# transparence : taux et garanties visibles (docs/CAPTOLOGIE.md)
 	var rates: Dictionary = g.banner["rates"]
-	info.add_child(UiKit.label("Taux : Rare %s %% · Épique %s %% · Légendaire %s %%" % [str(rates["3"]).trim_suffix(".0"), str(rates["4"]).trim_suffix(".0"), str(rates["5"]).trim_suffix(".0")], 14, UiKit.DIM))
-	info.add_child(UiKit.progress("Légendaire garanti (compteur)", g.pity_5, int(g.banner["hard_pity_5"]), UiKit.RARITY_COLORS[5], 300))
-	info.add_child(UiKit.progress("Épique ou mieux garanti (compteur)", g.pity_4, int(g.banner["guarantee_4_every"]), UiKit.RARITY_COLORS[4], 300))
-	info.add_child(UiKit.label("Doublons → Fragments d'étage (promotion, bientôt).", 13, UiKit.DIM))
+	var rate_txt: Array[String] = []
+	for r in [3, 4, 5]:
+		rate_txt.append("[color=#%s]%s[/color] %s %%" % [UiKit.RARITY_COLORS[r].to_html(false), "★".repeat(r), str(rates[str(r)]).trim_suffix(".0")])
+	info.add_child(UiKit.rich("    ".join(rate_txt), 14, UiKit.DIM))
+	info.add_child(UiKit.progress("[color=#%s]★★★★★[/color]" % UiKit.RARITY_COLORS[5].to_html(false), g.pity_5, int(g.banner["hard_pity_5"]), UiKit.RARITY_COLORS[5], 300))
+	info.add_child(UiKit.progress("[color=#%s]★★★★+[/color]" % UiKit.RARITY_COLORS[4].to_html(false), g.pity_4, int(g.banner["guarantee_4_every"]), UiKit.RARITY_COLORS[4], 300))
 	var cost := int(GameData.progression()["pull_cost"])
 	var buttons := HBoxContainer.new()  # boutons sous les infos : la ligne tient sur un écran de téléphone
 	buttons.add_theme_constant_override("separation", 12)
 	info.add_child(buttons)
 	for n in [1, 10]:
-		var b := UiKit.button("Invoquer x%d\n%d Éclats" % [n, n * cost], _pull.bind(n), Vector2(170, 72))
+		var b := UiKit.rich_button("Invoquer ×%d   %s %d" % [n, UiKit.bb("eclat_de_voeu", 18, UiKit.ACCENT), n * cost], _pull.bind(n), Vector2(200, 60))
 		b.disabled = Session.profile.amount("eclat_de_voeu") < n * cost
 		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		buttons.add_child(b)
@@ -67,13 +69,13 @@ func _result_card(r: Dictionary) -> Control:
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", UiKit.panel_style(Color(col, 0.22), col, 3 if r.get("new", false) else 1))
 	p.custom_minimum_size = Vector2(220, 80)
-	var tail := "NOUVEAU !" if r.get("new", false) else "+%d Fragments" % int(r.get("fragments", 0))
+	var tail := "NOUVEAU !" if r.get("new", false) else "%s +%d" % [UiKit.bb("fragments_etage", 15, col), int(r.get("fragments", 0))]
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 8)
 	p.add_child(h)
 	h.add_child(UiKit.portrait(r["id"], 72))
-	var l := UiKit.label("%s\n%s\n%s" % ["★".repeat(rarity), UiKit.char_name(r["id"]), tail], 15, col)
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var l := UiKit.rich("[center]%s\n%s\n%s[/center]" % ["★".repeat(rarity), UiKit.char_name(r["id"]), tail], 15, col)
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(l)
 	return p

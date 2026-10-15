@@ -1,14 +1,20 @@
 class_name UiKit
 extends RefCounted
-## Briques d'interface partagées par les écrans (couleurs, textes, boutons, vue 3D des personnages).
+## Briques d'interface partagées par les écrans (couleurs, icônes, textes, boutons, vue 3D des personnages).
+## Règle UI T99 : zéro texte superflu. Ressources, stats et effets s'affichent en icônes vectorielles
+## (assets/icons, assets/status_icons : tools/ui_icons.py) ; le texte ne sert qu'aux nombres, aux noms des
+## personnages et aux titres de menus.
 
-# Palette d'estampe ukiyo-e : nuit indigo, or ocre, bleu de Prusse (bero-ai), vermillon (shu), glycine (fuji).
-const BG := Color("121726")
-const PANEL := Color("1d2337")
-const ACCENT := Color("d4a446")
-const DIM := Color("9a95a8")
-const PAPER := Color("ece0c6")
-const VERMILION := Color("c4281f")
+# Palette officielle (Bible D.A.) : indigo nocturne, or ancien, ivoire papier, rouge sceau, bleu minéral, encre.
+const BG := Color("21172f")
+const PANEL := Color("2a2040")
+const ACCENT := Color("d1ad62")
+const DIM := Color("a89eb4")
+const PAPER := Color("e8dec5")
+const VERMILION := Color("b83a35")
+const MINERAL := Color("263c4a")
+const INK := Color("332c29")
+const ICON_DIR := "res://assets/icons/"
 const CONST_COLORS := {"orion": Color("4a7ab8"), "grande_ourse": Color("c94f35"), "sirius": Color("8e6bb8")}
 const CONST_NAMES := {"orion": "Orion", "grande_ourse": "Grande Ourse", "sirius": "Sirius"}
 const RARITY_COLORS := {3: Color("8fa3c0"), 4: Color("b07de0"), 5: Color("e8b84a")}
@@ -44,30 +50,32 @@ static func char_color(id: String) -> Color:
 	return CONST_COLORS[GameData.constellation_of(GameData.character(id)["nation"])]
 
 
+## Stat en BBCode (pour rich()) : icône puis valeur.
 static func stat_text(stat: String, value: float) -> String:
-	return "%s +%d%s" % [STAT_NAMES.get(stat, stat), int(value), " %" if stat in PCT_STATS else ""]
+	return "%s +%d%s" % [bb(stat.trim_suffix("_pct")), int(value), " %" if stat in PCT_STATS else ""]
 
 
 static func roman(n: int) -> String:
 	return ["", "I", "II", "III", "IV", "V", "VI"][n]
 
 
+## Relique en BBCode : icône d'ensemble, emplacement, stat principale, niveau.
 static func relic_title(r: Dictionary) -> String:
-	return "%s %s · %s · +%d" % [SET_NAMES.get(r["set"], r["set"]), roman(int(r["slot"])),
-		stat_text(r["main"]["stat"], float(r["main"]["value"])), int(r["level"])]
+	return "%s %s   %s   [color=#%s]+%d[/color]" % [bb("set_" + str(r["set"]), 18, ACCENT), roman(int(r["slot"])),
+		stat_text(r["main"]["stat"], float(r["main"]["value"])), ACCENT.to_html(false), int(r["level"])]
 
 
 static func relic_subs(r: Dictionary) -> String:
 	var parts: Array[String] = []
 	for s: String in r["subs"]:
 		parts.append(stat_text(s, float(r["subs"][s])))
-	return "  ".join(parts)
+	return "   ".join(parts)
 
 
-## Description courte d'une compétence, tirée de ses données.
+## Description courte d'une compétence, tirée de ses données (BBCode : stats et effets en icônes).
 static func skill_text(sk: Dictionary) -> String:
 	if sk.has("passive"):
-		return "Passif. " + str(sk.get("desc", ""))
+		return bb("passive") + " " + str(sk.get("desc", ""))
 	var parts: Array[String] = []
 	var hits: Array = sk.get("hits", [])
 	if not hits.is_empty():
@@ -77,9 +85,9 @@ static func skill_text(sk: Dictionary) -> String:
 			var terms: Array[String] = []
 			if sc is Dictionary:
 				for s: String in sc:
-					terms.append("%d %% %s" % [roundi(float(sc[s]) * 100.0), "PV max" if s == "hp" else STAT_NAMES.get(s, s)])
+					terms.append("%d %% %s" % [roundi(float(sc[s]) * 100.0), bb(s)])
 			else:
-				terms.append("%d %% %s" % [roundi(float(h.get("mult", 1.0)) * 100.0), "PV max" if sc == "hp" else STAT_NAMES.get(sc, sc)])
+				terms.append("%d %% %s" % [roundi(float(h.get("mult", 1.0)) * 100.0), bb(str(sc))])
 			var txt := " + ".join(terms)
 			if int(h.get("repeat", 1)) > 1:
 				txt = "%d x (%s)" % [int(h["repeat"]), txt]
@@ -92,13 +100,117 @@ static func skill_text(sk: Dictionary) -> String:
 			if ef["id"] in BattleEngine.ACTIONS:
 				continue
 			var chance := int(ef.get("chance", 100))
-			parts.append("%s %d tour(s)%s" % [BattleLog.effect_name(ef["id"]), int(ef.get("turns", 1)),
+			parts.append("%s %d%s" % [bb_status(ef["id"]), int(ef.get("turns", 1)),
 				" (%d %%)" % chance if chance < 100 else ""])
 	if sk.has("cd"):
-		parts.append("recharge %d" % int(sk["cd"]))
+		parts.append("%s %d" % [bb("cooldown"), int(sk["cd"])])
 	if sk.has("desc"):
 		parts.append(str(sk["desc"]).trim_suffix("."))
 	return ". ".join(parts) + "."
+
+
+# --- Icônes ------------------------------------------------------------------
+
+static func icon_texture(id: String) -> Texture2D:
+	var path := ICON_DIR + id + ".svg"
+	return load(path) if ResourceLoader.exists(path) else null
+
+
+static func status_texture(effect_id: String) -> Texture2D:
+	var path := "res://assets/status_icons/%s.svg" % effect_id
+	return load(path) if ResourceLoader.exists(path) else null
+
+
+static func icon(id: String, side := 20.0, tint := PAPER) -> TextureRect:
+	var t := TextureRect.new()
+	t.texture = icon_texture(id)
+	t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	t.custom_minimum_size = Vector2(side, side)
+	t.self_modulate = _icon_tint(tint)  # glyphes dessinés en ivoire
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return t
+
+
+## Icône suivie d'un nombre (ressource, stat…) : seul le chiffre est écrit.
+static func amount(id: String, text: String, size := 16, color := PAPER) -> HBoxContainer:
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 4)
+	h.add_child(icon(id, size * 1.25, color))
+	var l := label(text, size, color)
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	h.add_child(l)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return h
+
+
+## Icône dans un texte BBCode (rich()).
+static func bb(id: String, size := 16, tint := PAPER) -> String:
+	var path := ICON_DIR + id + ".svg"
+	if not ResourceLoader.exists(path):
+		return STAT_NAMES.get(id, id)
+	return "[img width=%d height=%d color=#%s]%s[/img]" % [size, size, _icon_tint(tint).to_html(), path]
+
+
+static func bb_status(effect_id: String, size := 16) -> String:
+	var path := "res://assets/status_icons/%s.svg" % effect_id
+	if not ResourceLoader.exists(path):
+		return BattleLog.effect_name(effect_id)
+	return "[img width=%d height=%d]%s[/img]" % [size, size, path]
+
+
+static func _icon_tint(tint: Color) -> Color:
+	return Color(minf(tint.r / PAPER.r, 1.0), minf(tint.g / PAPER.g, 1.0), minf(tint.b / PAPER.b, 1.0), tint.a)
+
+
+## Texte avec icônes (BBCode). wrap : retour à la ligne dans la largeur disponible.
+static func rich(text: String, size := 16, color := PAPER, wrap := false) -> RichTextLabel:
+	var r := RichTextLabel.new()
+	r.bbcode_enabled = true
+	r.fit_content = true
+	r.scroll_active = false
+	r.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if wrap else TextServer.AUTOWRAP_OFF
+	if wrap:
+		r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	r.add_theme_font_size_override("normal_font_size", size)
+	r.add_theme_color_override("default_color", color)
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	r.text = text
+	return r
+
+
+## Remplace les jetons {id} d'un texte par les icônes correspondantes (textes venus du cœur du jeu).
+static func iconize(text: String, size := 16, tint := PAPER) -> String:
+	var re := RegEx.create_from_string("\\{([a-z_]+)\\}")
+	var out := text
+	for m in re.search_all(text):
+		out = out.replace(m.get_string(), bb(m.get_string(1), size, tint))
+	return out
+
+
+## Bouton dont le libellé contient des icônes (BBCode centré).
+static func rich_button(text: String, cb: Callable, min_size := Vector2(150, 52), size := 16, color := PAPER) -> Button:
+	var b := button("", cb, min_size)
+	var r := rich("[center]%s[/center]" % text, size, color)
+	r.set_anchors_preset(Control.PRESET_FULL_RECT)
+	r.autowrap_mode = TextServer.AUTOWRAP_OFF
+	r.fit_content = false
+	r.offset_top = (min_size.y - size * 1.5) / 2.0
+	b.add_child(r)
+	return b
+
+
+## Bouton-icône (Retour, Infos, Journal…), sans texte.
+static func icon_button(id: String, cb: Callable, side := 44.0) -> Button:
+	var b := Button.new()
+	b.icon = icon_texture(id)
+	b.expand_icon = true
+	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.custom_minimum_size = Vector2(side, side)
+	b.add_theme_constant_override("icon_max_width", int(side * 0.55))
+	b.pressed.connect(cb)
+	juice(b)
+	return b
 
 
 # --- Widgets -----------------------------------------------------------------
@@ -120,7 +232,7 @@ static func panel(border := Color.TRANSPARENT) -> PanelContainer:
 	return p
 
 
-static func label(text: String, size := 16, color := Color.WHITE) -> Label:
+static func label(text: String, size := 16, color := PAPER) -> Label:
 	var l := Label.new()
 	l.text = text
 	l.add_theme_font_size_override("font_size", size)
@@ -152,11 +264,11 @@ static func juice(b: Control) -> void:
 			tw.tween_property(b, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT))
 
 
-## Barre de progression légendée (auto-suivi : le joueur voit où il en est).
+## Barre de progression légendée (auto-suivi : le joueur voit où il en est). text : BBCode (icônes).
 static func progress(text: String, value: float, maxv: float, col := ACCENT, width := 0.0) -> VBoxContainer:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 2)
-	v.add_child(label("%s  %d / %d" % [text, int(value), int(maxv)], 13, Color("cfc8e8")))
+	v.add_child(rich("%s  %d / %d" % [text, int(value), int(maxv)], 13, PAPER))
 	var bar := ProgressBar.new()
 	bar.max_value = maxv
 	bar.value = 0.0
@@ -166,7 +278,7 @@ static func progress(text: String, value: float, maxv: float, col := ACCENT, wid
 	fill.bg_color = col
 	fill.set_corner_radius_all(4)
 	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0.08, 0.06, 0.12)
+	bg.bg_color = Color(BG.darkened(0.4), 0.9)
 	bg.set_corner_radius_all(4)
 	bar.add_theme_stylebox_override("fill", fill)
 	bar.add_theme_stylebox_override("background", bg)
@@ -176,14 +288,14 @@ static func progress(text: String, value: float, maxv: float, col := ACCENT, wid
 
 
 ## Pastille discrète en haut à droite d'un bouton (suggestion au bon moment).
-static func badge(target: Control, text := "!") -> void:
+static func badge(target: Control, text := "!", icon_id := "") -> void:
 	var b := PanelContainer.new()
-	var st := panel_style(Color("e0463c"), Color.TRANSPARENT, 0, 10)
+	var st := panel_style(VERMILION, Color.TRANSPARENT, 0, 10)
 	st.set_content_margin_all(3)
 	st.content_margin_left = 7
 	st.content_margin_right = 7
 	b.add_theme_stylebox_override("panel", st)
-	b.add_child(label(text, 12, Color.WHITE))
+	b.add_child(amount(icon_id, text, 12) if icon_id != "" else label(text, 12, Color.WHITE))
 	b.anchor_left = 1.0
 	b.anchor_right = 1.0
 	b.offset_right = -6.0  # collée au coin, à l'intérieur du bouton
@@ -201,19 +313,19 @@ static func currency_bar() -> HBoxContainer:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 18)
 	var labels := {}
-	for k in ["eclat_de_voeu", "pieces", "fragments_etage"]:
-		labels[k] = label("", 15, ACCENT if k == "eclat_de_voeu" else Color.WHITE)
-		h.add_child(labels[k])
-	var en := label("", 15, Color("8fd8a0"))
-	h.add_child(en)
+	for k in ["eclat_de_voeu", "pieces", "fragments_etage", "energie"]:
+		var box := amount(k, "", 15, ACCENT if k == "eclat_de_voeu" else (Color("9fd8b0") if k == "energie" else PAPER))
+		labels[k] = box.get_child(1)
+		h.add_child(box)
 	var refresh := func() -> void:
 		for k: String in labels:
-			labels[k].text = "%s : %d" % [CURRENCY_NAMES[k], Session.profile.amount(k)]
+			if k != "energie":
+				labels[k].text = thousands(Session.profile.amount(k))
 		var p: Profile = Session.profile
 		p.refresh_energy(Session.now())
 		var nxt := p.energy_next_in(Session.now())
-		en.text = "Énergie : %d/%d%s" % [p.energy, int(GameData.progression()["energy"]["max"]),
-			"  (+1 dans %d:%02d)" % [nxt / 60, nxt % 60] if nxt > 0 else ""]
+		labels["energie"].text = "%d/%d%s" % [p.energy, int(GameData.progression()["energy"]["max"]),
+			"  %d:%02d" % [nxt / 60, nxt % 60] if nxt > 0 else ""]
 	refresh.call()
 	var timer := Timer.new()  # suit les dépenses faites sur l'écran
 	timer.wait_time = 0.25
@@ -223,30 +335,44 @@ static func currency_bar() -> HBoxContainer:
 	return h
 
 
+## 300000 → « 300 000 » (espace fine des milliers).
+static func thousands(n: int) -> String:
+	var s := str(absi(n))
+	var out := ""
+	while s.length() > 3:
+		out = "\u202f" + s.right(3) + out
+		s = s.left(s.length() - 3)
+	return ("-" if n < 0 else "") + s + out
+
+
 static var _theme: Theme
 
 
-## Thème commun : boutons sombres à liseré doré au survol, sélecteurs et onglets assortis.
+## Thème commun (Bible D.A.) : fonds indigo, fins liserés d'or ancien, texte ivoire.
 static func theme() -> Theme:
 	if _theme != null:
 		return _theme
 	var t := Theme.new()
-	var normal := panel_style(Color("1d1830"), Color("3a3258"), 1, 10)
-	var hover := panel_style(Color("2a2244"), ACCENT, 2, 10)
-	var pressed := panel_style(Color("3a2e5a"), ACCENT, 2, 10)
-	var disabled := panel_style(Color("16131f"), Color("2a2538"), 1, 10)
+	var normal := panel_style(PANEL, Color(ACCENT, 0.55), 1, 8)
+	var hover := panel_style(PANEL.lightened(0.08), ACCENT, 2, 8)
+	var pressed := panel_style(PANEL.lightened(0.16), ACCENT.lightened(0.2), 2, 8)
+	var disabled := panel_style(BG.darkened(0.2), Color(ACCENT, 0.15), 1, 8)
 	for cls in ["Button", "OptionButton"]:
 		t.set_stylebox("normal", cls, normal)
 		t.set_stylebox("hover", cls, hover)
 		t.set_stylebox("pressed", cls, pressed)
 		t.set_stylebox("disabled", cls, disabled)
 		t.set_stylebox("focus", cls, StyleBoxEmpty.new())
-		t.set_color("font_color", cls, Color("ece6ff"))
-		t.set_color("font_hover_color", cls, Color("fff4d6"))
-		t.set_color("font_disabled_color", cls, Color("6a6488"))
-	t.set_stylebox("panel", "TabContainer", panel_style(Color("1a1528"), Color.TRANSPARENT, 0, 8))
-	t.set_stylebox("tab_selected", "TabContainer", panel_style(Color("2a2244"), ACCENT, 1, 6))
-	t.set_stylebox("tab_unselected", "TabContainer", panel_style(Color("15121f"), Color.TRANSPARENT, 0, 6))
+		t.set_color("font_color", cls, PAPER)
+		t.set_color("font_hover_color", cls, Color("fff6e0"))
+		t.set_color("font_disabled_color", cls, Color(PAPER, 0.35))
+		t.set_color("icon_normal_color", cls, PAPER)
+		t.set_color("icon_hover_color", cls, Color("fff6e0"))
+		t.set_color("icon_disabled_color", cls, Color(PAPER, 0.35))
+	t.set_color("font_color", "Label", PAPER)
+	t.set_stylebox("panel", "TabContainer", panel_style(Color(BG, 0.9), Color.TRANSPARENT, 0, 8))
+	t.set_stylebox("tab_selected", "TabContainer", panel_style(PANEL.lightened(0.06), ACCENT, 1, 6))
+	t.set_stylebox("tab_unselected", "TabContainer", panel_style(BG.darkened(0.2), Color.TRANSPARENT, 0, 6))
 	_theme = t
 	return t
 
@@ -256,11 +382,11 @@ static func screen(owner: Control, title: String, back_scene := "res://scenes/ma
 	for c in owner.get_children():
 		c.queue_free()
 	owner.theme = theme()
-	var bg := TextureRect.new()  # fond en dégradé (violet nuit vers noir)
+	var bg := TextureRect.new()  # fond en dégradé (indigo nocturne vers encre)
 	var grad := GradientTexture2D.new()
 	var g := Gradient.new()
-	g.set_color(0, Color("2a1f45"))
-	g.set_color(1, Color("0b0912"))
+	g.set_color(0, BG.lightened(0.08))
+	g.set_color(1, Color("0d0914"))
 	grad.gradient = g
 	grad.fill = GradientTexture2D.FILL_RADIAL
 	grad.fill_from = Vector2(0.3, 0.35)
@@ -282,7 +408,7 @@ static func screen(owner: Control, title: String, back_scene := "res://scenes/ma
 	head.add_theme_constant_override("separation", 16)
 	v.add_child(head)
 	if back_scene != "":
-		head.add_child(button("Retour", func() -> void: owner.get_tree().change_scene_to_file(back_scene), Vector2(110, 44)))
+		head.add_child(icon_button("back", func() -> void: owner.get_tree().change_scene_to_file(back_scene)))
 	var t := label(title, 28, ACCENT)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(t)
@@ -322,8 +448,15 @@ static func char_card(id: String, cb: Callable, selected := false, locked := fal
 	b.add_theme_stylebox_override("hover", panel_style(Color(col, 0.3), col, 2))
 	b.add_theme_stylebox_override("pressed", panel_style(Color(col, 0.4), col, 3))
 	var rarity := int(GameData.character(id)["rarity"]) if GameData.characters().has(id) else 3
-	var cls: String = CLASS_NAMES.get(GameData.character(id)["class"], "") if GameData.characters().has(id) else ""
-	b.text = "%s\n%s\n%s" % [char_name(id) if not locked else "???", "★".repeat(rarity), cls]
+	b.text = "%s\n%s" % [char_name(id) if not locked else "???", "★".repeat(rarity)]
+	if GameData.characters().has(id) and not locked:  # classe en icône, en haut à droite
+		var ci := icon(str(GameData.character(id)["class"]), 18, Color(PAPER, 0.8))
+		ci.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		ci.offset_left = -24
+		ci.offset_top = 6
+		ci.offset_right = -6
+		ci.offset_bottom = 24
+		b.add_child(ci)
 	b.add_theme_color_override("font_color", RARITY_COLORS[rarity] if not locked else DIM)
 	if not locked:
 		b.icon = portrait_texture(id)

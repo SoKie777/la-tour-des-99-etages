@@ -7,7 +7,36 @@ extends RefCounted
 const INK := Color("1c1618")
 const SAKURA := Color("f29ab4")
 
+const SLASH_SHADER := preload("res://assets/materials/shaders/ink_slash.gdshader")
+const SEAL_SHADER := preload("res://assets/materials/shaders/unit_seal.gdshader")
+
 static var _disc_tex: GradientTexture2D
+static var _crescent: ArrayMesh
+
+
+## Croissant (UV.x le long du trait, UV.y en travers) : plus épais au milieu, effilé aux pointes.
+static func crescent_mesh() -> ArrayMesh:
+	if _crescent == null:
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		var n := 24
+		var outer: Array[Vector3] = []
+		var inner: Array[Vector3] = []
+		for i in n + 1:
+			var t := float(i) / n
+			var a := lerpf(-1.25, 1.25, t)
+			var w := 0.42 * sin(t * PI) + 0.02
+			outer.append(Vector3(cos(a), sin(a), 0) * (0.95 + w * 0.5))
+			inner.append(Vector3(cos(a), sin(a), 0) * (0.95 - w * 0.5))
+		for i in n:
+			var t0 := float(i) / n
+			var t1 := float(i + 1) / n
+			for v: Array in [[outer[i], t0, 0.0], [inner[i], t0, 1.0], [outer[i + 1], t1, 0.0],
+					[outer[i + 1], t1, 0.0], [inner[i], t0, 1.0], [inner[i + 1], t1, 1.0]]:
+				st.set_uv(Vector2(v[1], v[2]))
+				st.add_vertex(v[0])
+		_crescent = st.commit()
+	return _crescent
 
 
 ## Disque doux (dégradé radial) : tache d'encre, pétale, soleil, nuage.
@@ -120,6 +149,42 @@ static func burst(parent: Node3D, pos: Vector3, c: Color, amount := 24, speed :=
 	p.scale_amount_curve = curve
 	parent.add_child(p)
 	parent.get_tree().create_timer(life + 0.3).timeout.connect(p.queue_free)
+
+
+## Tranchant d'encre (vibe Ufotable) : un croissant de pinceau balaie la cible puis s'efface. Un seul
+## maillage et un shader à défilement d'UV, pas de particules lourdes.
+static func ink_slash(parent: Node3D, pos: Vector3, c: Color, crit := false, duration := 0.28) -> void:
+	var mi := MeshInstance3D.new()
+	mi.mesh = crescent_mesh()
+	var m := ShaderMaterial.new()
+	m.shader = SLASH_SHADER
+	m.set_shader_parameter("edge_color", c)
+	m.set_shader_parameter("angle", randf_range(-0.9, 0.9) + (PI if randf() < 0.5 else 0.0))
+	m.set_shader_parameter("seed", randf() * 50.0)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.position = pos
+	mi.scale = Vector3.ONE * (1.8 if crit else 1.4)
+	parent.add_child(mi)
+	var tw := mi.create_tween()
+	tw.tween_method(func(v: float) -> void: m.set_shader_parameter("progress", v), 0.0, 1.0, duration)
+	tw.tween_callback(mi.queue_free)
+
+
+## Sceau doré sous les pieds d'une unité (anneaux, graduations, échiquier inscrit).
+static func unit_seal(c: Color, radius := 0.62) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var q := QuadMesh.new()
+	q.size = Vector2(radius * 2.0, radius * 2.0)
+	q.orientation = PlaneMesh.FACE_Y
+	mi.mesh = q
+	var m := ShaderMaterial.new()
+	m.shader = SEAL_SHADER
+	m.set_shader_parameter("color", c)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.position.y = 0.03
+	return mi
 
 
 ## Impact : tache d'encre qui s'étale puis s'efface, gouttelettes d'encre et éclats de la couleur de l'attaquant.

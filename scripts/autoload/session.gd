@@ -26,7 +26,7 @@ func _ready() -> void:
 			save_path = a.trim_prefix("--save=")
 	if "--smoke" in OS.get_cmdline_user_args():
 		smoke_test = true
-		auto_battle = true
+		auto_battle = not "--manual" in OS.get_cmdline_user_args()  # --manual : captures des boutons de compétences
 		battle_speed = 3.0
 		profile = Profile.new_game()  # le test ne touche pas à la sauvegarde
 		battle = {"mode": "tower", "floor": 1}

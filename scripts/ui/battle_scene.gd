@@ -8,8 +8,8 @@ extends Node3D
 signal finished(winner: int)
 
 const COLORS := {"orion": Color("4d8fd6"), "grande_ourse": Color("c8553d"), "sirius": Color("9b6bd6")}
-const UI_BG := Color("14121f")
-const UI_ACCENT := Color("c9a24a")
+const UI_BG := UiKit.BG  # palette de la Bible D.A.
+const UI_ACCENT := UiKit.ACCENT
 const STACK_NAMES := {"spark": "Étincelle", "fury": "Fureur", "rage": "Rage", "visage": "Visage", "dette": "Dette",
 	"clone": "Clones", "inertia": "Inertie"}
 const CAM_FOV := 40.0  # focale serrée (Bible D.A.) : caméra reculée d'autant, les héros ressortent du décor
@@ -25,6 +25,7 @@ var bars := {}         # BattleUnit -> barre de vie 3D
 var cards := {}        # BattleUnit -> {hp: ProgressBar, info: Label}
 var status_rows := {}  # BattleUnit -> Node3D : icônes des effets au-dessus de la tête
 var markers := {}      # BattleUnit -> marqueur de la barre d'action
+var marker_status := {}  # BattleUnit -> petites icônes d'effets sous/sur le marqueur
 var float_stack := {}  # BattleUnit -> [instant ms, rang] des textes flottants
 var log_label: RichTextLabel
 var log_panel: PanelContainer
@@ -47,6 +48,7 @@ var info_panel: PanelContainer
 var ui_root: Control
 var stars := {}       # BattleUnit -> étoiles qui tournent au-dessus de la tête (Étourdissement)
 var zz_timer := {}    # BattleUnit -> temps avant le prochain « Z » (Sommeil)
+var flash_rect: ColorRect  # frame d'impact noir et blanc des ultimes
 
 
 func _ready() -> void:
@@ -145,12 +147,27 @@ func _perform(actor: BattleUnit, skill_idx: int, target: BattleUnit) -> void:
 	if melee and sk.get("target", "") == "all_enemies":
 		BattleFx.shockwave(self, _home(focus) * Vector3(0, 0, 1), _col(actor), 4.5, 0.5 / Session.battle_speed)
 	engine.use_skill(actor, skill_idx, target)
+	if skill_idx == 2:
+		_impact_flash()
 	_refresh()
 	if melee:
 		var back := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		back.tween_property(pawn, "position", home, 0.25 / Session.battle_speed)
 		await back.finished
 	await _pause(0.3)
+
+
+## Frame d'impact d'un ultime : un éclair noir et blanc à l'encre (Bible D.A., étape 4).
+func _impact_flash() -> void:
+	if flash_rect == null or Session.smoke_test:
+		return
+	flash_rect.visible = true
+	var m: ShaderMaterial = flash_rect.material
+	m.set_shader_parameter("amount", 1.0)
+	var tw := create_tween()
+	tw.tween_interval(0.07)
+	tw.tween_method(func(v: float) -> void: m.set_shader_parameter("amount", v), 1.0, 0.0, 0.18)
+	tw.tween_callback(func() -> void: flash_rect.visible = false)
 
 
 func _pause(seconds: float) -> void:
@@ -253,6 +270,8 @@ func _on_battle_event(ev: Dictionary) -> void:
 					models[t].flash(Color(1, 1, 1, 0.7) if not crit else Color(1, 0.7, 0.45, 0.9), 0.18)
 				if pawns.has(t):
 					BattleFx.ink_splash(self, pawns[t].position + Vector3(0, 1.2, 0.3), _col(src) if src != null else Color.WHITE, crit)
+					BattleFx.ink_slash(self, pawns[t].position + Vector3(0, 1.1, 0.45), _col(src).lightened(0.3) if src != null else UI_ACCENT,
+						crit, 0.28 / Session.battle_speed)
 				_shake(0.45 if crit else 0.22)
 				if crit:
 					_hitstop(0.07)
@@ -266,7 +285,7 @@ func _on_battle_event(ev: Dictionary) -> void:
 			if pawns.has(t):
 				BattleFx.petals(self, pawns[t].position + Vector3(0, 0.5, 0))
 		"resist", "immune":
-			_float_text(ev["target"], "Résiste", Color("a0a0b8"), 0.6)
+			_float_icon(ev["target"], UiKit.icon_texture("res"))
 		"miss":
 			_float_text(ev["target"], "Raté", Color("a0a0b8"), 0.9)
 		"phase":
@@ -288,7 +307,7 @@ func _on_battle_event(ev: Dictionary) -> void:
 			_float_text(ev["actor"], "Riposte", Color("ffd27f"), 0.9)
 			_play_anim(ev["actor"], "attack")
 		"effect":
-			_float_text(ev["target"], BattleLog.effect_name(ev["effect"]), Color("e0c060"), 0.6)
+			_float_icon(ev["target"], UiKit.status_texture(ev["effect"]))
 		"revive":
 			if pawns.has(ev["target"]):
 				_play_anim(ev["target"], "idle")
@@ -372,6 +391,7 @@ func _make_pawn(u: BattleUnit) -> Node3D:
 	shadow.material_override = sm
 	shadow.position.y = 0.02
 	root.add_child(shadow)
+	root.add_child(BattleFx.unit_seal(UI_ACCENT if u.team == 0 else UiKit.VERMILION.lightened(0.15)))  # socle-sceau
 	var row := Node3D.new()  # icônes des buffs (bleus) et debuffs (rouges) au-dessus de la tête
 	row.position.y = height + (0.3 if u.team == 0 else 0.85)
 	root.add_child(row)
@@ -495,6 +515,23 @@ func _float_text(u: BattleUnit, text: String, color: Color, size := 1.0) -> void
 	l.font_size = int(30 * size)
 	l.outline_size = 7
 	l.outline_modulate = Color(0.05, 0.02, 0.08)
+	_float_node(u, l)
+
+
+## Effet posé : son icône jaillit au-dessus de la cible (règle UI : pas de texte).
+func _float_icon(u: BattleUnit, tex: Texture2D) -> void:
+	if not pawns.has(u) or tex == null:
+		return
+	var sp := Sprite3D.new()
+	sp.texture = tex
+	sp.pixel_size = 0.005
+	sp.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	sp.no_depth_test = true
+	sp.render_priority = 4
+	_float_node(u, sp)
+
+
+func _float_node(u: BattleUnit, l: Node3D) -> void:
 	# textes simultanés sur la même cible : empilés au lieu de se superposer
 	var now := Time.get_ticks_msec()
 	var last: Array = float_stack.get(u, [0, -1])
@@ -520,6 +557,7 @@ func _build_ui() -> void:
 	var root := Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.theme = UiKit.theme()
 	layer.add_child(root)
 
 	dim = ColorRect.new()  # assombrissement des ultimes
@@ -527,6 +565,14 @@ func _build_ui() -> void:
 	dim.color = Color(0.02, 0.0, 0.05, 0.0)
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(dim)
+	flash_rect = ColorRect.new()
+	flash_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var fm := ShaderMaterial.new()
+	fm.shader = preload("res://assets/materials/shaders/impact_flash.gdshader")
+	flash_rect.material = fm
+	flash_rect.visible = false
+	root.add_child(flash_rect)
 	banner = UiKit.label("", 54, Color.WHITE)
 	banner.add_theme_font_override("font", GAME_FONT)
 	banner.add_theme_constant_override("outline_size", 14)
@@ -545,20 +591,15 @@ func _build_ui() -> void:
 	top.offset_top = 8
 	top.add_theme_constant_override("separation", 8)
 	root.add_child(top)
+	top.add_child(UiKit.icon("turn", 16, UI_ACCENT))
 	turn_label = UiKit.label("", 17, UI_ACCENT)
 	turn_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(turn_label)
 	ui_root = root
-	var infos := Button.new()
-	infos.text = "Infos"
-	infos.pressed.connect(_toggle_info)
-	top.add_child(infos)
-	var journal := Button.new()
-	journal.text = "Journal"
-	journal.pressed.connect(func() -> void: log_panel.visible = not log_panel.visible)
-	top.add_child(journal)
-	var auto := CheckButton.new()
-	auto.text = "Auto"
+	top.add_child(UiKit.icon_button("info", _toggle_info, 40))
+	top.add_child(UiKit.icon_button("journal", func() -> void: log_panel.visible = not log_panel.visible, 40))
+	var auto := UiKit.icon_button("auto", func() -> void: pass, 40)  # combat automatique : bouton à bascule
+	auto.toggle_mode = true
 	auto.button_pressed = Session.auto_battle
 	auto.toggled.connect(func(on: bool) -> void:
 		Session.auto_battle = on
@@ -567,15 +608,13 @@ func _build_ui() -> void:
 			_advance())
 	top.add_child(auto)
 	var speed := Button.new()
+	speed.custom_minimum_size = Vector2(52, 40)
 	speed.text = "x%d" % int(Session.battle_speed)
 	speed.pressed.connect(func() -> void:
 		Session.battle_speed = 1.0 if Session.battle_speed >= 3.0 else Session.battle_speed + 1.0
 		speed.text = "x%d" % int(Session.battle_speed))
 	top.add_child(speed)
-	var back := Button.new()
-	back.text = "Quitter"
-	back.pressed.connect(_back_to_menu)
-	top.add_child(back)
+	top.add_child(UiKit.icon_button("quit", _back_to_menu, 40))
 
 	_build_action_bar(root)
 
@@ -615,8 +654,8 @@ func _build_ui() -> void:
 
 	action_box = HBoxContainer.new()
 	action_box.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	action_box.offset_left = -330
-	action_box.offset_right = 330
+	action_box.offset_left = -360
+	action_box.offset_right = 360
 	action_box.offset_top = -92
 	action_box.offset_bottom = -14
 	action_box.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -638,65 +677,90 @@ func _build_ui() -> void:
 func _build_action_bar(root: Control) -> void:
 	var holder := Control.new()
 	holder.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	holder.offset_left = -320
-	holder.offset_right = 320
-	holder.offset_top = 44
-	holder.offset_bottom = 96
+	holder.offset_left = -300
+	holder.offset_right = 300
+	holder.offset_top = 52
+	holder.offset_bottom = 110
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(holder)
-	var track := ColorRect.new()
-	track.color = Color(UI_ACCENT, 0.55)
-	track.position = Vector2(0, 25)
-	track.size = Vector2(640, 3)
+	var track := ColorRect.new()  # fil du temps, centré
+	track.color = Color(UI_ACCENT, 0.7)
+	track.position = Vector2(0, 28)
+	track.size = Vector2(600, 2)
 	holder.add_child(track)
-	var goal := UiKit.label("▶", 18, UI_ACCENT)
-	goal.position = Vector2(642, 12)
+	for x in [0.0, 600.0]:
+		var tick := ColorRect.new()
+		tick.color = UI_ACCENT
+		tick.position = Vector2(x - 1, 22)
+		tick.size = Vector2(2, 14)
+		holder.add_child(tick)
+	var goal := UiKit.icon("turn", 16, UI_ACCENT)
+	goal.position = Vector2(606, 21)
 	holder.add_child(goal)
 	action_track = holder
 	for u in engine.units:
-		var m := PanelContainer.new()
-		var st := UiKit.panel_style(Color(_col(u), 0.85), Color.WHITE if u.team == 0 else Color("ff6060"), 1, 5)
-		st.set_content_margin_all(2)
-		m.add_theme_stylebox_override("panel", st)
-		if UiKit.portrait_texture(u.id) != null:
-			m.add_child(UiKit.portrait(u.id, 28))
-		else:
-			var l := UiKit.label(u.display_name.substr(0, 3), 11, Color.WHITE)
-			l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			l.custom_minimum_size = Vector2(30, 0)
-			m.add_child(l)
-		m.position = Vector2(0, 30 if u.team == 0 else 0)  # alliés sous la ligne, ennemis au-dessus
+		var m := VBoxContainer.new()
+		m.add_theme_constant_override("separation", 1)
 		m.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var box := PanelContainer.new()  # case carrée épurée
+		var st := UiKit.panel_style(Color(UI_BG, 0.92), UiKit.PAPER if u.team == 0 else UiKit.VERMILION, 1, 2)
+		st.set_content_margin_all(1)
+		box.add_theme_stylebox_override("panel", st)
+		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if UiKit.portrait_texture(u.id) != null:
+			box.add_child(UiKit.portrait(u.id, 26))
+		else:
+			var l := UiKit.label(u.display_name.substr(0, 2), 11)
+			l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			l.custom_minimum_size = Vector2(26, 26)
+			box.add_child(l)
+		var fx := HBoxContainer.new()
+		fx.add_theme_constant_override("separation", 1)
+		fx.alignment = BoxContainer.ALIGNMENT_CENTER
+		fx.custom_minimum_size = Vector2(28, 10)
+		fx.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# alliés sous le fil (effets dessous), ennemis au-dessus (effets dessus)
+		if u.team == 0:
+			m.add_child(box)
+			m.add_child(fx)
+			m.position = Vector2(0, 31)
+		else:
+			m.add_child(fx)
+			m.add_child(box)
+			m.position = Vector2(0, -15)
 		holder.add_child(m)
 		markers[u] = m
+		marker_status[u] = fx
 
 
 func _make_card(u: BattleUnit) -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _panel_style(Color(UI_BG, 0.82), _col(u)))
-	panel.custom_minimum_size.x = 236
+	panel.add_theme_stylebox_override("panel", _panel_style(Color(UI_BG, 0.78), _col(u)))
+	panel.custom_minimum_size.x = 226
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 6)
+	panel.add_child(h)
+	if UiKit.portrait_texture(u.id) != null:
+		h.add_child(UiKit.portrait(u.id, 34))
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 2)
-	panel.add_child(v)
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 6)
-	v.add_child(head)
-	if UiKit.portrait_texture(u.id) != null:
-		head.add_child(UiKit.portrait(u.id, 30))
-	var name_label := UiKit.label(u.display_name, 14)
-	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	head.add_child(name_label)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(v)
+	v.add_child(UiKit.label(u.display_name, 13))
 	var hp := ProgressBar.new()
 	hp.max_value = u.max_hp()
 	hp.show_percentage = false
-	hp.custom_minimum_size.y = 8
+	hp.custom_minimum_size.y = 5
 	var fill := StyleBoxFlat.new()
-	fill.bg_color = _col(u).lightened(0.2) if u.team == 0 else Color("d04848")
-	fill.set_corner_radius_all(3)
+	fill.bg_color = _col(u).lightened(0.25) if u.team == 0 else UiKit.VERMILION.lightened(0.15)
 	hp.add_theme_stylebox_override("fill", fill)
+	var empty := StyleBoxFlat.new()
+	empty.bg_color = Color(0, 0, 0, 0.45)
+	hp.add_theme_stylebox_override("background", empty)
 	v.add_child(hp)
-	var info := UiKit.label("", 11, Color("cfc8e8"))
-	info.autowrap_mode = TextServer.AUTOWRAP_WORD
+	var info := HFlowContainer.new()  # PV, bouclier, effets et cumuls : icônes + nombres
+	info.add_theme_constant_override("h_separation", 6)
+	info.add_theme_constant_override("v_separation", 1)
 	v.add_child(info)
 	cards[u] = {"hp": hp, "info": info, "panel": panel}
 	return panel
@@ -705,12 +769,29 @@ func _make_card(u: BattleUnit) -> Control:
 func _panel_style(bg: Color, border := Color.TRANSPARENT) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
 	s.bg_color = bg
-	s.set_corner_radius_all(8)
-	s.set_content_margin_all(7)
+	s.set_corner_radius_all(4)
+	s.set_content_margin_all(6)
+	s.border_color = Color(UI_ACCENT, 0.8)  # liseré d'or 1 px (Bible D.A.)
+	s.set_border_width_all(1)
 	if border.a > 0.0:
-		s.border_color = border
-		s.border_width_left = 4
+		s.border_width_left = 3  # couleur de constellation à gauche
 	return s
+
+
+## Petite icône d'effet avec ses tours restants (fiches, barre d'action).
+func _chip(tex: Texture2D, num: int, side := 15.0) -> Control:
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 1)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var t := TextureRect.new()
+	t.texture = tex
+	t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	t.custom_minimum_size = Vector2(side, side)
+	h.add_child(t)
+	if num >= 0:
+		h.add_child(UiKit.label(str(num), 11))
+	return h
 
 
 func _refresh() -> void:
@@ -719,24 +800,36 @@ func _refresh() -> void:
 		c["hp"].max_value = u.max_hp()
 		var tw := create_tween()
 		tw.tween_property(c["hp"], "value", u.hp, 0.25)
-		var parts: Array[String] = ["PV %d/%d" % [int(u.hp), int(u.max_hp())]]
-		if u.shield_value() > 0.0:
-			parts.append("Bouclier %d" % int(u.shield_value()))
+		var info: HFlowContainer = c["info"]
+		for ch in info.get_children():
+			ch.queue_free()
+		if not u.is_alive():
+			info.add_child(UiKit.icon("boss", 15, UiKit.DIM))  # hors combat
+		else:
+			info.add_child(UiKit.amount("hp", "%d/%d" % [int(u.hp), int(u.max_hp())], 11))
+			if u.shield_value() > 0.0:
+				info.add_child(UiKit.amount("shield", str(int(u.shield_value())), 11, Color("9fc8e8")))
+			for e in u.effects:
+				if e["id"] != "shield":
+					var turns := int(e["turns"])
+					info.add_child(_chip(UiKit.status_texture(e["id"]), turns if turns <= 99 else -1))
+			for st: String in u.stacks:
+				if u.stack(st) > 0:
+					info.add_child(UiKit.amount("stack_" + st, str(u.stack(st)), 11, UI_ACCENT))
+		(c["panel"] as Control).modulate = Color(1, 1, 1, 1.0 if u.is_alive() else 0.4)
+	for u: BattleUnit in marker_status:
+		var fx: HBoxContainer = marker_status[u]
+		for ch in fx.get_children():
+			ch.queue_free()
+		var n := 0
 		for e in u.effects:
-			var turns := int(e["turns"])
-			if e["id"] == "shield":
-				continue
-			var label := BattleLog.effect_name(e["id"]) + (" x%d" % int(e["stacks"]) if int(e.get("stacks", 1)) > 1 else "")
-			parts.append(label if turns > 99 else "%s(%d)" % [label, turns])
-		for s: String in u.stacks:
-			if u.stack(s) > 0:
-				parts.append("%s %d" % [STACK_NAMES.get(s, s.capitalize()), u.stack(s)])
-		c["info"].text = "  ".join(parts) if u.is_alive() else "Hors combat"
-		c["panel"].modulate = Color(1, 1, 1, 1.0 if u.is_alive() else 0.4)
+			if e["id"] != "shield" and n < 3:
+				fx.add_child(_chip(UiKit.status_texture(e["id"]), -1, 9))
+				n += 1
 	for u: BattleUnit in status_rows:
 		_refresh_status_row(u)
 	if engine.current != null:
-		turn_label.text = "Au tour de : %s" % engine.current.display_name
+		turn_label.text = engine.current.display_name
 
 
 const GOOD_KINDS := ["buff", "aura", "stance"]
@@ -751,7 +844,7 @@ func _refresh_status_row(u: BattleUnit) -> void:
 		return
 	var shown: Array[Dictionary] = []
 	for e in u.effects:
-		if e["id"] != "shield" and ResourceLoader.exists("res://assets/status_icons/%s.png" % e["id"]):
+		if e["id"] != "shield" and UiKit.status_texture(e["id"]) != null:
 			shown.append(e)
 	var effects_def: Dictionary = GameData.rules()["effects"]
 	shown.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
@@ -761,7 +854,7 @@ func _refresh_status_row(u: BattleUnit) -> void:
 	for i in shown.size():
 		var e: Dictionary = shown[i]
 		var s := Sprite3D.new()
-		s.texture = load("res://assets/status_icons/%s.png" % e["id"])
+		s.texture = UiKit.status_texture(e["id"])
 		s.pixel_size = 0.0034
 		s.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		s.no_depth_test = true
@@ -803,7 +896,7 @@ func _toggle_info() -> void:
 	var t := UiKit.label("Combattants", 22, UI_ACCENT)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(t)
-	head.add_child(UiKit.button("Fermer", _toggle_info, Vector2(110, 40)))
+	head.add_child(UiKit.icon_button("close", _toggle_info, 40))
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -828,32 +921,31 @@ func _unit_info(u: BattleUnit) -> Control:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 3)
 	p.add_child(v)
-	var cls: String = UiKit.CLASS_NAMES.get(u.data.get("class", ""), "Boss")
-	v.add_child(UiKit.label("%s  ·  %s%s" % [u.display_name, cls, "" if u.is_alive() else "  (hors combat)"], 16, _col(u).lightened(0.4)))
-	v.add_child(UiKit.label("PV %d/%d   ATK %d   DEF %d   VIT %d   TC %d %%   DC %d %%   PRÉ %d   RÉS %d" % [
-		int(u.hp), int(u.max_hp()), int(u.stat("atk")), int(u.stat("def")), int(u.stat("spd")), int(u.stat("cr")),
-		int(u.stat("cd")), int(u.stat("acc")), int(u.stat("res"))], 12, Color("cfc8e8")))
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 6)
+	v.add_child(head)
+	head.add_child(UiKit.icon(str(u.data.get("class", "boss")) if UiKit.CLASS_NAMES.has(u.data.get("class", "")) else "boss", 18, _col(u).lightened(0.4)))
+	head.add_child(UiKit.label(u.display_name, 16, _col(u).lightened(0.4)))
+	if not u.is_alive():
+		head.add_child(UiKit.icon("boss", 16, UiKit.DIM))
+	var stats := HFlowContainer.new()
+	stats.add_theme_constant_override("h_separation", 12)
+	v.add_child(stats)
+	stats.add_child(UiKit.amount("hp", "%d/%d" % [int(u.hp), int(u.max_hp())], 12))
+	for k in ["atk", "def", "spd", "cr", "cd", "acc", "res"]:
+		stats.add_child(UiKit.amount(k, ("%d %%" if k in ["cr", "cd"] else "%d") % int(u.stat(k)), 12))
 	for i in 3:
 		var sk := u.skill(i)
-		var state := "passif" if u.is_passive(i) else ("prête" if u.cooldowns[i] == 0 else "recharge %d" % u.cooldowns[i])
-		var sl := UiKit.label("%s · %s  (%s)" % [["S1", "S2", "Ultime"][i], sk["name"], state], 13, Color.WHITE if state != "passif" else Color("b8b0d8"))
-		v.add_child(sl)
-		var d := UiKit.label(UiKit.skill_text(sk), 11, UiKit.DIM)
-		d.autowrap_mode = TextServer.AUTOWRAP_WORD
-		v.add_child(d)
-	if u.effects.is_empty():
-		v.add_child(UiKit.label("Aucun effet actif.", 12, UiKit.DIM))
+		var state := UiKit.bb("passive") if u.is_passive(i) else ("" if u.cooldowns[i] == 0 else "%s %d" % [UiKit.bb("cooldown"), u.cooldowns[i]])
+		var tag := "[color=#%s]%s[/color]" % [UiKit.VERMILION.lightened(0.3).to_html(false), "◆"] if i == 2 else "◇"
+		v.add_child(UiKit.rich("%s %s  %s" % [tag, sk["name"], state], 13, UiKit.PAPER if not u.is_passive(i) else UiKit.DIM))
+		v.add_child(UiKit.rich(UiKit.skill_text(sk), 11, UiKit.DIM, true))
 	for e in u.effects:
 		var def: Dictionary = GameData.rules()["effects"][e["id"]]
-		var kind: String = def["kind"]
-		var col := Color("7fd8a0") if kind == "buff" or kind == "aura" else (Color("ff8a7a") if kind in ["debuff", "cc", "mark"] else Color("e0c060"))
 		var turns := int(e["turns"])
 		var st := int(e.get("stacks", 1))
-		var txt := "%s%s%s : %s" % [BattleLog.effect_name(e["id"]), " x%d" % st if st > 1 else "",
-			"" if turns > 99 else " (%d t)" % turns, def.get("desc", "")]
-		var el := UiKit.label(txt, 12, col)
-		el.autowrap_mode = TextServer.AUTOWRAP_WORD
-		v.add_child(el)
+		v.add_child(UiKit.rich("%s %s%s  %s" % [UiKit.bb_status(e["id"], 18), "" if turns > 99 else str(turns),
+			" ×%d" % st if st > 1 else "", def.get("desc", "")], 12, UiKit.PAPER, true))
 	return p
 
 
@@ -862,15 +954,20 @@ func _clear_actions() -> void:
 		c.queue_free()
 
 
-func _skill_button(text: String, border: Color, cb: Callable, disabled := false) -> Button:
+func _skill_button(text: String, border: Color, cb: Callable, disabled := false, ultimate := false) -> Button:
 	var b := Button.new()
 	b.text = text
-	b.custom_minimum_size = Vector2(200, 72)
+	b.custom_minimum_size = Vector2(210, 66)
 	b.autowrap_mode = TextServer.AUTOWRAP_WORD
-	b.add_theme_stylebox_override("normal", UiKit.panel_style(Color(UI_BG, 0.9), border, 2, 12))
-	b.add_theme_stylebox_override("hover", UiKit.panel_style(Color(border, 0.3), border, 3, 12))
-	b.add_theme_stylebox_override("pressed", UiKit.panel_style(Color(border, 0.5), border, 3, 12))
-	b.add_theme_stylebox_override("disabled", UiKit.panel_style(Color(UI_BG, 0.7), Color(border, 0.25), 1, 12))
+	var bg := Color(UiKit.VERMILION.darkened(0.45), 0.92) if ultimate else Color(UI_BG, 0.9)
+	b.add_theme_stylebox_override("normal", UiKit.panel_style(bg, border, 2 if ultimate else 1, 6))
+	var glow := UiKit.panel_style(bg.lightened(0.15), border.lightened(0.3), 3, 6)  # surbrillance à la sélection
+	glow.shadow_color = Color(border, 0.55)
+	glow.shadow_size = 8
+	b.add_theme_stylebox_override("hover", glow)
+	b.add_theme_stylebox_override("pressed", glow)
+	b.add_theme_stylebox_override("disabled", UiKit.panel_style(Color(UI_BG, 0.7), Color(border, 0.25), 1, 6))
+	b.add_theme_color_override("font_color", UiKit.PAPER)
 	b.disabled = disabled
 	b.pressed.connect(cb)
 	b.scale = Vector2(0.85, 0.85)
@@ -880,21 +977,29 @@ func _skill_button(text: String, border: Color, cb: Callable, disabled := false)
 	return b
 
 
+## Pastille d'angle d'un bouton (recharge, passif, PV de la cible).
+func _corner(b: Control, c: Control) -> void:
+	c.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	c.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	c.offset_right = -6
+	c.offset_top = 4
+	b.add_child(c)
+
+
 func _show_actions(actor: BattleUnit) -> void:
 	waiting_input = true
 	_clear_actions()
 	for i in 3:
 		var sk := actor.skill(i)
-		var border := UI_ACCENT if i == 2 else _col(actor).lightened(0.2)
 		if actor.is_passive(i):
-			var pb := _skill_button("%s · %s\n(passif)" % [["S1", "S2", "S3"][i], sk["name"]], Color("6a6488"), func() -> void: pass, true)
-			pb.tooltip_text = sk.get("desc", "")
+			var pb := _skill_button(sk["name"], Color(UI_ACCENT, 0.4), func() -> void: pass, true)
+			_corner(pb, UiKit.icon("passive", 16, UiKit.DIM))
 			action_box.add_child(pb)
 		else:
 			var cd := actor.cooldowns[i]
-			var txt := "%s · %s" % [["S1", "S2", "ULTIME"][i], sk["name"]] + ("\nrecharge %d" % cd if cd > 0 else "")
-			var b := _skill_button(txt, border, _on_skill_chosen.bind(actor, i), not i in engine.usable_skills(actor))
-			b.tooltip_text = UiKit.skill_text(sk)
+			var b := _skill_button(sk["name"], UI_ACCENT, _on_skill_chosen.bind(actor, i), not i in engine.usable_skills(actor), i == 2)
+			if cd > 0:
+				_corner(b, UiKit.amount("cooldown", str(cd), 12))
 			action_box.add_child(b)
 
 
@@ -906,13 +1011,15 @@ func _on_skill_chosen(actor: BattleUnit, idx: int) -> void:
 		return
 	_clear_actions()
 	for t in engine.valid_targets(actor, idx):
-		var b := _skill_button("%s\n%d %% PV" % [t.display_name, int(t.hp_ratio() * 100)], _col(t), func() -> void:
+		var b := _skill_button(t.display_name, _col(t), func() -> void:
 			waiting_input = false
 			await _perform(actor, idx, t)
 			_advance())
 		b.custom_minimum_size = Vector2(170, 64)
+		_corner(b, UiKit.amount("hp", "%d %%" % int(t.hp_ratio() * 100), 12))
 		action_box.add_child(b)
-	action_box.add_child(_skill_button("Retour", Color("6a6488"), _show_actions.bind(actor)))
+	var back := UiKit.icon_button("back", _show_actions.bind(actor), 64)
+	action_box.add_child(back)
 
 
 func _show_result() -> void:
@@ -935,58 +1042,53 @@ func _show_result() -> void:
 	if in_loot and engine.winner != 0 and not Session.smoke_test:
 		Session.profile.refund_energy(int(Session.battle.get("energy", 0)))
 		Session.save()
-		var ll := Label.new()
-		ll.text = "Énergie rendue (+%d)" % int(Session.battle.get("energy", 0))
-		ll.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		v.add_child(ll)
+		_reward_lines(v, [["%s +%d" % [UiKit.bb("energie", 20), int(Session.battle.get("energy", 0))], false]])
 	if in_loot and engine.winner == 0 and not Session.smoke_test:
 		var lrw := Session.profile.win_loot(Session.battle["boss"], int(Session.battle["diff"]), Session.rng)
 		Session.save()
-		var ls: Array[String] = ["+%d Pièces" % lrw["currencies"]["pieces"]]
+		var ls: Array = [["%s +%s" % [UiKit.bb("pieces", 20), UiKit.thousands(lrw["currencies"]["pieces"])], false]]
 		for r: Dictionary in lrw["relics"]:
-			ls.append("Relique : " + UiKit.relic_title(r))
+			ls.append([UiKit.relic_title(r), false])
 		if lrw["pity_used"] != "":
-			ls.append("Relique garantie : set " + UiKit.SET_NAMES.get(lrw["pity_used"], lrw["pity_used"]))
+			ls.append(["%s %s ✓" % [UiKit.bb("relique", 20, UI_ACCENT), UiKit.bb("set_" + str(lrw["pity_used"]), 20, UI_ACCENT)], true])
 		if lrw.has("unlocked"):
-			ls.append("Palier débloqué : " + LootBoss.difficulty(int(lrw["unlocked"]))["name"])
+			ls.append(["▲ " + str(LootBoss.difficulty(int(lrw["unlocked"]))["name"]), true])
 		_reward_lines(v, ls)
 	if in_tower and engine.winner != 0 and not Session.smoke_test and GameData.progression()["energy"]["refund_on_defeat"]:
 		Session.profile.refund_energy(int(Session.battle.get("energy", 0)))
 		Session.save()
 		if int(Session.battle.get("energy", 0)) > 0:
-			var lr := Label.new()
-			lr.text = "Énergie rendue (+%d)" % int(Session.battle["energy"])
-			lr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			v.add_child(lr)
+			_reward_lines(v, [["%s +%d" % [UiKit.bb("energie", 20), int(Session.battle["energy"])], false]])
 	if in_tower and engine.winner == 0 and not Session.smoke_test:
 		var rw := Session.profile.win_floor(floor_n, Session.rng)
 		Session.save()
-		var lines: Array[String] = ["Étage %d franchi !" % floor_n if rw["first_clear"] else "Étage %d" % floor_n]
-		lines.append("+%d Pièces" % rw["currencies"]["pieces"])
+		var lines: Array = [["%s %d%s" % [UiKit.bb("floor", 22, UI_ACCENT), floor_n, "  ★" if rw["first_clear"] else ""], rw["first_clear"]]]
+		lines.append(["%s +%s" % [UiKit.bb("pieces", 20), UiKit.thousands(rw["currencies"]["pieces"])], false])
 		if rw["currencies"].has("eclat_de_voeu"):
-			lines.append("+%d Éclats de Vœu (première victoire)" % rw["currencies"]["eclat_de_voeu"])
+			lines.append(["%s +%d" % [UiKit.bb("eclat_de_voeu", 22, UI_ACCENT), rw["currencies"]["eclat_de_voeu"]], true])
 		for r: Dictionary in rw["relics"]:
-			lines.append("Relique : " + UiKit.relic_title(r))
+			lines.append([UiKit.relic_title(r), false])
 		_reward_lines(v, lines)
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 10)
 	v.add_child(row)
 	if in_tower and engine.winner == 0 and Session.profile.can_enter_floor(floor_n + 1) and floor_n < Tower.floor_count():
-		var nb := UiKit.button("Étage suivant  ›", func() -> void: Session.start_tower_floor(floor_n + 1), Vector2(190, 52))
+		var nb := UiKit.button("%d  ›" % (floor_n + 1), func() -> void: Session.start_tower_floor(floor_n + 1), Vector2(150, 52))
+		nb.icon = UiKit.icon_texture("floor")
 		nb.add_theme_stylebox_override("normal", UiKit.panel_style(Color("4a3a12"), UI_ACCENT, 2, 10))  # action principale
 		nb.add_theme_color_override("font_color", Color("fff1c4"))
 		nb.disabled = Session.profile.energy < Session.profile.floor_cost(floor_n + 1)
 		row.add_child(nb)
 	if in_loot:
-		var lb := UiKit.button("Rejouer", func() -> void: Session.start_loot(Session.battle["boss"], int(Session.battle["diff"])))
+		var lb := UiKit.icon_button("auto", func() -> void: Session.start_loot(Session.battle["boss"], int(Session.battle["diff"])), 52)
 		lb.disabled = Session.profile.energy < int(LootBoss.cfg()["energy_cost"])
 		row.add_child(lb)
 	if in_tower:
-		var rb := UiKit.button("Rejouer", func() -> void: Session.start_tower_floor(floor_n))
+		var rb := UiKit.icon_button("auto", func() -> void: Session.start_tower_floor(floor_n), 52)
 		rb.disabled = Session.profile.energy < Session.profile.floor_cost(floor_n)
 		row.add_child(rb)
-	row.add_child(UiKit.button("Retour", _back_to_menu))
+	row.add_child(UiKit.icon_button("back", _back_to_menu, 52))
 	result_panel.add_child(v)
 	result_panel.visible = true
 	result_panel.scale = Vector2(0.7, 0.7)
@@ -1003,12 +1105,12 @@ func _show_result() -> void:
 		get_tree().quit(0)
 
 
-## Récompenses révélées une à une (retour gratifiant) ; les plus importantes en doré.
-func _reward_lines(v: VBoxContainer, lines: Array[String]) -> void:
+## Récompenses révélées une à une (retour gratifiant) ; les plus importantes en doré. lines : [[bbcode, clé]].
+func _reward_lines(v: VBoxContainer, lines: Array) -> void:
 	for k in lines.size():
-		var key := lines[k].contains("Éclats") or lines[k].contains("franchi") or lines[k].contains("débloqué") or lines[k].contains("garantie")
-		var l := UiKit.label(lines[k], 18 if key else 15, UI_ACCENT if key else Color("e8e2ff"))
-		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var key: bool = lines[k][1]
+		var l := UiKit.rich("[center]%s[/center]" % lines[k][0], 18 if key else 15, UI_ACCENT if key else UiKit.PAPER)
+		l.custom_minimum_size.x = 420
 		l.modulate.a = 0.0
 		v.add_child(l)
 		var tw := l.create_tween()

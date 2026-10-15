@@ -41,20 +41,11 @@ func _build() -> void:
 	var side := VBoxContainer.new()
 	side.custom_minimum_size.x = 380
 	cols.add_child(side)
-	side.add_child(UiKit.label("Équipe engagée", 18, UiKit.DIM))
 	var view := UiKit.model_view(p.team, Vector2i(380, 330))
 	side.add_child(view)
 	side.add_child(UiKit.button("Modifier l'équipe", func() -> void: get_tree().change_scene_to_file("res://scenes/team.tscn"), Vector2(380, 52)))
-	var en: Dictionary = GameData.progression()["energy"]
-	var help := UiKit.label("Chaque victoire : Pièces + 1 relique. Première victoire : Éclats de Vœu.\n" +
-		"Étages 1 à %d gratuits, puis %d d'énergie ; une défaite rend l'énergie.\n" % [int(en["free_floors"]), int(en["floor_cost"])] +
-		"Balayer : rejoue un étage gagné sans combat.", 14, UiKit.DIM)
-	help.autowrap_mode = TextServer.AUTOWRAP_WORD
-	side.add_child(help)
 	if sweep_msg != "":
-		var m := UiKit.label(sweep_msg, 14, UiKit.ACCENT)
-		m.autowrap_mode = TextServer.AUTOWRAP_WORD
-		side.add_child(m)
+		side.add_child(UiKit.rich(sweep_msg, 14, UiKit.ACCENT, true))
 
 
 func _scroll_to(scroll: ScrollContainer, target: Control) -> void:
@@ -72,41 +63,39 @@ func _floor_row(f: Dictionary) -> Control:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 14)
 	panel.add_child(h)
-	var title := "Étage %d" % n
+	var title := "%s %d" % [UiKit.bb("floor", 20), n]
 	if f.has("boss"):
-		title += " · BOSS"
+		title += "  " + UiKit.bb("boss", 20, UiKit.VERMILION.lightened(0.3))
 	elif f.get("elite", false):
-		title += " · Élite"
-	var t := UiKit.label(title, 18, UiKit.ACCENT if f.has("boss") else Color.WHITE)
+		title += "  ★"
+	var t := UiKit.rich(title, 18, UiKit.ACCENT if f.has("boss") else UiKit.PAPER)
 	t.custom_minimum_size.x = 170
 	h.add_child(t)
 	var names: Array[String] = []
 	for id: String in f["enemies"]:
 		names.append(UiKit.char_name(id))
-	var txt := "%s\nPuissance %d %%" % [", ".join(names), roundi(float(f["power"]) * 100.0)]
+	var txt := "%s\n%s %d %%" % [", ".join(names), UiKit.bb("atk", 14), roundi(float(f["power"]) * 100.0)]
 	if f.has("boss_unit"):
 		var b := GameData.boss(f["boss_unit"])
 		txt = "%s · %s\n%s" % [b["name"], b.get("voie", ""), b["skills"][1]["desc"]]
 	if open and not cleared:  # anticipation : la récompense de première victoire est annoncée
 		var rk := "eclat_de_voeu_boss" if f.has("boss") else ("eclat_de_voeu_elite" if f.get("elite", false) else "eclat_de_voeu")
-		txt += "\nPremière victoire : +%d Éclats de Vœu" % int(GameData.tower()["rewards"]["first"][rk])
-	var info := UiKit.label(txt, 14, UiKit.ACCENT if open and not cleared else UiKit.DIM)
-	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info.autowrap_mode = TextServer.AUTOWRAP_WORD
+		txt += "\n★ %s +%d" % [UiKit.bb("eclat_de_voeu", 16, UiKit.ACCENT), int(GameData.tower()["rewards"]["first"][rk])]
+	var info := UiKit.rich(txt, 14, UiKit.ACCENT if open and not cleared else UiKit.DIM, true)
 	h.add_child(info)
 	if open:
 		var cost := p.floor_cost(n)
-		var fight := UiKit.button(("Rejouer" if cleared else "Combattre") + ("\n%d énergie" % cost if cost > 0 else "\ngratuit"),
-			func() -> void: Session.start_tower_floor(n), Vector2(118, 50))
+		var fight := UiKit.rich_button(("%s" % UiKit.bb("auto", 18) if cleared else "Combattre") + ("  %s %d" % [UiKit.bb("energie", 16), cost] if cost > 0 else ""),
+			func() -> void: Session.start_tower_floor(n), Vector2(150, 50), 15)
 		fight.disabled = p.energy < cost
 		h.add_child(fight)
 		if cleared:
 			for times in [1, 5]:
-				var sw := UiKit.button("Balayer\nx%d" % times, _sweep.bind(n, times), Vector2(76, 50))
+				var sw := UiKit.rich_button("%s ×%d" % [UiKit.bb("speed", 16), times], _sweep.bind(n, times), Vector2(76, 50), 15)
 				sw.disabled = cost > 0 and p.energy < cost
 				h.add_child(sw)
 	else:
-		h.add_child(UiKit.label("Verrouillé", 14, UiKit.DIM))
+		h.add_child(UiKit.icon("lock", 22, UiKit.DIM))
 	if not open:
 		panel.modulate = Color(1, 1, 1, 0.55)
 	return panel
@@ -116,10 +105,11 @@ func _sweep(n: int, times: int) -> void:
 	var rw := Session.profile.sweep_floor(n, times, Session.rng, Session.now())
 	Session.save()
 	if int(rw["times"]) == 0:
-		sweep_msg = "Pas assez d'énergie."
+		sweep_msg = "%s 0" % UiKit.bb("energie", 16, UiKit.VERMILION.lightened(0.3))
 	else:
 		var sets: Array[String] = []
 		for r: Dictionary in rw["relics"]:
 			sets.append(UiKit.relic_title(r))
-		sweep_msg = "Balayage de l'étage %d x%d : +%d Pièces\n%s" % [n, int(rw["times"]), int(rw["currencies"].get("pieces", 0)), "\n".join(sets)]
+		sweep_msg = "%s %d ×%d   %s +%s\n%s" % [UiKit.bb("floor", 16), n, int(rw["times"]), UiKit.bb("pieces", 16),
+			UiKit.thousands(int(rw["currencies"].get("pieces", 0))), "\n".join(sets)]
 	_build()

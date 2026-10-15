@@ -19,6 +19,6 @@ void fragment() {
 	// fins liserés d'or entre les cases, effacés vers le centre pour ne pas gêner la lecture
 	vec2 f = abs(fract(g) - 0.5);
 	float line = smoothstep(0.47, 0.5, max(f.x, f.y)) * smoothstep(0.12, 0.42, length(c));
-	ALBEDO = mix(col, line_color.rgb, line * 0.14);
+	ALBEDO = mix(col, line_color.rgb, line * 0.08);
 	ROUGHNESS = 0.8;
 }

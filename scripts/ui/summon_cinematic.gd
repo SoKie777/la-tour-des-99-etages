@@ -511,9 +511,9 @@ func _finish() -> void:
 		var p := PanelContainer.new()
 		p.add_theme_stylebox_override("panel", UiKit.panel_style(Color(col, 0.22), col, 3 if r.get("new", false) else 1))
 		p.custom_minimum_size = Vector2(200, 76)
-		var tail := "NOUVEAU !" if r.get("new", false) else "+%d Fragments" % int(r.get("fragments", 0))
-		var l := UiKit.label("%s\n%s\n%s" % [["", "", "", "Rare", "Épique", "Légendaire"][rar], UiKit.char_name(r["id"]), tail], 15, col)
-		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var tail := "NOUVEAU !" if r.get("new", false) else "%s +%d" % [UiKit.bb("fragments_etage", 15, col), int(r.get("fragments", 0))]
+		var l := UiKit.rich("[center]%s\n%s\n%s[/center]" % ["★".repeat(rar), UiKit.char_name(r["id"]), tail], 15, col)
+		l.custom_minimum_size.x = 190
 		p.add_child(l)
 		grid.add_child(p)
 		# les cartes apparaissent une à une avec un rebond
