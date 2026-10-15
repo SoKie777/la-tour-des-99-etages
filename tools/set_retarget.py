@@ -26,5 +26,17 @@ def patch(imp):
         print("ok", os.path.relpath(fbx, ROOT))
 
 
+def patch_texture(imp):
+    """Textures extraites des modèles MPFB : 1024 px max et compression GPU (mémoire et taille de l'APK)."""
+    s = open(imp, encoding="utf-8").read()
+    s2 = re.sub(r"compress/mode=\d+", "compress/mode=2", s)
+    s2 = re.sub(r"process/size_limit=\d+", "process/size_limit=1024", s2)
+    if s2 != s:
+        open(imp, "w", encoding="utf-8", newline="\n").write(s2)
+        print("texture", os.path.relpath(imp[:-len(".import")], ROOT))
+
+
 for imp in glob.glob(os.path.join(ROOT, "assets", "**", "*.fbx.import"), recursive=True):
     patch(imp)
+for imp in glob.glob(os.path.join(ROOT, "assets", "models", "*.png.import")):
+    patch_texture(imp)
