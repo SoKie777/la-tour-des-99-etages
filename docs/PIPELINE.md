@@ -109,3 +109,11 @@ Changer `VERSION`, puis committer et pousser sur `main`. On obtient :
 2. `python tools/ukiyoe_portraits.py <dossier>` : aplats façon gravure sur bois, contour à l'encre, papier washi,
    soleil à la couleur de la constellation, sceau rouge avec la rareté (三 四 五, 鬼 pour les boss) → `assets/portraits/<id>.png`.
 À relancer après chaque remodelage d'un personnage. `UiKit.portrait(id, taille)` affiche l'icône.
+
+## Icônes d'effets et image de bannière
+- `python tools/status_icons.py` : une icône par effet de `data/rules.json` et `data/statuses.json`
+  (carré bleu à symbole blanc = bonus, rouge = malus) → `assets/status_icons/<id>.png`, affichées au-dessus
+  de la tête des combattants avec les tours restants. Symbole et légende : table `ICONS` du script.
+- `godot --path . --script res://tools/banner_shot.gd -- <photo.png> [vedette]` puis
+  `python tools/make_banner.py <photo.png> [titre] [sous-titre]` → `assets/ui/banner_legendaires.png`
+  (clé `art` de la bannière dans `data/gacha.json`).

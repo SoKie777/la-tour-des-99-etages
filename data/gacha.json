@@ -27,6 +27,7 @@
       "featured": [
         "montana"
       ],
+      "art": "res://assets/ui/banner_legendaires.png",
       "featured_multiplier": 2.0
     }
   }

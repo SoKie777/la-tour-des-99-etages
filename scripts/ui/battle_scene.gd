@@ -21,6 +21,7 @@ var pawns := {}        # BattleUnit -> Node3D
 var models := {}       # BattleUnit -> CharacterModel
 var bars := {}         # BattleUnit -> barre de vie 3D
 var cards := {}        # BattleUnit -> {hp: ProgressBar, info: Label}
+var status_rows := {}  # BattleUnit -> Node3D : icônes des effets au-dessus de la tête
 var markers := {}      # BattleUnit -> marqueur de la barre d'action
 var float_stack := {}  # BattleUnit -> [instant ms, rang] des textes flottants
 var log_label: RichTextLabel
@@ -355,6 +356,10 @@ func _make_pawn(u: BattleUnit) -> Node3D:
 	shadow.material_override = sm
 	shadow.position.y = 0.02
 	root.add_child(shadow)
+	var row := Node3D.new()  # icônes des buffs (bleus) et debuffs (rouges) au-dessus de la tête
+	row.position.y = height + (0.3 if u.team == 0 else 0.85)
+	root.add_child(row)
+	status_rows[u] = row
 	if u.team == 0:
 		return root  # ton équipe est au premier plan : ses PV sont dans les fiches en bas à gauche
 	var bar := BattleFx.hp_bar(Color("e05050"))
@@ -712,8 +717,53 @@ func _refresh() -> void:
 				parts.append("%s %d" % [STACK_NAMES.get(s, s.capitalize()), u.stack(s)])
 		c["info"].text = "  ".join(parts) if u.is_alive() else "Hors combat"
 		c["panel"].modulate = Color(1, 1, 1, 1.0 if u.is_alive() else 0.4)
+	for u: BattleUnit in status_rows:
+		_refresh_status_row(u)
 	if engine.current != null:
 		turn_label.text = "Au tour de : %s" % engine.current.display_name
+
+
+const GOOD_KINDS := ["buff", "aura", "stance"]
+
+
+## Rangée d'icônes d'effets au-dessus de la tête : bonus d'abord, puis malus ; tours restants en petit.
+func _refresh_status_row(u: BattleUnit) -> void:
+	var row: Node3D = status_rows[u]
+	for c in row.get_children():
+		c.queue_free()
+	if not u.is_alive():
+		return
+	var shown: Array[Dictionary] = []
+	for e in u.effects:
+		if e["id"] != "shield" and ResourceLoader.exists("res://assets/status_icons/%s.png" % e["id"]):
+			shown.append(e)
+	var effects_def: Dictionary = GameData.rules()["effects"]
+	shown.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return (str(effects_def.get(a["id"], {}).get("kind", "")) in GOOD_KINDS) and not (str(effects_def.get(b["id"], {}).get("kind", "")) in GOOD_KINDS))
+	shown = shown.slice(0, 6)
+	var step := 0.25
+	for i in shown.size():
+		var e: Dictionary = shown[i]
+		var s := Sprite3D.new()
+		s.texture = load("res://assets/status_icons/%s.png" % e["id"])
+		s.pixel_size = 0.0034
+		s.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		s.no_depth_test = true
+		s.render_priority = 2
+		s.position.x = (i - (shown.size() - 1) / 2.0) * step
+		row.add_child(s)
+		var turns := int(e["turns"])
+		if turns <= 99:
+			var t := Label3D.new()
+			t.text = str(turns)
+			t.font_size = 26
+			t.outline_size = 8
+			t.pixel_size = 0.004
+			t.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+			t.no_depth_test = true
+			t.render_priority = 3
+			t.position = Vector3(0, -0.13, 0.01)
+			s.add_child(t)
 
 
 ## Fiche des combattants : stats, compétences (recharges) et effets actifs avec leur explication.

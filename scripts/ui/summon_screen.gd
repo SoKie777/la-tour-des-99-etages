@@ -24,16 +24,27 @@ func _build() -> void:
 	# transparence : taux et garanties visibles (docs/CAPTOLOGIE.md)
 	var rates: Dictionary = g.banner["rates"]
 	info.add_child(UiKit.label("Taux : Rare %s %% · Épique %s %% · Légendaire %s %%" % [str(rates["3"]).trim_suffix(".0"), str(rates["4"]).trim_suffix(".0"), str(rates["5"]).trim_suffix(".0")], 14, UiKit.DIM))
-	info.add_child(UiKit.progress("Légendaire garanti (compteur)", g.pity_5, int(g.banner["hard_pity_5"]), UiKit.RARITY_COLORS[5], 380))
-	info.add_child(UiKit.progress("Épique ou mieux garanti (compteur)", g.pity_4, int(g.banner["guarantee_4_every"]), UiKit.RARITY_COLORS[4], 380))
+	info.add_child(UiKit.progress("Légendaire garanti (compteur)", g.pity_5, int(g.banner["hard_pity_5"]), UiKit.RARITY_COLORS[5], 300))
+	info.add_child(UiKit.progress("Épique ou mieux garanti (compteur)", g.pity_4, int(g.banner["guarantee_4_every"]), UiKit.RARITY_COLORS[4], 300))
 	info.add_child(UiKit.label("Doublons → Fragments d'étage (promotion, bientôt).", 13, UiKit.DIM))
 	var cost := int(GameData.progression()["pull_cost"])
+	var buttons := HBoxContainer.new()  # boutons sous les infos : la ligne tient sur un écran de téléphone
+	buttons.add_theme_constant_override("separation", 12)
+	info.add_child(buttons)
 	for n in [1, 10]:
 		var b := UiKit.button("Invoquer x%d\n%d Éclats" % [n, n * cost], _pull.bind(n), Vector2(170, 72))
 		b.disabled = Session.profile.amount("eclat_de_voeu") < n * cost
 		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		head.add_child(b)
-	if not g.banner["featured"].is_empty():
+		buttons.add_child(b)
+	if g.banner.has("art") and ResourceLoader.exists(g.banner["art"]):
+		var art := TextureRect.new()  # image de bannière façon estampe (tools/make_banner.py)
+		art.texture = load(g.banner["art"])
+		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		art.custom_minimum_size = Vector2(480, 270)
+		head.add_child(art)
+		head.move_child(art, 0)  # l'image à gauche, les infos et les boutons à droite
+	elif not g.banner["featured"].is_empty():
 		head.add_child(UiKit.model_view(g.banner["featured"], Vector2i(220, 260), "victory"))
 
 	var grid := GridContainer.new()
