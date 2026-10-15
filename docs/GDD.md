@@ -114,13 +114,13 @@ Espion de Lumière, Moussa, Issa, Mohamed). Ils sont nettement plus faibles que 
   VI ATK%/DEF%/PV%/VIT.
 - Niveaux 0 à 15 ; 3 secondaires au départ ; aux paliers +3/6/9/12/15, une 4e secondaire est ajoutée
   puis une secondaire existante est renforcée.
-- Sets (doc MVP) : Orion → Attaque (2), Vitesse (2), set de 4 à créer · Sirius → Défense (2),
-  Immunité (2), Vampirisme (4) · Grande Ourse → Vie (2), Précision (2), Gel (4).
-- Effets spéciaux codés : Vampirisme 20 %, Immunité au 1er tour, Gel 10 % quand le porteur est
-  attaqué.
-- Suggestion pour le set de 4 d'Orion (offensif, ATK/VIT) : **Assaut** — « après une attaque
-  critique, +10 % de PA (une fois par tour) ». Il sert les DPS rapides et reste dans l'esprit
-  « vitesse » d'Orion.
+- Sets validés (fiche, partie 4), par boss de butin : 2 sets de 4 pièces et 1 set de 2.
+  Orion → Attaque (4 : +15 % ATK à 2 pièces, +30 DC à 4), Vitesse (4 : +12 % VIT, puis +13 %),
+  Taux critique (2 : +12 TC) · Sirius → Vampirisme (4 : +10 % PV, vol de vie 20 % à 4), Défense (4 :
+  +15 % DEF, puis +15 %), Immunité (2 : Immunité au 1er tour) · Grande Ourse → Gel (4 : +15 RÉS, 10 % de
+  geler l'attaquant à 4), Vie (2 : +15 % PV), Précision (2 : +20 PRÉ).
+- Plus tard (fiche, parties 4 et 5) : sets type Ocean, Astralis, Calamity, Aegis ; Poursuite, Bain de sang,
+  Effort, Tissage du temps ; qualité des reliques (6 niveaux), recyclage intégral, pitié de relique.
 
 ## 9. Invocation et économie (v0.2, réglable dans `data/progression.json` et `data/tower.json`)
 

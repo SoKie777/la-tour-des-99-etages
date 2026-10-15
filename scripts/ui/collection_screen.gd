@@ -134,7 +134,7 @@ func _build_relics() -> void:
 	if not active.is_empty():
 		var names: Array[String] = []
 		for s: String in active:
-			names.append("%s x%d" % [UiKit.SET_NAMES.get(s, s), active[s]])
+			names.append("%s (%d pièces)" % [UiKit.SET_NAMES.get(s, s), active[s]])
 		relic_box.add_child(UiKit.label("Sets actifs : " + ", ".join(names), 14, UiKit.ACCENT))
 
 	relic_box.add_child(UiKit.label("Reliques de l'emplacement %s (gagnées dans la Tour)" % UiKit.roman(slot_selected), 15, UiKit.DIM))

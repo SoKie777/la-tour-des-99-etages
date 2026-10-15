@@ -27,18 +27,37 @@ static func level_up(rng: RandomNumberGenerator, relic: Dictionary) -> void:
 		_add_or_boost_sub(rng, relic)
 
 
-## Nombre d'activations de chaque set (un set de 2 porté en 4 pièces s'active 2 fois).
+## Sets actifs : set -> nombre de pièces portées (2 au minimum). Un set inconnu (ancienne sauvegarde) est ignoré.
 static func active_sets(equipped: Array) -> Dictionary:
 	var sets: Dictionary = GameData.relics()["sets"]
 	var counts := {}
 	for r: Dictionary in equipped:
-		counts[r["set"]] = counts.get(r["set"], 0) + 1
+		if sets.has(r["set"]):
+			counts[r["set"]] = counts.get(r["set"], 0) + 1
 	var active := {}
 	for s: String in counts:
-		var n: int = counts[s] / int(sets[s]["size"])
-		if n > 0:
-			active[s] = n
+		if counts[s] >= 2:
+			active[s] = counts[s]
 	return active
+
+
+## Bonus et effet spécial d'un set selon le nombre de pièces : [bonus, special ou ""].
+## Set de 2 : une activation par paire. Set de 4 : bonus2 dès 2 pièces, bonus4 et l'effet spécial à 4.
+static func set_bonus(set_id: String, pieces: int) -> Array:
+	var d: Dictionary = GameData.relics()["sets"][set_id]
+	var bonus := {}
+	var special := ""
+	if int(d["size"]) == 2:
+		for k: String in d.get("bonus", {}):
+			bonus[k] = float(d["bonus"][k]) * (pieces / 2)
+		special = d.get("special", "")
+	else:
+		bonus = d.get("bonus2", {}).duplicate()
+		if pieces >= 4:
+			for k: String in d.get("bonus4", {}):
+				bonus[k] = float(bonus.get(k, 0.0)) + float(d["bonus4"][k])
+			special = d.get("special", "")
+	return [bonus, special]
 
 
 ## Stats finales = base du personnage + reliques + sets. Renvoie {stats, specials}.
@@ -56,13 +75,13 @@ static func apply(base_stats: Dictionary, equipped: Array) -> Dictionary:
 		for s: String in r["subs"]:
 			add.call(s, float(r["subs"][s]))
 	var specials: Array[String] = []
-	var sets: Dictionary = GameData.relics()["sets"]
 	var active := active_sets(equipped)
 	for s: String in active:
-		for stat_name: String in sets[s]["bonus"]:
-			add.call(stat_name, float(sets[s]["bonus"][stat_name]) * active[s])
-		if sets[s].has("special"):
-			specials.append(sets[s]["special"])
+		var sb := set_bonus(s, active[s])
+		for stat_name: String in sb[0]:
+			add.call(stat_name, float(sb[0][stat_name]))
+		if sb[1] != "":
+			specials.append(sb[1])
 	var out := {}
 	for k: String in base_stats:
 		var v := float(base_stats[k])

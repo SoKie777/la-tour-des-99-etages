@@ -1,5 +1,5 @@
 {
- "_comment": "Roster v2 (fiche « Personnages jouables et boss », kits façon Dislyte) : 7 Légendaires (5★) et 8 Épiques (4★). Les 9 personnages du MVP sont les Rares (3★). Stats de niveau max : barème par classe et rareté. Vocabulaire : docs/KITS.md.",
+ "_comment": "Roster v2 (fiche « Personnages jouables et boss », kits façon Dislyte) : 7 Légendaires (5★) et 8 Épiques (4★). Les 9 personnages du MVP sont les Rares (3★). Stats de niveau max : barème par classe et rareté. Vocabulaire : docs/KITS.md. PV des Épiques et Légendaires x1,7 pour des combats de 6 à 8 tours par personnage (mesuré avec tools/tune_v2.gd).",
  "characters": [
   {
    "id": "montana",
@@ -10,7 +10,7 @@
    "affinity": "",
    "rarity": 5,
    "stats": {
-    "hp": 4860,
+    "hp": 8260,
     "atk": 990,
     "def": 510,
     "spd": 121,
@@ -129,7 +129,7 @@
    "affinity": "",
    "rarity": 5,
    "stats": {
-    "hp": 5280,
+    "hp": 8980,
     "atk": 960,
     "def": 570,
     "spd": 118,
@@ -222,7 +222,7 @@
    "affinity": "",
    "rarity": 4,
    "stats": {
-    "hp": 4510,
+    "hp": 7670,
     "atk": 1290,
     "def": 455,
     "spd": 109,
@@ -315,7 +315,7 @@
    "affinity": "",
    "rarity": 4,
    "stats": {
-    "hp": 4950,
+    "hp": 8420,
     "atk": 1155,
     "def": 550,
     "spd": 103,
@@ -367,7 +367,7 @@
    "affinity": "",
    "rarity": 4,
    "stats": {
-    "hp": 7150,
+    "hp": 12160,
     "atk": 770,
     "def": 935,
     "spd": 95,
@@ -437,7 +437,7 @@
    "affinity": "",
    "rarity": 5,
    "stats": {
-    "hp": 7560,
+    "hp": 12850,
     "atk": 780,
     "def": 960,
     "spd": 100,
@@ -522,7 +522,7 @@
    "affinity": "",
    "rarity": 5,
    "stats": {
-    "hp": 4920,
+    "hp": 8360,
     "atk": 1410,
     "def": 500,
     "spd": 112,
@@ -588,7 +588,7 @@
    "affinity": "",
    "rarity": 4,
    "stats": {
-    "hp": 4950,
+    "hp": 8420,
     "atk": 1155,
     "def": 550,
     "spd": 103,
@@ -667,7 +667,7 @@
    "affinity": "",
    "rarity": 4,
    "stats": {
-    "hp": 4460,
+    "hp": 7580,
     "atk": 910,
     "def": 470,
     "spd": 118,
@@ -748,7 +748,7 @@
    "affinity": "",
    "rarity": 4,
    "stats": {
-    "hp": 4840,
+    "hp": 8230,
     "atk": 880,
     "def": 520,
     "spd": 115,
@@ -839,7 +839,7 @@
    "affinity": "",
    "rarity": 5,
    "stats": {
-    "hp": 5400,
+    "hp": 9180,
     "atk": 1260,
     "def": 600,
     "spd": 106,
@@ -928,7 +928,7 @@
    "affinity": "",
    "rarity": 4,
    "stats": {
-    "hp": 4510,
+    "hp": 7670,
     "atk": 1290,
     "def": 455,
     "spd": 109,
@@ -1021,7 +1021,7 @@
    "affinity": "",
    "rarity": 5,
    "stats": {
-    "hp": 4860,
+    "hp": 8260,
     "atk": 990,
     "def": 510,
     "spd": 121,
@@ -1108,7 +1108,7 @@
    "affinity": "",
    "rarity": 4,
    "stats": {
-    "hp": 4840,
+    "hp": 8230,
     "atk": 880,
     "def": 520,
     "spd": 115,
@@ -1194,7 +1194,7 @@
    "affinity": "",
    "rarity": 5,
    "stats": {
-    "hp": 10580,
+    "hp": 17990,
     "atk": 1680,
     "def": 1260,
     "spd": 115,

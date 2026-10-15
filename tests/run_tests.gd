@@ -502,10 +502,16 @@ func test_relics() -> void:
 			Relics.level_up(rng, r)
 	check(gear[0]["subs"].size() == 4, "Relique +15 : 4 stats secondaires")
 	var active := Relics.active_sets(gear)
-	check(active.get("vampirisme", 0) == 1 and active.get("vitesse", 0) == 1, "Set 4 + set 2 actifs")
+	check(active.get("vampirisme", 0) == 4 and active.get("vitesse", 0) == 2, "Set 4 + set 2 actifs")
 	var u := Relics.make_unit("mohamed", gear)
 	check(u.set_specials.has("lifesteal_20"), "Vampirisme transmis au combat")
-	check(u.base["spd"] > 108 * 1.12 - 0.01, "Set Vitesse : +12 % VIT")
+	check(u.base["spd"] > 108 * 1.12 - 0.01, "Set Vitesse (2 pièces) : +12 % VIT")
+	var atk4: Array = []
+	for slot in range(1, 5):
+		atk4.append(Relics.generate(rng, "attaque", slot))
+	var with4: Dictionary = Relics.apply(GameData.character("mohamed")["stats"], atk4)["stats"]
+	var with2: Dictionary = Relics.apply(GameData.character("mohamed")["stats"], atk4.slice(0, 2))["stats"]
+	check(with4["cd"] - with2["cd"] >= 30.0, "Set Attaque (4 pièces) : +30 DC en plus du bonus à 2 pièces")
 
 
 func test_profile() -> void:

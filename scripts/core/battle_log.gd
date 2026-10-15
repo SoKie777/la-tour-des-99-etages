@@ -16,7 +16,9 @@ const EFFECT_NAMES := {
 
 
 static func effect_name(eid: String) -> String:
-	return EFFECT_NAMES.get(eid, eid)
+	if EFFECT_NAMES.has(eid):
+		return EFFECT_NAMES[eid]
+	return str(GameData.rules()["effects"].get(eid, {}).get("name", eid))  # statuts signature
 
 
 static func describe(ev: Dictionary) -> String:
@@ -35,7 +37,8 @@ static func describe(ev: Dictionary) -> String:
 		"heal":
 			return "%s récupère %d PV." % [ev["target"].display_name, int(ev["amount"])]
 		"effect":
-			return "%s : %s (%d t)." % [ev["target"].display_name, effect_name(ev["effect"]), ev["turns"]]
+			var st := int(ev.get("stacks", 1))
+			return "%s : %s%s (%d t)." % [ev["target"].display_name, effect_name(ev["effect"]), " x%d" % st if st > 1 else "", ev["turns"]]
 		"effect_end":
 			return "%s : fin de %s." % [ev["target"].display_name, effect_name(ev["effect"])]
 		"resist":
@@ -48,6 +51,16 @@ static func describe(ev: Dictionary) -> String:
 			return "Zéro perte ! %s reste à 1 PV." % ev["target"].display_name
 		"death":
 			return "%s est hors combat." % ev["target"].display_name
+		"miss":
+			return "%s rate %s !" % [ev["actor"].display_name, ev["target"].display_name]
+		"clone_absorb":
+			return "Un clone de %s absorbe le coup." % ev["target"].display_name
+		"clone_copy":
+			return "Un clone de %s copie l'attaque." % ev["actor"].display_name
+		"invincible":
+			return "%s est invincible." % ev["target"].display_name
+		"no_heal":
+			return "%s ne peut pas être soigné." % ev["target"].display_name
 		"ap":
 			return "%s : %+d %% de PA." % [ev["target"].display_name, int(ev["amount"])]
 		"steal":

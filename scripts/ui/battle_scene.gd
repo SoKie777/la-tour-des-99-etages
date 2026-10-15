@@ -14,6 +14,7 @@ var engine: BattleEngine
 var pawns := {}        # BattleUnit -> Node3D
 var models := {}       # BattleUnit -> CharacterModel
 var cards := {}        # BattleUnit -> {hp: ProgressBar, info: Label}
+var float_stack := {}  # BattleUnit -> [instant ms, rang] des textes flottants
 var log_label: RichTextLabel
 var turn_label: Label
 var action_box: HBoxContainer
@@ -97,6 +98,10 @@ func _on_battle_event(ev: Dictionary) -> void:
 			_float_text(ev["target"], "+" + str(int(ev["amount"])), Color("6bdc8a"))
 		"resist", "immune":
 			_float_text(ev["target"], "Résiste", Color("a0a0b8"))
+		"miss":
+			_float_text(ev["target"], "Raté", Color("a0a0b8"))
+		"clone_absorb":
+			_float_text(ev["target"], "Clone !", Color("b07de0"))
 		"effect":
 			_float_text(ev["target"], BattleLog.effect_name(ev["effect"]), Color("e0c060"))
 		"death":
@@ -188,7 +193,12 @@ func _float_text(u: BattleUnit, text: String, color: Color) -> void:
 	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	l.font_size = 56
 	l.outline_size = 10
-	l.position = pawns[u].position + Vector3(randf_range(-0.3, 0.3), 2.5, 0)
+	# textes simultanés sur la même cible : empilés au lieu de se superposer
+	var now := Time.get_ticks_msec()
+	var last: Array = float_stack.get(u, [0, -1])
+	var row: int = last[1] + 1 if now - int(last[0]) < 450 else 0
+	float_stack[u] = [now, row]
+	l.position = pawns[u].position + Vector3(randf_range(-0.2, 0.2), 2.5 + row * 0.38, 0)
 	add_child(l)
 	var tw := create_tween()
 	tw.set_parallel()
@@ -327,7 +337,8 @@ func _refresh() -> void:
 			parts.append("Bouclier %d" % int(u.shield_value()))
 		for e in u.effects:
 			var turns := int(e["turns"])
-			parts.append(BattleLog.effect_name(e["id"]) if turns > 99 else "%s(%d)" % [BattleLog.effect_name(e["id"]), turns])
+			var label := BattleLog.effect_name(e["id"]) + (" x%d" % int(e["stacks"]) if int(e.get("stacks", 1)) > 1 else "")
+			parts.append(label if turns > 99 else "%s(%d)" % [label, turns])
 		for s: String in u.stacks:
 			if u.stack(s) > 0:
 				parts.append("%s %d" % [STACK_NAMES.get(s, s.capitalize()), u.stack(s)])

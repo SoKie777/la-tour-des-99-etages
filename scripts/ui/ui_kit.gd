@@ -19,7 +19,7 @@ const STAT_NAMES := {
 }
 const PCT_STATS := ["hp_pct", "atk_pct", "def_pct", "spd_pct", "cr", "cd", "acc", "res"]
 const SET_NAMES := {
-	"attaque": "Attaque", "vitesse": "Vitesse", "orion_4": "Orion (4)", "defense": "Défense",
+	"attaque": "Attaque", "vitesse": "Vitesse", "taux_critique": "Taux critique", "defense": "Défense",
 	"immunite": "Immunité", "vampirisme": "Vampirisme", "vie": "Vie", "precision": "Précision", "gel": "Gel",
 }
 const CURRENCY_NAMES := {"eclat_de_voeu": "Éclats de Vœu", "pieces": "Pièces", "fragments_etage": "Fragments d'étage"}
