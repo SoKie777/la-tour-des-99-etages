@@ -133,6 +133,25 @@ func play(action: String) -> void:
 	ap.play("fx/" + anim)
 
 
+## Éclat de couleur sur tout le personnage (coup reçu, soin) : un voile additif qui s'efface.
+func flash(color: Color, duration := 0.22) -> void:
+	if meshes.is_empty():
+		return
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.albedo_color = Color(color, color.a * 0.6)  # l'alpha de la couleur règle l'intensité
+	for mi in meshes:
+		mi.material_overlay = m
+	var tw := create_tween()
+	tw.tween_property(m, "albedo_color:a", 0.0, duration)
+	tw.tween_callback(func() -> void:
+		for mi in meshes:
+			if mi.material_overlay == m:
+				mi.material_overlay = null)
+
+
 func _on_finished(anim_name: StringName) -> void:
 	if not dead and not str(anim_name).trim_prefix("fx/") in LOOPS:
 		ap.play("fx/" + anims["idle"])

@@ -52,7 +52,7 @@
       "class": "boss",
       "rarity": 0,
       "voie": "Gardien d'Orion",
-      "height_m": 2.2,
+      "height_m": 2.9,
       "sets": [
         "attaque",
         "vitesse",
@@ -126,7 +126,7 @@
       "class": "boss",
       "rarity": 0,
       "voie": "Gardien de la Grande Ourse",
-      "height_m": 2.4,
+      "height_m": 2.9,
       "sets": [
         "gel",
         "vie",
@@ -211,7 +211,7 @@
       "class": "boss",
       "rarity": 0,
       "voie": "Gardien de Sirius",
-      "height_m": 2.2,
+      "height_m": 2.9,
       "sets": [
         "vampirisme",
         "defense",

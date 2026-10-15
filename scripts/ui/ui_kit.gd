@@ -130,7 +130,23 @@ static func button(text: String, cb: Callable, min_size := Vector2(150, 52)) -> 
 	b.text = text
 	b.custom_minimum_size = min_size
 	b.pressed.connect(cb)
+	juice(b)
 	return b
+
+
+## Bouton qui s'enfonce quand on appuie et rebondit quand on relâche.
+static func juice(b: Control) -> void:
+	b.resized.connect(func() -> void: b.pivot_offset = b.size / 2.0)
+	b.gui_input.connect(func(ev: InputEvent) -> void:
+		if not (ev is InputEventMouseButton or ev is InputEventScreenTouch):
+			return
+		if b is BaseButton and (b as BaseButton).disabled:
+			return
+		var tw := b.create_tween()
+		if ev.is_pressed():
+			tw.tween_property(b, "scale", Vector2(0.94, 0.94), 0.06)
+		else:
+			tw.tween_property(b, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT))
 
 
 static func currency_bar() -> HBoxContainer:
@@ -159,12 +175,51 @@ static func currency_bar() -> HBoxContainer:
 	return h
 
 
+static var _theme: Theme
+
+
+## Thème commun : boutons sombres à liseré doré au survol, sélecteurs et onglets assortis.
+static func theme() -> Theme:
+	if _theme != null:
+		return _theme
+	var t := Theme.new()
+	var normal := panel_style(Color("1d1830"), Color("3a3258"), 1, 10)
+	var hover := panel_style(Color("2a2244"), ACCENT, 2, 10)
+	var pressed := panel_style(Color("3a2e5a"), ACCENT, 2, 10)
+	var disabled := panel_style(Color("16131f"), Color("2a2538"), 1, 10)
+	for cls in ["Button", "OptionButton"]:
+		t.set_stylebox("normal", cls, normal)
+		t.set_stylebox("hover", cls, hover)
+		t.set_stylebox("pressed", cls, pressed)
+		t.set_stylebox("disabled", cls, disabled)
+		t.set_stylebox("focus", cls, StyleBoxEmpty.new())
+		t.set_color("font_color", cls, Color("ece6ff"))
+		t.set_color("font_hover_color", cls, Color("fff4d6"))
+		t.set_color("font_disabled_color", cls, Color("6a6488"))
+	t.set_stylebox("panel", "TabContainer", panel_style(Color("1a1528"), Color.TRANSPARENT, 0, 8))
+	t.set_stylebox("tab_selected", "TabContainer", panel_style(Color("2a2244"), ACCENT, 1, 6))
+	t.set_stylebox("tab_unselected", "TabContainer", panel_style(Color("15121f"), Color.TRANSPARENT, 0, 6))
+	_theme = t
+	return t
+
+
 ## Fond + marges + en-tête (Retour, titre, monnaies). Renvoie le conteneur du contenu.
 static func screen(owner: Control, title: String, back_scene := "res://scenes/main.tscn") -> VBoxContainer:
 	for c in owner.get_children():
 		c.queue_free()
-	var bg := ColorRect.new()
-	bg.color = BG
+	owner.theme = theme()
+	var bg := TextureRect.new()  # fond en dégradé (violet nuit vers noir)
+	var grad := GradientTexture2D.new()
+	var g := Gradient.new()
+	g.set_color(0, Color("2a1f45"))
+	g.set_color(1, Color("0b0912"))
+	grad.gradient = g
+	grad.fill = GradientTexture2D.FILL_RADIAL
+	grad.fill_from = Vector2(0.3, 0.35)
+	grad.fill_to = Vector2(1.1, 1.1)
+	bg.texture = grad
+	bg.stretch_mode = TextureRect.STRETCH_SCALE
+	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	owner.add_child(bg)
 	var margin := MarginContainer.new()
@@ -230,13 +285,28 @@ static func model_view(ids: Array, view_size: Vector2i, action := "idle") -> Sub
 	sun.rotation_degrees = Vector3(-35, 25, 0)
 	world.add_child(sun)
 	var spacing := 1.0
+	var stage := Node3D.new()  # léger balancement : les personnages vivent à l'écran
+	world.add_child(stage)
+	stage.rotation_degrees.y = -6.0
+	var sway := stage.create_tween().set_loops()
+	sway.tween_property(stage, "rotation_degrees:y", 6.0, 3.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	sway.tween_property(stage, "rotation_degrees:y", -6.0, 3.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	for i in ids.size():
 		var m := CharacterModel.new()
-		world.add_child(m)
+		stage.add_child(m)
 		m.position = Vector3((i - (ids.size() - 1) / 2.0) * spacing, 0, 0)
 		m.rotation_degrees.y = 18.0 * ((ids.size() - 1) / 2.0 - i) if ids.size() > 1 else 0.0
 		m.setup(ids[i], char_color(ids[i]))
 		m.play(action)
+	var pedestal := BattleFx.flat_ring(ACCENT, 0.4 + ids.size() * 0.45, 0.04, 1.0)  # socle lumineux
+	world.add_child(pedestal)
+	var spot := SpotLight3D.new()
+	spot.position = Vector3(0, 4.5, 1.5)
+	spot.rotation_degrees = Vector3(-72, 0, 0)
+	spot.light_energy = 2.0
+	spot.spot_angle = 30.0
+	spot.light_color = Color("fff0dc")
+	world.add_child(spot)
 	var cam := Camera3D.new()
 	var width := maxf(1.6, ids.size() * spacing)
 	cam.fov = 35

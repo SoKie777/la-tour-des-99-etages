@@ -13,6 +13,7 @@ config/features=PackedStringArray("4.7", "Mobile")
 [autoload]
 
 Session="*res://scripts/autoload/session.gd"
+Transition="*res://scripts/autoload/transition.gd"
 
 [display]
 
