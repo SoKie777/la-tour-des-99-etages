@@ -13,6 +13,8 @@ var battle: Dictionary = {}
 var rng := RandomNumberGenerator.new()
 ## Résultats de la dernière invocation (cinématique puis écran d'invocation).
 var last_pulls: Array[Dictionary] = []
+## Cadeaux versés au chargement (affichés une fois sur le menu).
+var grant_notes: Array[String] = []
 ## Test de fumée : godot --headless --path . res://scenes/battle.tscn -- --smoke
 var smoke_test := false
 
@@ -57,7 +59,8 @@ func load_profile() -> void:
 			profile = Profile.from_dict(parsed)
 	if profile == null:
 		profile = Profile.new_game()
-		save()
+	grant_notes = profile.apply_grants()
+	save()
 
 
 func save() -> void:
@@ -72,6 +75,7 @@ func save() -> void:
 
 func reset_profile() -> void:
 	profile = Profile.new_game()
+	profile.apply_grants()
 	gacha.set_state({})
 	save()
 

@@ -14,6 +14,7 @@ const STACK_NAMES := {"spark": "Étincelle", "fury": "Fureur", "rage": "Rage", "
 const CAM_POS := Vector3(0, 3.1, 7.9)
 const CAM_LOOK := Vector3(0, 1.0, -0.9)
 const RANGED := ["cast", "heal", "roar", "taunt", "block"]  # animations jouées sur place
+const GAME_FONT := preload("res://assets/fonts/LilitaOne-Regular.ttf")  # police libre (OFL), chiffres et titres
 
 var engine: BattleEngine
 var pawns := {}        # BattleUnit -> Node3D
@@ -229,7 +230,7 @@ func _on_battle_event(ev: Dictionary) -> void:
 			var dot := ev.has("dot")
 			var src: BattleUnit = ev.get("source")
 			var col := Color("ff9a3d") if crit else (Color("c9b8ff") if dot else Color.WHITE)
-			_float_text(t, ("CRITIQUE  " if crit else "") + str(int(ev["amount"])), col, 1.35 if crit else 1.0)
+			_float_text(t, str(int(ev["amount"])) + (" !" if crit else ""), col, 1.3 if crit else 1.0)
 			if not dot:
 				_play_anim(t, "crit_hit" if crit else "hit")
 				if models.has(t):
@@ -392,8 +393,9 @@ func _float_text(u: BattleUnit, text: String, color: Color, size := 1.0) -> void
 	l.modulate = color
 	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	l.no_depth_test = true
-	l.font_size = int(40 * size)
-	l.outline_size = 10
+	l.font = GAME_FONT
+	l.font_size = int(30 * size)
+	l.outline_size = 7
 	l.outline_modulate = Color(0.05, 0.02, 0.08)
 	# textes simultanés sur la même cible : empilés au lieu de se superposer
 	var now := Time.get_ticks_msec()
@@ -403,7 +405,7 @@ func _float_text(u: BattleUnit, text: String, color: Color, size := 1.0) -> void
 	var h := float(u.data.get("height_m", 1.75))
 	var base_y := (h * 0.75) if u.team == 0 else (h + 0.3)
 	l.position = pawns[u].position + Vector3(randf_range(-0.25, 0.25), base_y + row * 0.32, 0.3)
-	l.scale = Vector3.ONE * 1.5
+	l.scale = Vector3.ONE * 1.45
 	add_child(l)
 	var tw := create_tween()
 	tw.tween_property(l, "scale", Vector3.ONE, 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -428,6 +430,7 @@ func _build_ui() -> void:
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(dim)
 	banner = UiKit.label("", 54, Color.WHITE)
+	banner.add_theme_font_override("font", GAME_FONT)
 	banner.add_theme_constant_override("outline_size", 14)
 	banner.add_theme_color_override("font_outline_color", Color(0.05, 0.02, 0.08))
 	banner.position = Vector2(-400, 250)
@@ -689,7 +692,8 @@ func _show_result() -> void:
 	var v := VBoxContainer.new()
 	var title := Label.new()
 	title.text = {0: "VICTOIRE", 1: "DÉFAITE"}.get(engine.winner, "ÉGALITÉ")
-	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_font_override("font", GAME_FONT)
+	title.add_theme_font_size_override("font_size", 52)
 	title.add_theme_color_override("font_color", UI_ACCENT)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(title)

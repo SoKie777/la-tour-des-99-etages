@@ -688,7 +688,11 @@ func test_profile() -> void:
 	q.set_team(["mello"])
 	q.equip("mello", ra)
 	check(q.apply_formation(0) and q.team == ["ghost", "issa"] and q.owner_of(ra) == "ghost", "Formation : équipe et relique réappliquées")
+	var eclats := q.amount("eclat_de_voeu")
+	check(q.apply_grants().size() == 1 and q.amount("eclat_de_voeu") == eclats + 3000, "Cadeau de test : 3 000 Éclats versés")
+	check(q.apply_grants().is_empty() and q.amount("eclat_de_voeu") == eclats + 3000, "Cadeau de test : une seule fois")
 	var q2 := Profile.from_dict(JSON.parse_string(JSON.stringify(q.to_dict())))
+	check(q2.apply_grants().is_empty(), "Cadeau de test : mémorisé dans la sauvegarde")
 	check(q2.energy == q.energy and q2.formations.size() == q.formations.size() and q2.apply_formation(0), "Énergie et formations sauvegardées")
 
 

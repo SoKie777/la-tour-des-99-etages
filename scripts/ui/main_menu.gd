@@ -41,6 +41,11 @@ func _ready() -> void:
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	right.add_child(spacer)
+	if not Session.grant_notes.is_empty():  # cadeau reçu : message affiché une fois
+		var gift := UiKit.label("Cadeau reçu : " + " ".join(Session.grant_notes) + " (3 000 Éclats, 300 000 Pièces)", 14, UiKit.ACCENT)
+		gift.autowrap_mode = TextServer.AUTOWRAP_WORD
+		right.add_child(gift)
+		Session.grant_notes.clear()
 
 	right.add_child(UiKit.label("Combat libre (test, équipes de nation)", 13, UiKit.DIM))
 	var row := HBoxContainer.new()
