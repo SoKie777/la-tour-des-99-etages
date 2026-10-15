@@ -17,6 +17,24 @@
         {"enemies": ["general_metal", "mohamed", "nidhogg"], "power": 1.0},
         {"enemies": [], "boss_unit": "promethee", "power": 1.0, "boss": "Prométhée"}
       ]
+    },
+    {
+      "id": "foret_gemmes", "name": "Forêt des Gemmes", "first_floor": 13, "decor": "gemmes", "boss_decor": "geode",
+      "floors": [
+        {"enemies": ["yass", "tarkhan", "saraya"], "power": 0.9},
+        {"enemies": ["noor_el", "jo_prince", "flint"], "power": 0.9},
+        {"enemies": ["nyssa", "selene", "ghost"], "power": 0.95},
+        {"enemies": ["adrian", "mello", "yass"], "power": 0.95},
+        {"enemies": ["ezra", "flint", "jo_prince"], "power": 0.9},
+        {"enemies": ["montana", "mikhaila", "ghost"], "power": 1.0, "elite": true},
+        {"enemies": ["tarkhan", "saraya", "mello"], "power": 1.0},
+        {"enemies": ["noor_el", "ezra", "flint"], "power": 1.05},
+        {"enemies": ["selene", "nyssa", "mikhaila"], "power": 1.05},
+        {"enemies": ["adrian", "saraya", "yass"], "power": 1.0},
+        {"enemies": ["montana", "ezra", "mello"], "power": 1.1},
+        {"enemies": ["noor_el", "ezra", "adrian"], "power": 1.05, "elite": true},
+        {"enemies": [], "boss_unit": "geode", "power": 1.0, "boss": "L'Impératrice Géode"}
+      ]
     }
   ],
   "rewards": {

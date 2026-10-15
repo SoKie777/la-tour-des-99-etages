@@ -49,12 +49,17 @@ var ui_root: Control
 var stars := {}       # BattleUnit -> étoiles qui tournent au-dessus de la tête (Étourdissement)
 var zz_timer := {}    # BattleUnit -> temps avant le prochain « Z » (Sommeil)
 var flash_rect: ColorRect  # frame d'impact noir et blanc des ultimes
+## Mode tactique de la Tour : ultimes en attente (coupure de la ligne de temps), réserve de Sceaux.
+var ult_queue: Array[BattleUnit] = []
+var sp_row: HBoxContainer
 
 
 func _ready() -> void:
 	var teams := Session.battle_teams()
 	engine = BattleEngine.new(teams[0], teams[1])
 	engine.battle_event.connect(_on_battle_event)
+	if Session.battle.get("mode", "") == "tower":  # mode tactique : seulement dans l'Ascension
+		engine.enable_tactics(Tower.tactics_rank(int(Session.battle["floor"])))
 	_build_world()
 	_build_ui()
 	_refresh()
@@ -71,6 +76,7 @@ func _process(delta: float) -> void:
 		b["root"].global_basis = cam.global_basis
 		b["fill"].scale.x = lerpf(b["fill"].scale.x, clampf(u.hp_ratio(), 0.0, 1.0), minf(1.0, delta * 8.0))
 		b["shield"].scale.x = clampf(u.shield_value() / u.max_hp(), 0.0, 1.0)
+		b["tough"].scale.x = clampf(u.toughness / u.max_toughness, 0.0, 1.0) if u.max_toughness > 0.0 else 0.0
 		b["root"].visible = u.is_alive()
 	for u: BattleUnit in stars:
 		stars[u].rotation.y += delta * 4.0
@@ -87,6 +93,8 @@ func _process(delta: float) -> void:
 		for u: BattleUnit in markers:
 			var m: Control = markers[u]
 			m.visible = u.is_alive()
+			# boss en charge : son marqueur clignote en rouge sceau sur la ligne de temps
+			m.modulate = Color(1.0, 0.45, 0.4) if u.charging > 0 and (Time.get_ticks_msec() / 250) % 2 == 0 else Color.WHITE
 			m.position.x = lerpf(m.position.x, clampf(u.ap, 0.0, 1.0) * w - m.size.x / 2.0, minf(1.0, delta * 10.0))
 
 
@@ -94,6 +102,10 @@ func _process(delta: float) -> void:
 
 func _advance() -> void:
 	while true:
+		if engine.winner != BattleEngine.ONGOING:
+			_show_result()
+			return
+		await _run_ult_queue()
 		if engine.winner != BattleEngine.ONGOING:
 			_show_result()
 			return
@@ -120,7 +132,8 @@ func _advance() -> void:
 		return
 
 
-func _perform(actor: BattleUnit, skill_idx: int, target: BattleUnit) -> void:
+## cut : ultime hors tour du mode tactique (coupure de la ligne de temps, le tour n'est pas consommé).
+func _perform(actor: BattleUnit, skill_idx: int, target: BattleUnit, cut := false) -> void:
 	_clear_actions()
 	hitstop_used = false
 	var sk := actor.skill(skill_idx)
@@ -146,7 +159,10 @@ func _perform(actor: BattleUnit, skill_idx: int, target: BattleUnit) -> void:
 		await _skill_vfx(actor, sk, focus)
 	if melee and sk.get("target", "") == "all_enemies":
 		BattleFx.shockwave(self, _home(focus) * Vector3(0, 0, 1), _col(actor), 4.5, 0.5 / Session.battle_speed)
-	engine.use_skill(actor, skill_idx, target)
+	if cut:
+		engine.cast_ultimate(actor, target)
+	else:
+		engine.use_skill(actor, skill_idx, target)
 	if skill_idx == 2:
 		_impact_flash()
 	_refresh()
@@ -168,6 +184,54 @@ func _impact_flash() -> void:
 	tw.tween_interval(0.07)
 	tw.tween_method(func(v: float) -> void: m.set_shader_parameter("amount", v), 1.0, 0.0, 0.18)
 	tw.tween_callback(func() -> void: flash_rect.visible = false)
+
+
+## Ultimes en attente (mode tactique) : joués avant le tour suivant, quel que soit le joueur actif.
+## En mode Auto, chaque héros lance son ultime dès que son énergie est pleine.
+func _run_ult_queue() -> void:
+	if engine.tactics.is_empty():
+		return
+	if Session.auto_battle:
+		for u in engine.ready_ultimates():
+			if not u in ult_queue:
+				ult_queue.append(u)
+	while not ult_queue.is_empty() and engine.winner == BattleEngine.ONGOING:
+		var u: BattleUnit = ult_queue.pop_front()
+		if engine.ult_ready(u):
+			var t: BattleUnit = engine.ai_target(u, 2) if engine.needs_target(u, 2) else null
+			await _perform(u, 2, t, true)
+	_refresh()
+
+
+## Bouton d'ultime d'un héros (fiche ou barre d'actions). Pendant ton tour : il coupe immédiatement la
+## ligne de temps (choix de la cible), puis ton héros actif joue normalement ; sinon il passe en file.
+func _on_ult_pressed(u: BattleUnit) -> void:
+	if done or not engine.ult_ready(u) or u in ult_queue:
+		return
+	if not waiting_input:
+		ult_queue.append(u)
+		_float_text(u, "!", UI_ACCENT, 1.2)
+		return
+	var actor: BattleUnit = engine.current
+	_clear_actions()
+	var go := func(t: BattleUnit) -> void:
+		waiting_input = false
+		await _perform(u, 2, t, true)
+		if engine.winner != BattleEngine.ONGOING:
+			_show_result()
+		else:
+			_refresh()
+			_show_actions(actor)
+	var targets := engine.valid_targets(u, 2) if engine.needs_target(u, 2) else [] as Array[BattleUnit]
+	if targets.size() <= 1:
+		go.call(targets[0] if not targets.is_empty() else null)
+		return
+	for t in targets:
+		var b := _skill_button(t.display_name, _col(t), go.bind(t))
+		b.custom_minimum_size = Vector2(170, 64)
+		_corner(b, UiKit.amount("hp", "%d %%" % int(t.hp_ratio() * 100), 12))
+		action_box.add_child(b)
+	action_box.add_child(UiKit.icon_button("back", _show_actions.bind(actor), 64))
 
 
 func _pause(seconds: float) -> void:
@@ -308,6 +372,26 @@ func _on_battle_event(ev: Dictionary) -> void:
 			_play_anim(ev["actor"], "attack")
 		"effect":
 			_float_icon(ev["target"], UiKit.status_texture(ev["effect"]))
+		"break":  # Rupture : gros éclat d'encre, la cible recule sur la ligne de temps
+			var bt: BattleUnit = ev["target"]
+			_float_text(bt, "RUPTURE", UiKit.PAPER, 1.5)
+			if pawns.has(bt):
+				BattleFx.ink_splash(self, pawns[bt].position + Vector3(0, 1.2, 0.3), UiKit.PAPER, true)
+				BattleFx.shockwave(self, pawns[bt].position, UiKit.PAPER, 2.5, 0.4 / Session.battle_speed)
+			_shake(0.6)
+			_hitstop(0.09)
+		"follow_up":  # assaut coordonné après une Rupture
+			_play_anim(ev["actor"], "attack")
+		"charge":  # boss : charge télégraphiée (Oblitération à son prochain tour)
+			_float_icon(ev["actor"], UiKit.icon_texture("charge"))
+			if models.has(ev["actor"]):
+				models[ev["actor"]].flash(Color(UiKit.VERMILION, 0.7), 0.6)
+			_shake(0.3)
+		"obliterate":
+			_float_text(ev["actor"], "!!!", UiKit.VERMILION.lightened(0.3), 1.6)
+			BattleFx.shockwave(self, Vector3(0, 0, 2.3), UiKit.VERMILION, 6.0, 0.6 / Session.battle_speed)
+			_shake(1.0)
+			_impact_flash()
 		"revive":
 			if pawns.has(ev["target"]):
 				_play_anim(ev["target"], "idle")
@@ -661,6 +745,34 @@ func _build_ui() -> void:
 	action_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	action_box.add_theme_constant_override("separation", 10)
 	root.add_child(action_box)
+	if not engine.tactics.is_empty():
+		var sp_box := HBoxContainer.new()  # Sceaux de l'équipe (et Résonance des constellations)
+		sp_box.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+		sp_box.offset_left = -200
+		sp_box.offset_right = 200
+		sp_box.offset_top = -124
+		sp_box.offset_bottom = -100
+		sp_box.alignment = BoxContainer.ALIGNMENT_CENTER
+		sp_box.add_theme_constant_override("separation", 14)
+		sp_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		root.add_child(sp_box)
+		sp_row = HBoxContainer.new()
+		sp_row.add_theme_constant_override("separation", 4)
+		sp_box.add_child(sp_row)
+		for i in engine.sp_max:
+			sp_row.add_child(UiKit.icon("sceau", 20))
+		var cons := {}
+		for u in engine.units:
+			if u.team == 0:
+				cons[u.constellation] = int(cons.get(u.constellation, 0)) + 1
+		for k: String in cons:
+			if int(cons[k]) >= 2:
+				sp_box.add_child(UiKit.amount(k, "×%d" % int(cons[k]), 12, UiKit.CONST_COLORS[k].lightened(0.3)))
+		if cons.size() >= 3:
+			var tri := HBoxContainer.new()
+			for k: String in cons:
+				tri.add_child(UiKit.icon(k, 16, UiKit.CONST_COLORS[k].lightened(0.3)))
+			sp_box.add_child(tri)
 
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -734,6 +846,7 @@ func _build_action_bar(root: Control) -> void:
 
 
 func _make_card(u: BattleUnit) -> Control:
+	var tactical := not engine.tactics.is_empty()
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", _panel_style(Color(UI_BG, 0.78), _col(u)))
 	panel.custom_minimum_size.x = 226
@@ -746,24 +859,53 @@ func _make_card(u: BattleUnit) -> Control:
 	v.add_theme_constant_override("separation", 2)
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(v)
-	v.add_child(UiKit.label(u.display_name, 13))
-	var hp := ProgressBar.new()
-	hp.max_value = u.max_hp()
-	hp.show_percentage = false
-	hp.custom_minimum_size.y = 5
-	var fill := StyleBoxFlat.new()
-	fill.bg_color = _col(u).lightened(0.25) if u.team == 0 else UiKit.VERMILION.lightened(0.15)
-	hp.add_theme_stylebox_override("fill", fill)
-	var empty := StyleBoxFlat.new()
-	empty.bg_color = Color(0, 0, 0, 0.45)
-	hp.add_theme_stylebox_override("background", empty)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 3)
+	v.add_child(head)
+	head.add_child(UiKit.label(u.display_name, 13))
+	if tactical and u.team == 1:  # faiblesses : constellations qui entament la Ténacité
+		for c in u.weakness:
+			head.add_child(UiKit.icon(c, 14, UiKit.CONST_COLORS[c].lightened(0.3)))
+	var hp := _bar(u.max_hp(), _col(u).lightened(0.25) if u.team == 0 else UiKit.VERMILION.lightened(0.15), 5)
 	v.add_child(hp)
+	var c := {"hp": hp, "panel": panel}
+	if tactical and u.team == 1 and u.max_toughness > 0.0:
+		c["tough"] = _bar(u.max_toughness, UiKit.PAPER, 3)
+		v.add_child(c["tough"])
+	if tactical and u.team == 0 and not u.is_passive(2):
+		c["energy"] = _bar(float(engine.tactics["energy_max"]), UI_ACCENT, 3)
+		v.add_child(c["energy"])
+		var ult := Button.new()  # ultime : coupe la ligne de temps quand l'énergie est pleine
+		ult.custom_minimum_size = Vector2(40, 40)
+		ult.icon = UiKit.icon_texture(UiKit.skill_icon_id(u.skill(2)))
+		ult.expand_icon = true
+		ult.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		ult.add_theme_constant_override("icon_max_width", 26)
+		ult.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		ult.pressed.connect(_on_ult_pressed.bind(u))
+		h.add_child(ult)
+		c["ult"] = ult
 	var info := HFlowContainer.new()  # PV, bouclier, effets et cumuls : icônes + nombres
 	info.add_theme_constant_override("h_separation", 6)
 	info.add_theme_constant_override("v_separation", 1)
 	v.add_child(info)
-	cards[u] = {"hp": hp, "info": info, "panel": panel}
+	c["info"] = info
+	cards[u] = c
 	return panel
+
+
+func _bar(maxv: float, col: Color, height: float) -> ProgressBar:
+	var bar := ProgressBar.new()
+	bar.max_value = maxv
+	bar.show_percentage = false
+	bar.custom_minimum_size.y = height
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = col
+	bar.add_theme_stylebox_override("fill", fill)
+	var empty := StyleBoxFlat.new()
+	empty.bg_color = Color(0, 0, 0, 0.45)
+	bar.add_theme_stylebox_override("background", empty)
+	return bar
 
 
 func _panel_style(bg: Color, border := Color.TRANSPARENT) -> StyleBoxFlat:
@@ -817,6 +959,18 @@ func _refresh() -> void:
 				if u.stack(st) > 0:
 					info.add_child(UiKit.amount("stack_" + st, str(u.stack(st)), 11, UI_ACCENT))
 		(c["panel"] as Control).modulate = Color(1, 1, 1, 1.0 if u.is_alive() else 0.4)
+		if c.has("tough"):
+			(c["tough"] as ProgressBar).value = u.toughness
+			(c["tough"] as ProgressBar).modulate = Color(1, 0.55, 0.45) if u.broken else Color.WHITE
+		if c.has("energy"):
+			(c["energy"] as ProgressBar).value = u.energy
+			var ult: Button = c["ult"]
+			var ready := engine.ult_ready(u)
+			ult.disabled = not ready
+			ult.add_theme_stylebox_override("normal", UiKit.panel_style(Color(UiKit.VERMILION.darkened(0.3), 0.95) if ready else Color(UI_BG, 0.8),
+				UI_ACCENT if ready else Color(UI_ACCENT, 0.25), 2 if ready else 1, 20))
+		if u.charging > 0:
+			info.add_child(UiKit.amount("charge", "1", 12, UiKit.VERMILION.lightened(0.3)))
 	for u: BattleUnit in marker_status:
 		var fx: HBoxContainer = marker_status[u]
 		for ch in fx.get_children():
@@ -830,6 +984,9 @@ func _refresh() -> void:
 		_refresh_status_row(u)
 	if engine.current != null:
 		turn_label.text = engine.current.display_name
+	if sp_row != null:  # réserve de Sceaux de l'équipe
+		for i in sp_row.get_child_count():
+			(sp_row.get_child(i) as CanvasItem).modulate = UI_ACCENT if i < engine.sp else Color(UiKit.PAPER, 0.18)
 
 
 const GOOD_KINDS := ["buff", "aura", "stance"]
@@ -994,7 +1151,8 @@ func _show_actions(actor: BattleUnit) -> void:
 	for i in 3:
 		var sk := actor.skill(i)
 		var passive := actor.is_passive(i)
-		var usable := not passive and i in engine.usable_skills(actor)
+		var tactical_ult := not engine.tactics.is_empty() and i == 2 and not passive
+		var usable := (engine.ult_ready(actor) if tactical_ult else (not passive and i in engine.usable_skills(actor)))
 		var b := _skill_button("", UI_ACCENT if not passive else Color(UI_ACCENT, 0.4), func() -> void: pass, false, i == 2)
 		b.custom_minimum_size = Vector2(92, 92)
 		b.pivot_offset = b.custom_minimum_size / 2.0
@@ -1009,8 +1167,20 @@ func _show_actions(actor: BattleUnit) -> void:
 		b.add_child(ic)
 		if passive:
 			_corner(b, UiKit.icon("passive", 16, UiKit.DIM))
+		elif tactical_ult:
+			_corner(b, UiKit.amount("energie", "%d %%" % int(100.0 * actor.energy / float(engine.tactics["energy_max"])), 12))
 		elif actor.cooldowns[i] > 0:
 			_corner(b, UiKit.amount("cooldown", str(actor.cooldowns[i]), 12))
+		if not engine.tactics.is_empty() and not passive and i < 2:  # économie de Sceaux
+			var delta := int(engine.tactics["sp_gain"][i]) - int(engine.tactics["sp_cost"][i])
+			if delta != 0:
+				var sb := UiKit.amount("sceau", ("+%d" if delta > 0 else "−%d") % absi(delta), 12, UI_ACCENT if delta > 0 else UiKit.VERMILION.lightened(0.35))
+				sb.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+				sb.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+				sb.grow_vertical = Control.GROW_DIRECTION_BEGIN
+				sb.offset_right = -6
+				sb.offset_bottom = -4
+				b.add_child(sb)
 		var held := [false]
 		var timer := Timer.new()
 		timer.one_shot = true
@@ -1027,7 +1197,10 @@ func _show_actions(actor: BattleUnit) -> void:
 			_hide_skill_tip())
 		b.pressed.connect(func() -> void:
 			if usable and not held[0]:
-				_on_skill_chosen(actor, i))
+				if tactical_ult:
+					_on_ult_pressed(actor)
+				else:
+					_on_skill_chosen(actor, i))
 		action_box.add_child(b)
 
 
@@ -1131,6 +1304,17 @@ func _show_result() -> void:
 			lines.append(["%s +%d" % [UiKit.bb("eclat_de_voeu", 22, UI_ACCENT), rw["currencies"]["eclat_de_voeu"]], true])
 		for r: Dictionary in rw["relics"]:
 			lines.append([UiKit.relic_title(r), false])
+		if not engine.tactics.is_empty():  # étoiles : victoire, aucun K.O., victoire rapide
+			var no_ko := engine.units.all(func(x: BattleUnit) -> bool: return x.team != 0 or x.is_alive())
+			var mask := 1 | (2 if no_ko else 0) | (4 if engine.team_actions <= int(engine.tactics["star_actions"]) else 0)
+			var st := Session.profile.record_stars(floor_n, mask)
+			Session.save()
+			var parts: Array[String] = []
+			for k in 3:
+				var got := (mask >> k) & 1 == 1
+				parts.append("%s [color=#%s]★[/color]" % [UiKit.bb(["titan", "hp", "speed"][k], 18, UI_ACCENT if got else UiKit.DIM),
+					(UI_ACCENT if got else UiKit.DIM).to_html(false)])
+			lines.append(["   ".join(parts) + ("   %s +%d" % [UiKit.bb("eclat_de_voeu", 18, UI_ACCENT), int(st["currencies"].get("eclat_de_voeu", 0))] if int(st["new"]) > 0 else ""), int(st["new"]) > 0])
 		_reward_lines(v, lines)
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER

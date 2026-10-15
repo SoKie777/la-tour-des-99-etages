@@ -44,6 +44,7 @@ const CHAR_MAP := {
 	"chronophage": {"idle": "idle_caster", "attack": "cast_attack", "skill": "cast_area", "ultimate": "cast_buff"},
 	"wyrm": {"attack": "punch_combo", "skill": "hurricane_kick", "ultimate": "roar"},
 	"serpent": {"idle": "idle_caster", "attack": "kick_high", "skill": "heal", "ultimate": "cast_area"},
+	"geode": {"idle": "idle_caster", "attack": "cast_attack", "skill": "cast_area", "ultimate": "cast_buff"},
 }
 const HOLD_AT_END := ["ko"]
 ## Vêtements MPFB (peints en couleurs de sommets, sans texture) : mots-clés des noms d'objets.
@@ -99,9 +100,18 @@ static func available() -> bool:
 	return ResourceLoader.exists(BASE_SCENE)
 
 
+## Modèle 3D d'un personnage ou d'un boss : clé « model » de ses données (modèle provisoire), sinon son id.
+static func model_id(char_id: String) -> String:
+	if GameData.characters().has(char_id):
+		return str(GameData.character(char_id).get("model", char_id))
+	if GameData.bosses()["bosses"].has(char_id):
+		return str(GameData.boss(char_id).get("model", char_id))
+	return char_id
+
+
 func setup(char_id: String, tint: Color, height_m: float = 1.75) -> void:
 	anims = MAP.merged(CHAR_MAP.get(char_id, {}), true)
-	var custom := "res://assets/models/%s.fbx" % char_id
+	var custom := "res://assets/models/%s.fbx" % model_id(char_id)
 	var is_custom := ResourceLoader.exists(custom)
 	model = (load(custom if is_custom else BASE_SCENE) as PackedScene).instantiate()
 	add_child(model)

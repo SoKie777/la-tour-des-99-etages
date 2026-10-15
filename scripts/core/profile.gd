@@ -13,6 +13,7 @@ var next_relic_uid := 1
 var equipped: Dictionary = {}       # id du perso -> {"1".."6": uid}
 var team: Array[String] = []
 var tower_cleared := 0              # plus haut étage gagné
+var tower_stars := {}               # étage -> étoiles obtenues (masque : 1 victoire, 2 aucun K.O., 4 victoire rapide)
 var gacha_state: Dictionary = {}
 var energy := 0
 var energy_time := 0                # instant (secondes Unix) du dernier point d'énergie compté
@@ -290,6 +291,31 @@ func can_enter_floor(number: int) -> bool:
 
 
 ## Applique une victoire : monnaies et reliques gagnées. Renvoie les récompenses.
+## Étoiles d'un étage (Tour tactique) : masque des conditions remplies, cumulé d'une victoire à l'autre.
+func floor_stars(number: int) -> int:
+	return int(tower_stars.get(str(number), 0))
+
+
+static func star_count(mask: int) -> int:
+	return (mask & 1) + ((mask >> 1) & 1) + ((mask >> 2) & 1)
+
+
+## Enregistre les étoiles d'une victoire ; chaque nouvelle étoile rapporte star_reward. Renvoie
+## {"mask": masque cumulé, "new": nouvelles étoiles, "currencies": récompenses versées}.
+func record_stars(number: int, mask: int) -> Dictionary:
+	var before := floor_stars(number)
+	var after := before | mask
+	tower_stars[str(number)] = after
+	var gained := star_count(after) - star_count(before)
+	var cur := {}
+	var rw: Dictionary = GameData.rules()["tower_tactics"]["star_reward"]
+	for k: String in rw:
+		cur[k] = int(rw[k]) * gained
+		if cur[k] > 0:
+			add(k, cur[k])
+	return {"mask": after, "new": gained, "currencies": cur}
+
+
 func win_floor(number: int, rng: RandomNumberGenerator) -> Dictionary:
 	var first := number > tower_cleared
 	var rw := Tower.rewards(number, first, rng)
@@ -362,7 +388,7 @@ func to_dict() -> Dictionary:
 	return {
 		"version": SAVE_VERSION, "owned": owned, "currencies": currencies, "relics": relics,
 		"next_relic_uid": next_relic_uid, "equipped": equipped, "team": team,
-		"tower_cleared": tower_cleared, "gacha_state": gacha_state,
+		"tower_cleared": tower_cleared, "tower_stars": tower_stars, "gacha_state": gacha_state,
 		"energy": energy, "energy_time": energy_time, "formations": formations, "loot": loot,
 		"grants_received": grants_received, "unseen": unseen,
 	}
@@ -387,6 +413,8 @@ static func from_dict(d: Dictionary) -> Profile:
 			p.equipped[id][slot] = int(d["equipped"][id][slot])
 	p.team.assign(d.get("team", []))
 	p.tower_cleared = int(d.get("tower_cleared", 0))
+	for k: String in d.get("tower_stars", {}):
+		p.tower_stars[k] = int(d["tower_stars"][k])
 	p.gacha_state = d.get("gacha_state", {})
 	for id: String in d.get("loot", {}):
 		var ls: Dictionary = d["loot"][id]

@@ -10,6 +10,8 @@ extends RefCounted
 ##   orion  : sanctuaire du Chronophage, nuit étoilée, horloges flottantes, sabliers
 ##   givre  : lac gelé du Wyrm, monts enneigés, côtes de dragon pris dans la glace, Grande Ourse
 ##   sirius : désert du Serpent solaire, dunes, pyramides, serpent géant, obélisques
+##   gemmes : Forêt des Gemmes, arbres géants aux cristaux luminescents, lucioles (étages 13 à 24)
+##   geode  : cœur de la Géode, parois d'améthyste, cristaux géants (étage 25, l'Impératrice Géode)
 
 const THEMES := {
 	"dojo": {"sky": ["142342", "b8644a"], "ground": "2a1c22", "mist": "6a4450",
@@ -22,6 +24,10 @@ const THEMES := {
 		"ambient": "8a90c8", "key": "e8e4ff", "key_energy": 1.05, "rim": "e0b860"},
 	"givre": {"sky": ["3a5f8f", "f0c6c0"], "ground": "a8bcd4", "mist": "c8d4e6",
 		"ambient": "c0d0ec", "key": "fff4ea", "key_energy": 1.1, "rim": "9fd0ff"},
+	"gemmes": {"sky": ["0e2a2e", "3fa38a"], "ground": "10221f", "mist": "2f6e62",
+		"ambient": "9fd8c8", "key": "e8fff4", "key_energy": 1.05, "rim": "b07de0"},
+	"geode": {"sky": ["160a26", "6a2a8a"], "ground": "1a0f26", "mist": "4a2a6a",
+		"ambient": "b8a0e0", "key": "f4e8ff", "key_energy": 1.05, "rim": "e07de0"},
 	"sirius": {"sky": ["2f5a96", "f2b24a"], "ground": "a8743e", "mist": "e8b070",
 		"ambient": "f0d0a0", "key": "fff0c8", "key_energy": 1.2, "rim": "ffb060"},
 }
@@ -54,6 +60,10 @@ static func build(parent: Node3D, id: String) -> void:
 			_givre(parent)
 		"sirius":
 			_sirius(parent)
+		"gemmes":
+			_gemmes(parent)
+		"geode":
+			_geode(parent)
 		_:
 			_dojo(parent)
 
@@ -1006,3 +1016,113 @@ static func _sirius(p: Node3D) -> void:
 		_mesh(p, _cyl(0.0, 0.26, 0.5, 4), tip, pos + Vector3(0, 4.95, 0), Vector3(0, 45, 0))
 	_light(p, Color("ffd080"), Vector3(0, 4.0, -9.0), 1.0, 9.0)
 	_ambient(p, Color("f0c890"), 50, 5.0, Vector3(-2, 0.6, -2), Vector3(12, 0.6, 6), Vector3(2.0, 0.1, 0), 0.05, 1.0, 10.0)
+
+
+## Cristal à facettes (prisme hexagonal à pointe) posé au sol, légèrement incliné.
+static func _crystal(p: Node3D, at: Vector3, h: float, r: float, c: Color, tilt: Vector3, glow := 0.6) -> void:
+	var mat := _toon(c, glow, 0.6)
+	var piv := _pivot(p, at)  # corps et pointe tournent ensemble
+	piv.rotation_degrees = tilt
+	_mesh(piv, _cyl(r * 0.85, r, h * 0.7, 6), mat, Vector3(0, h * 0.35, 0))
+	_mesh(piv, _cyl(0.0, r * 0.85, h * 0.3, 6), mat, Vector3(0, h * 0.85, 0))
+
+
+## Arbre de la Forêt des Gemmes en silhouette : tronc tordu, houppier en nuages, fruits de cristal.
+static func _gem_tree(cx: float, base: float, h: float, seed_: int) -> Array:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_
+	var polys: Array = []
+	var trunk := PackedVector2Array()
+	var halves := PackedFloat32Array()
+	for i in 9:
+		var t := i / 8.0
+		trunk.append(Vector2(cx + sin(t * 3.0 + seed_) * h * 0.06, base + t * h * 0.7))
+		halves.append(lerpf(h * 0.06, h * 0.025, t))
+	polys.append(_strip(trunk, halves))
+	for k in 5:
+		var c := Vector2(cx + rng.randf_range(-0.35, 0.35) * h, base + h * rng.randf_range(0.62, 0.95))
+		polys.append(_circle(c, h * rng.randf_range(0.16, 0.26), 18))
+	return polys
+
+
+## Forêt des Gemmes (univers 02) : brume émeraude, arbres géants, cristaux qui luisent, lucioles.
+static func _gemmes(p: Node3D) -> void:
+	var tint: Array[Color] = [Color("dfffee"), Color("b8f0ff")]
+	_starfield(p, 70, 13, 6.0, tint)
+	_soft(p, Color("b8ffe8", 0.6), 14, Vector3(14, 7.5, -88))
+	_layer(p, [_circle(Vector2(14, 7.5), 2.8, 40)], Color("f4fff8"), Color("c8ffe8"), -86)  # lune pâle
+	_layer(p, [_ridge(-120, 120, 0.0, 6.5, 23, 1.6, 0.5)], Color("1f5a52"), Color("4f9e8a"), -72)
+	var far: Array = []
+	var x := -110.0
+	var k := 0
+	while x < 110.0:
+		far.append_array(_gem_tree(x, -0.5, 7.0 + (k % 3) * 1.5, k))
+		x += 9.0 + (k % 4)
+		k += 1
+	_layer(p, far, Color("17403e"), Color("2f6e62"), -58, Vector2(0, 10))
+	var mid: Array = []
+	x = -100.0
+	while x < 100.0:
+		mid.append_array(_gem_tree(x, -0.5, 5.5 + (k % 3), k))
+		x += 11.0 + (k % 5)
+		k += 1
+	_layer(p, mid, Color("0d2826"), Color("1b4440"), -40, Vector2(0, 8))
+	# fruits de cristal accrochés aux arbres du plan moyen : petits points lumineux
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 77
+	var xf: Array[Transform3D] = []
+	var cols: Array[Color] = []
+	for i in 90:
+		xf.append(Transform3D(Basis.from_scale(Vector3.ONE * rng.randf_range(0.25, 0.6)),
+			Vector3(rng.randf_range(-90, 90), rng.randf_range(3.0, 8.5), -39.8)))
+		cols.append([Color("7fffd4"), Color("c07de0"), Color("ffd27f")][rng.randi() % 3])
+	_multi(p, QuadMesh.new(), _dots(), xf, cols)
+	_layer(p, [_ridge(-100, 100, -0.5, 1.8, 29, 1.6, 0.4)], Color("0b1f1d"), Color("143330"), -24)
+	# arène : dalle de jade, cristaux d'émeraude et d'améthyste autour
+	_platform(p, Color("1f4a44"))
+	var ring := BattleFx.flat_ring(Color("7fffd4"), 6.9, 0.06, 1.4)
+	ring.position.y = 0.01
+	p.add_child(ring)
+	var gem_cols := [Color("3fe0b0"), Color("b07de0"), Color("7fd0ff")]
+	for i in 12:
+		var a := deg_to_rad(rng.randf_range(195.0, 345.0))
+		var r := rng.randf_range(8.5, 12.0)
+		var h := rng.randf_range(1.2, 3.4)
+		_crystal(p, Vector3(cos(a) * r, -0.2, sin(a) * r), h, rng.randf_range(0.25, 0.5), gem_cols[i % 3],
+			Vector3(rng.randf_range(-15, 15), rng.randf_range(0, 60), rng.randf_range(-15, 15)))
+	for pos: Vector3 in [Vector3(-8.5, 0, -5), Vector3(8.5, 0, -5)]:
+		_light(p, Color("7fffd4"), pos + Vector3(0, 1.5, 0.5), 1.2, 7.0)
+	_ambient(p, Color("c8ffb0"), 45, 6.0, Vector3(0, 2.0, -3), Vector3(11, 2.0, 5), Vector3(0.2, 0.25, 0), 0.07, 1.0, 180.0)
+
+
+## Cœur de la Géode (étage 25) : parois d'améthyste en éventail, cristaux géants, poussière violette.
+static func _geode(p: Node3D) -> void:
+	var walls: Array = []  # parois de la géode : grands éclats triangulaires en arc de cercle
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 25
+	for i in 40:
+		var x := -100.0 + i * 5.2 + rng.randf_range(-1.5, 1.5)
+		var h := 8.0 + 6.0 * pow(absf(x) / 100.0, 1.4) * 2.0 + rng.randf_range(-1.5, 2.5)
+		var w := rng.randf_range(2.2, 4.0)
+		walls.append(PackedVector2Array([Vector2(x - w, -0.5), Vector2(x + rng.randf_range(-1.0, 1.0), h), Vector2(x + w, -0.5)]))
+	_layer(p, walls, Color("c07de0"), Color("3a1a5a"), -64, Vector2(0, 18))
+	var front: Array = []
+	for i in 26:
+		var x := -95.0 + i * 7.6 + rng.randf_range(-2.0, 2.0)
+		var h := 4.0 + rng.randf_range(0.0, 4.0)
+		var w := rng.randf_range(1.5, 3.0)
+		front.append(PackedVector2Array([Vector2(x - w, -0.5), Vector2(x, h), Vector2(x + w, -0.5)]))
+	_layer(p, front, Color("7a3aa0"), Color("241038"), -44, Vector2(0, 8))
+	_soft(p, Color("e0a0ff", 0.55), 34, Vector3(0, 9, -70))  # lueur au cœur de la géode
+	_platform(p, Color("3a2050"))
+	var ring := BattleFx.flat_ring(Color("e0a0ff"), 6.95, 0.07, 1.6)
+	ring.position.y = 0.01
+	p.add_child(ring)
+	for i in 10:
+		var side := -1.0 if i % 2 == 0 else 1.0
+		var r := 9.0 + floori(i / 2.0) * 1.3
+		var a := deg_to_rad(250.0 + side * (20.0 + floori(i / 2.0) * 9.0))
+		_crystal(p, Vector3(cos(a) * r, -0.2, sin(a) * r - 2.0), 3.0 + floori(i / 2.0) * 0.9, 0.45 + floori(i / 2.0) * 0.08,
+			Color("b07de0") if i % 3 else Color("e8c8ff"), Vector3(side * -12.0, i * 23.0, 0), 0.8)
+	_light(p, Color("d08cff"), Vector3(0, 3.0, -9.0), 1.6, 10.0)
+	_ambient(p, Color("e8c8ff"), 50, 7.0, Vector3(0, 3.0, -4), Vector3(12, 3.0, 5), Vector3(0, 0.15, 0), 0.06, 1.0, 180.0)

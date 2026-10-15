@@ -30,6 +30,15 @@ var max_hp_loss := 0.0
 var flags: Dictionary = {}
 ## Index des compétences utilisées, dans l'ordre (Aletheia de Prométhée lit les deux dernières).
 var skill_history: Array[int] = []
+## Mode tactique de la Tour (BattleEngine.enable_tactics) : énergie d'ultime des héros, Ténacité et
+## faiblesses des ennemis, Rupture en cours, charge télégraphiée des boss (tours avant l'Oblitération).
+var energy := 0.0
+var toughness := 0.0
+var max_toughness := 0.0
+var weakness: Array[String] = []
+var broken := false
+var charging := 0
+var boss_turns := 0
 
 
 func _init(char_data: Dictionary, team_idx: int, slot_idx: int, stats_override: Dictionary = {}) -> void:
@@ -137,6 +146,8 @@ func is_hard_cc() -> bool:
 
 ## Passe son tour (contrôle, ou posture comme la Contre-attaque minimale de Selene).
 func is_skipping() -> bool:
+	if flags.has("charge_turn"):  # boss qui consacre son tour à charger l'Oblitération
+		return true
 	for e in effects:
 		if GameData.rules()["effects"][e["id"]].get("skip_turn", false):
 			return true

@@ -23,6 +23,7 @@ func _init() -> void:
 	test_relics()
 	test_profile()
 	test_battle_stats()
+	test_tactics()
 	simulate_balance(sims)
 	simulate_rarity(maxi(40, sims / 2))
 	simulate_tower(maxi(20, sims / 4))
@@ -717,6 +718,77 @@ func test_battle_stats() -> void:
 	check(e.units.any(func(u: BattleUnit) -> bool: return float(e.stats[u]["dealt"]) > 0.0), "Bilan : des dégâts comptés")
 
 
+func test_tactics() -> void:
+	print("Mode tactique de la Tour")
+	var tt: Dictionary = GameData.rules()["tower_tactics"]
+	var e := BattleEngine.new(["montana", "mikhaila", "ghost"], ["adrian", "mello", "tarkhan"], 9)
+	var mon := unit_of(e, "montana")
+	var adr := unit_of(e, "adrian")
+	check(e.tactics.is_empty() and (2 in e.usable_skills(mon)) == (mon.cooldowns[2] == 0), "Hors Tour : règles de base")
+	e.enable_tactics()
+	check(e.sp == int(tt["sp_start"]) and e.sp_max == int(tt["sp_max"]), "Sceaux de départ")
+	check(adr.max_toughness == float(tt["toughness"]["normal"]) and adr.weakness == ["orion"], "Ténacité et faiblesse (constellation dominante)")
+	check(not 2 in e.usable_skills(mon) and 1 in e.usable_skills(mon), "Ultime hors des compétences du tour, S2 payable")
+	e.sp = 0
+	check(not 1 in e.usable_skills(mon), "S2 impossible sans Sceau")
+	e.current = mon
+	var energy0 := mon.energy
+	e.use_skill(mon, 0, adr)
+	check(e.sp == 1 and mon.energy >= energy0 + float(tt["energy_gain"][0]), "S1 : +1 Sceau et de l'énergie")
+	check(adr.toughness < adr.max_toughness, "La constellation dominante entame la Ténacité")
+	adr.toughness = 1.0
+	adr.ap = 0.5
+	e.current = mon
+	e.use_skill(mon, 0, adr)
+	check(adr.broken and adr.ap <= 0.2 + 1e-6, "Rupture : recul sur la barre d'action")
+	var m_broken := e._taken_mult(adr)
+	adr.broken = false
+	approx(m_broken / e._taken_mult(adr), 1.0 + float(tt["break_dmg_taken_pct"]) / 100.0, "Rupture : dégâts subis accrus")
+	adr.broken = true
+	e._start_turn(adr)
+	check(not adr.broken and adr.toughness == adr.max_toughness, "Fin de Rupture : Ténacité reconstituée")
+	mon.energy = float(tt["energy_max"])
+	var acts := e.team_actions
+	check(e.ult_ready(mon), "Énergie pleine : ultime prêt")
+	e.cast_ultimate(mon)
+	check(mon.energy < float(tt["energy_max"]) * 0.5 and e.team_actions == acts, "Ultime hors tour : énergie vidée, aucun tour consommé")
+	var b := BattleEngine.new(["montana", "mikhaila", "ghost"], Tower.enemy_units(12), 4)
+	b.enable_tactics()
+	var boss: BattleUnit = b.units[3]
+	check(boss.max_toughness == float(tt["toughness"]["boss"]) and not boss.weakness.is_empty(), "Boss : Ténacité et faiblesses propres")
+	for k in int(tt["charge"]["every"]):
+		boss.flags.erase("charge_turn")
+		b._boss_charge(boss)
+	check(boss.charging == 1 and boss.is_skipping(), "Boss : charge télégraphiée (il passe son tour)")
+	var hp0 := 0.0
+	for u in b.units:
+		if u.team == 0:
+			hp0 += u.hp
+	b.skip_turn(boss)
+	b._boss_charge(boss)
+	var hp1 := 0.0
+	for u in b.units:
+		if u.team == 0:
+			hp1 += u.hp
+	check(hp1 < hp0 and boss.charging == 0, "Charge non brisée : Oblitération sur l'équipe")
+	var w := BattleEngine.new(["montana", "adrian", "noor_el"], ["ghost"], 3)
+	w.enable_tactics()
+	check(w.sp_max == int(tt["sp_max"]) + int(tt["resonance"]["triad_sp_max"]), "Triade : un Sceau max de plus")
+	var t := BattleEngine.new(["montana", "mikhaila", "ghost"], ["adrian", "mello", "tarkhan"], 11)
+	t.enable_tactics()
+	check(t.run_auto() != BattleEngine.ONGOING, "Combat tactique automatique jusqu'au bout")
+	var pr := Profile.new_game()
+	var ecl := pr.amount("eclat_de_voeu")
+	var r1 := pr.record_stars(3, 1 | 2)
+	var r2 := pr.record_stars(3, 1 | 4)
+	check(int(r1["new"]) == 2 and int(r2["new"]) == 1 and pr.floor_stars(3) == 7, "Étoiles d'étage cumulées")
+	check(pr.amount("eclat_de_voeu") == ecl + 3 * int(tt["star_reward"]["eclat_de_voeu"]), "Chaque nouvelle étoile rapporte des Éclats")
+	var saved := Profile.from_dict(pr.to_dict())
+	check(saved.floor_stars(3) == 7, "Étoiles sauvegardées")
+	check(Tower.floor_count() == 25 and Tower.floor_info(25).get("boss_unit", "") == "geode" and Tower.floor_info(13)["decor"] == "gemmes",
+		"Univers 02 : étages 13 à 25, boss Impératrice Géode")
+
+
 func simulate_rarity(n: int) -> void:
 	var by := {3: [], 4: [], 5: []}
 	for id: String in GameData.characters():
@@ -747,23 +819,32 @@ Raretés (équipes tirées au hasard, %d combats) :" % n)
 
 
 ## Taux de victoire étage par étage (IA des deux côtés), sans reliques.
+## Tour en mode tactique (Sceaux, Ténacité, ultimes hors tour), sans reliques.
 func simulate_tower(n: int) -> void:
 	var teams := {"Départ (Nidhogg, Espion, Issa)": ["nidhogg", "espion_lumiere", "issa"],
-		"Mixte (Eiríkr, Issa, Don Diego)": ["eirikr", "issa", "don_diego"]}
-	print("\nTour, sans reliques (%d combats par étage) :" % n)
+		"Mixte (Eiríkr, Issa, Don Diego)": ["eirikr", "issa", "don_diego"],
+		"Triade v2 (Montana, Adrian, Noor-El)": ["montana", "adrian", "noor_el"],
+		"Épiques (Ghost, Tarkhan, Jo Prince)": ["ghost", "tarkhan", "jo_prince"]}
+	print("
+Tour tactique, sans reliques (%d combats par étage) :" % n)
 	for name: String in teams:
 		var line: Array[String] = []
 		for f in range(1, Tower.floor_count() + 1):
-			var wins := 0
-			for k in n:
-				var players: Array[BattleUnit] = []
-				for id: String in teams[name]:
-					players.append(BattleUnit.new(GameData.character(id), 0, players.size()))
-				var e := BattleEngine.new(players, Tower.enemy_units(f), 7000 + k)
-				if e.run_auto() == 0:
-					wins += 1
-			line.append("%d:%d%%" % [f, roundi(100.0 * wins / n)])
-		print("  %-32s %s" % [name, " ".join(line)])
+			line.append("%d:%d%%" % [f, roundi(100.0 * tower_wins(teams[name], f, n) / n)])
+		print("  %-38s %s" % [name, " ".join(line)])
+
+
+func tower_wins(ids: Array, f: int, n: int) -> int:
+	var wins := 0
+	for k in n:
+		var players: Array[BattleUnit] = []
+		for id: String in ids:
+			players.append(BattleUnit.new(GameData.character(id), 0, players.size()))
+		var e := BattleEngine.new(players, Tower.enemy_units(f), 7000 + k)
+		e.enable_tactics(Tower.tactics_rank(f))
+		if e.run_auto() == 0:
+			wins += 1
+	return wins
 
 
 func simulate_balance(n: int) -> void:

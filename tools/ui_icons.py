@@ -343,6 +343,29 @@ def bars(c):
     return poly([(6, 56), (58, 56), (58, 61), (6, 61)], c) + poly([(9, 36), (21, 36), (21, 52), (9, 52)], c) +         poly([(26, 14), (38, 14), (38, 52), (26, 52)], c) + poly([(43, 26), (55, 26), (55, 52), (43, 52)], c)
 
 
+def stars_lines(pts, links, c):
+    d = " ".join("M%.1f %.1f L%.1f %.1f" % (pts[a][0], pts[a][1], pts[b][0], pts[b][1]) for a, b in links)
+    return line(d, c, 2.5) + "".join(circle(x, y, r, c) for x, y, r in pts)
+
+
+def orion(c):
+    pts = [(16, 8, 5), (48, 11, 4.5), (25, 31, 3.5), (32, 33, 3.5), (39, 35, 3.5), (18, 56, 4.5), (47, 54, 5)]
+    return stars_lines([(x, y, r) for x, y, r in pts], [(0, 2), (1, 4), (2, 3), (3, 4), (2, 5), (4, 6), (0, 1)], c)
+
+
+def grande_ourse(c):
+    pts = [(4, 22, 3.5), (15, 26, 3.5), (25, 30, 3.5), (35, 32, 4), (37, 48, 4), (58, 48, 4.5), (57, 30, 4.5)]
+    return stars_lines(pts, [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 3)], c)
+
+
+def sirius(c):
+    return poly(star_pts(4, 28, 6), c) + poly(star_pts(4, 15, 4, 32, 32, -45), c) + circle(52, 52, 4, c)
+
+
+def seal_gem(c):
+    return path(d_of([(32, 3), (61, 32), (32, 61), (3, 32)]) + " " + d_of([(32, 17), (47, 32), (32, 47), (17, 32)]), c, "evenodd") +         poly([(32, 24), (40, 32), (32, 40), (24, 32)], c)
+
+
 def summon(c):
     return ring(32, 32, 26, c, 4) + poly(star_pts(6, 20, 9), c)
 
@@ -383,6 +406,8 @@ UI = {
     # boutons
     "info": info, "journal": scroll, "auto": loop, "quit": door, "back": back, "close": close, "lock": lock,
     "summon": summon, "speed": chevrons, "stats": bars, "dmg_taken": cracked,
+    # mode tactique de la Tour
+    "orion": orion, "grande_ourse": grande_ourse, "sirius": sirius, "sceau": seal_gem, "charge": exclaim,
 }
 
 STATUS_GLYPHS = {

@@ -33,6 +33,39 @@
   "_skill3_initial_cd": "Recharge de l'ultime au début du combat : 0 = toutes les compétences sont prêtes dès le premier tour (choix du créateur).",
   "ai_avoid_sleeping": true,
   "max_actions": 300,
+  "tower_tactics": {
+    "_comment": "Mode tactique de la Tour (inspiré de Honkai: Star Rail), seulement dans l'Ascension ; le JcJ et les boss de butin gardent les règles de base. Sceaux : réserve d'équipe (S1 en donne, S2 en coûte). Énergie : chaque héros la remplit et lance son ultime quand elle est pleine, à tout moment (coupure de la ligne de temps), sans perdre son tour. Ténacité : seuls les coups de la constellation qui domine l'ennemi (ou d'une faiblesse de boss) l'entament ; à zéro, Rupture : recul sur la barre d'action, dégâts bonus, effet de la constellation du briseur, +50 % de dégâts subis jusqu'à son prochain tour, et assaut coordonné des autres héros. Boss : charge télégraphiée tous les charge.every tours ; s'il n'est pas brisé avant son tour suivant, Oblitération sur toute l'équipe. Résonance : 2 héros d'une même constellation donnent un bonus, 3 constellations différentes (Triade) donnent un Sceau max de plus. Étoiles : victoire, aucun héros K.O., victoire en star_actions actions d'équipe au plus.",
+    "sp_max": 5,
+    "sp_start": 3,
+    "sp_gain": [1, 0, 0],
+    "sp_cost": [0, 1, 0],
+    "energy_max": 100,
+    "energy_start": 40,
+    "energy_gain": [20, 30, 0],
+    "energy_hit": 8,
+    "energy_kill": 10,
+    "toughness": {"normal": 60, "elite": 100, "boss": 180},
+    "toughness_dmg": [10, 20, 30],
+    "aoe_toughness_mult": 0.6,
+    "break_delay": 0.3,
+    "break_dmg_taken_pct": 50,
+    "break_burst_atk_pct": 120,
+    "break_effects": {
+      "orion": {"id": "slow", "turns": 2},
+      "grande_ourse": {"id": "burn", "turns": 2},
+      "sirius": {"id": "def_down", "value": 30, "turns": 2}
+    },
+    "follow_up_atk_pct": 40,
+    "charge": {"every": 4, "obliterate_atk_pct": 200},
+    "resonance": {
+      "orion": {"stat": "spd", "pct": 10},
+      "grande_ourse": {"stat": "atk", "pct": 12},
+      "sirius": {"stat": "hp", "pct": 15},
+      "triad_sp_max": 1
+    },
+    "star_actions": 15,
+    "star_reward": {"eclat_de_voeu": 2}
+  },
   "effects": {
     "burn": {
       "kind": "debuff",

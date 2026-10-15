@@ -2,7 +2,7 @@
 
 Gacha RPG mobile au tour par tour (3 contre 3, barre d'action), inspiré de Dislyte, dans un univers
 d'estampe japonaise : anime 3D, encre ukiyo-e et symbolique des échecs. Moteur : **Godot 4.7**.
-Version actuelle : **v0.6.0** (fichier `VERSION`).
+Version actuelle : **v0.7.0** (fichier `VERSION`).
 
 - **Jouer sur Android :** Releases → **[`apk-latest`](../../releases/tag/apk-latest)** (toujours la dernière version).
   L'APK est signé avec une clé fixe : on installe chaque nouvelle version **par-dessus** l'ancienne et la
@@ -11,14 +11,18 @@ Version actuelle : **v0.6.0** (fichier `VERSION`).
 
 ## Ce qu'on peut faire
 
-- **Ascension de la Tour** : univers 01, la Cité d'Acier (12 étages, une Élite, le boss **Prométhée**).
-  Chaque victoire rapporte des Pièces et une relique, la première des Éclats de Vœu ; énergie, balayage
-  des étages gagnés.
+- **Ascension de la Tour** (25 étages) : univers 01, la Cité d'Acier (boss **Prométhée**), et univers 02,
+  la Forêt des Gemmes (boss **l'Impératrice Géode**). Combats en **mode tactique** inspiré de Honkai: Star
+  Rail : Sceaux d'équipe, ultimes qui coupent la ligne de temps, Ténacité et Rupture par faiblesse de
+  constellation, assauts coordonnés, charges de boss télégraphiées, Résonance, 3 étoiles par étage.
+  Chaque victoire rapporte des Pièces et une relique, la première des Éclats de Vœu ; énergie, balayage.
 - **Boss de butin** : le Chronophage (Orion), le Wyrm de givre (Grande Ourse), le Serpent solaire (Sirius),
   4 paliers (Facile à Enfer), reliques ciblées et garantie après plusieurs victoires.
 - **Combats** à la barre d'action : 24 personnages en 3 nations / constellations (triangle Orion › Grande
-  Ourse › Sirius), compétences, ultimes avec gros plan, effets visibles, mode auto, vitesse ×1 à ×3.
-- **Invocation** sur bannière (taux et garanties affichés) avec cinématique sur l'échiquier.
+  Ourse › Sirius), compétences en symboles (appui long pour les lire), ultimes avec gros plan, effets
+  visibles, mode auto, vitesse ×1 à ×3, bilan de fin de combat (dégâts, dégâts subis, boucliers, soins).
+- **Invocation** façon Dislyte (illustration de la vedette, sélecteur de bannières, taux et garanties)
+  avec cinématique sur l'échiquier.
 - **Équipe** de 3 et formations, **Collection** (fiche, stats, compétences) et **reliques** (6 emplacements,
   ensembles, niveaux, recyclage).
 - Progression **sauvegardée** sur l'appareil.
@@ -27,7 +31,8 @@ Version actuelle : **v0.6.0** (fichier `VERSION`).
 
 - **Décors imaginés pour chaque lieu**, en papier découpé façon estampe : Cité d'Acier (pagodes d'acier,
   engrenage géant), forge de Prométhée (éclipse, volcan, chaînes), sanctuaire d'Orion (horloges flottantes),
-  lac gelé du Wyrm (monts enneigés, côtes de dragon), désert de Sirius (pyramides, serpent géant), cour de temple.
+  lac gelé du Wyrm (monts enneigés, côtes de dragon), désert de Sirius (pyramides, serpent géant), Forêt des
+  Gemmes (arbres et cristaux luminescents), cœur de la Géode (améthyste), cour de temple.
 - **Personnages en cel-shading** : ombre bleu minéral, liseré d'or, contour à l'encre ; portraits en estampe.
 - **Effets à l'encre** : tranchants de pinceau, taches d'encre, sceau doré sous chaque unité, éclair noir et
   blanc sur le coup d'un ultime.

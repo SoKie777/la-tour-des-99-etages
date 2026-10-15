@@ -450,6 +450,8 @@ static func screen(owner: Control, title: String, back_scene := "res://scenes/ma
 ## Icône estampe du personnage (assets/portraits, générées par tools/ukiyoe_portraits.py), ou null.
 static func portrait_texture(id: String) -> Texture2D:
 	var path := "res://assets/portraits/%s.png" % id
+	if not ResourceLoader.exists(path):  # boss au modèle provisoire : portrait de ce modèle
+		path = "res://assets/portraits/%s.png" % CharacterModel.model_id(id)
 	if not ResourceLoader.exists(path):
 		path = "res://assets/portraits/%s.png" % id.trim_suffix("_" + id.get_slice("_", id.get_slice_count("_") - 1))
 	return load(path) if ResourceLoader.exists(path) else null

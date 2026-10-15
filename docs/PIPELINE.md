@@ -135,10 +135,15 @@ accessoires 3D et particules. Le décor vient des données : `decor` / `boss_dec
 | `orion` | sanctuaire du Chronophage : horloges flottantes, sabliers, Orion |
 | `givre` | lac gelé du Wyrm : monts enneigés, côtes de dragon, Grande Ourse |
 | `sirius` | désert du Serpent solaire : dunes, pyramides, serpent géant, obélisques |
+| `gemmes` | Forêt des Gemmes : arbres géants, cristaux luminescents, lucioles (étages 13 à 24) |
+| `geode` | cœur de la Géode : parois et cristaux d'améthyste (étage 25) |
 
 - Photo d'un décor : `godot --path . --script res://tools/decor_shot.gd -- <id> sortie.png`.
 - Forcer un décor en combat : `res://scenes/battle.tscn -- --smoke --decor=<id>` ; `--manual` garde la main
   au joueur (captures des boutons de compétences).
+- Illustration de bannière : `godot --path . --script res://tools/splash_shot.gd -- photo.png <id> [animation]`
+  puis `python tools/make_splash.py photo.png <id>` → `assets/ui/splash_<id>.png` (clé `splash` de la bannière).
+- Réglage de la Tour tactique : `godot --headless --path . --script res://tools/tune_tower.gd -- [premier] [dernier] [combats]`.
 - Effets figés à mi-course : `godot --path . --script res://tools/fx_shot.gd -- sortie.png [décor]`.
 
 ## Rendu (Bible D.A.)

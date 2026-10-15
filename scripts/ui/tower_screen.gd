@@ -68,7 +68,15 @@ func _floor_row(f: Dictionary) -> Control:
 		title += "  " + UiKit.bb("boss", 20, UiKit.VERMILION.lightened(0.3))
 	elif f.get("elite", false):
 		title += "  ★"
-	var t := UiKit.rich(title, 18, UiKit.ACCENT if f.has("boss") else UiKit.PAPER)
+	var stars := p.floor_stars(n)  # étoiles obtenues (victoire, aucun K.O., victoire rapide)
+	var srow: Array[String] = []
+	for k in 3:
+		srow.append("[color=#%s]★[/color]" % (UiKit.ACCENT if (stars >> k) & 1 == 1 else Color(UiKit.DIM, 0.4)).to_html())
+	var weak: Array[String] = []  # faiblesses : constellations qui brisent la Ténacité
+	for c in Tower.floor_weaknesses(n):
+		weak.append(UiKit.bb(c, 24, UiKit.CONST_COLORS[c].lightened(0.3)))
+	var t := UiKit.rich("%s
+%s   %s" % [title, "".join(srow), " ".join(weak)], 18, UiKit.ACCENT if f.has("boss") else UiKit.PAPER)
 	t.custom_minimum_size.x = 170
 	h.add_child(t)
 	var names: Array[String] = []

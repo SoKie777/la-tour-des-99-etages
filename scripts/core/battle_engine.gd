@@ -31,6 +31,11 @@ var last_skill: Dictionary = {}
 var _in_reaction := false  # contre-attaques et frappes de clones : pas de réaction en chaîne
 ## Bilan du combat par unité : {"dealt", "taken", "shielded" (boucliers donnés), "healed"}
 var stats := {}
+## Mode tactique de la Tour (rules.tower_tactics) ; vide hors de la Tour : JcJ et boss de butin inchangés.
+var tactics := {}
+var sp := 0            # Sceaux de l'équipe du joueur (réserve commune)
+var sp_max := 0
+var team_actions := 0  # actions de l'équipe du joueur (étoile « victoire rapide »)
 
 
 ## team_a / team_b : listes d'ids de personnages, ou de BattleUnit déjà construits (reliques).
@@ -58,6 +63,127 @@ func _init(team_a: Array, team_b: Array, seed_value: int = 0) -> void:
 		if u.get_trait("enemy_spd_aura") != null:
 			for foe in enemies_of(u):
 				foe.effects.append(_make_effect("aura_chill", 9999, float(u.get_trait("enemy_spd_aura")), u, false))
+
+
+# --- Mode tactique (Tour) -----------------------------------------------------
+
+## Active le mode tactique. enemy_rank : « normal » ou « elite » (Ténacité des ennemis ; un boss a la sienne).
+func enable_tactics(enemy_rank := "normal") -> void:
+	tactics = rules["tower_tactics"]
+	sp_max = int(tactics["sp_max"])
+	var cons := {}
+	for u in units:
+		if u.team == 0:
+			u.energy = float(tactics["energy_start"])
+			cons[u.constellation] = int(cons.get(u.constellation, 0)) + 1
+		else:
+			var rank := "boss" if u.get_trait("boss") != null else enemy_rank
+			u.max_toughness = float(tactics["toughness"][rank])
+			u.toughness = u.max_toughness
+			u.weakness = weakness_of(u)
+	var res: Dictionary = tactics["resonance"]
+	for c: String in cons:
+		if int(cons[c]) >= 2 and res.has(c):  # Résonance : deux héros d'une même constellation
+			var bonus: Dictionary = res[c]
+			for u in units:
+				if u.team == 0:
+					u.base[bonus["stat"]] = float(u.base[bonus["stat"]]) * (1.0 + float(bonus["pct"]) / 100.0)
+					u.hp = u.max_hp()
+			_emit({"type": "resonance", "constellation": c})
+	if cons.size() >= 3:  # Triade : les trois constellations
+		sp_max += int(res["triad_sp_max"])
+		_emit({"type": "resonance", "constellation": "triade"})
+	sp = mini(int(tactics["sp_start"]), sp_max)
+
+
+## Faiblesses d'un ennemi : celles de ses données (boss), sinon la constellation qui domine la sienne.
+func weakness_of(u: BattleUnit) -> Array[String]:
+	var out: Array[String] = []
+	for c: String in u.data.get("weakness", []):
+		out.append(c)
+	if out.is_empty():
+		for c: String in rules["triangle"]["beats"]:
+			if rules["triangle"]["beats"][c] == u.constellation:
+				out.append(c)
+	return out
+
+
+## L'ultime d'un héros est prêt (énergie pleine) : il peut couper la ligne de temps.
+func ult_ready(u: BattleUnit) -> bool:
+	return not tactics.is_empty() and winner == ONGOING and u.team == 0 and u.is_alive() and not u.is_passive(2) \
+		and not u.is_skipping() and not u.has_effect("silence") and u.energy >= float(tactics["energy_max"])
+
+
+## Ultime hors tour (coupure de la ligne de temps) : ne consomme ni le tour ni la jauge d'action.
+func cast_ultimate(u: BattleUnit, target: BattleUnit = null) -> void:
+	assert(ult_ready(u), "Ultime pas prêt")
+	u.energy = 0.0
+	_emit({"type": "ult_cut", "actor": u})
+	u.skill_history.append(2)
+	if target == null and needs_target(u, 2):
+		target = _ai_target(u, 2)
+	execute(u, u.skill(2), target, 2)
+	last_skill = {"unit": u, "index": 2}
+	_check_end()
+
+
+## Héros dont l'ultime est prêt (mode Auto : ils coupent la ligne de temps dès que possible).
+func ready_ultimates() -> Array[BattleUnit]:
+	return units.filter(func(u: BattleUnit) -> bool: return ult_ready(u))
+
+
+func _gain_energy(u: BattleUnit, amount: float) -> void:
+	if not tactics.is_empty() and u != null and u.team == 0 and u.is_alive():
+		u.energy = minf(float(tactics["energy_max"]), u.energy + amount)
+
+
+func _hit_toughness(u: BattleUnit, t: BattleUnit, idx: int, aoe: bool) -> void:
+	if t.max_toughness <= 0.0 or t.broken or not t.is_alive() or not u.constellation in t.weakness:
+		return
+	var dmg := float(tactics["toughness_dmg"][clampi(idx, 0, 2)]) * (float(tactics["aoe_toughness_mult"]) if aoe else 1.0)
+	t.toughness = maxf(0.0, t.toughness - dmg)
+	_emit({"type": "toughness", "actor": u, "target": t})
+	if t.toughness <= 0.0:
+		_break(u, t)
+
+
+## Rupture : recul sur la barre d'action, dégâts bonus, effet de la constellation du briseur,
+## dégâts subis accrus jusqu'au prochain tour, charge du boss annulée, assaut coordonné des alliés.
+func _break(u: BattleUnit, t: BattleUnit) -> void:
+	t.broken = true
+	t.ap = maxf(0.0, t.ap - float(tactics["break_delay"]))
+	var cancelled := t.charging > 0
+	t.charging = 0
+	t.flags.erase("charge_turn")
+	_emit({"type": "break", "actor": u, "target": t, "charge_cancelled": cancelled})
+	_apply_damage(t, u.stat("atk") * float(tactics["break_burst_atk_pct"]) / 100.0, u, {"break": true})
+	var effects: Dictionary = tactics["break_effects"]
+	if t.is_alive() and effects.has(u.constellation):
+		var ef: Dictionary = effects[u.constellation].duplicate()
+		ef["no_roll"] = true
+		_try_apply(u, t, ef)
+	for a in allies_of(u):
+		if a != u and t.is_alive():
+			_emit({"type": "follow_up", "actor": a, "target": t})
+			_deal_damage(a, t, a.stat("atk") * float(tactics["follow_up_atk_pct"]) / 100.0, {})
+
+
+## Boss : tous les charge.every tours, il consacre son tour à charger ; à son tour suivant, s'il n'a pas
+## été brisé entre-temps, il lance l'Oblitération sur toute l'équipe.
+func _boss_charge(u: BattleUnit) -> void:
+	u.boss_turns += 1
+	if u.charging > 0:
+		u.charging = 0
+		u.flags["charge_turn"] = true
+		_emit({"type": "obliterate", "actor": u})
+		for t in enemies_of(u):
+			if t.is_alive() and u.is_alive():
+				_deal_damage(u, t, u.stat("atk") * float(tactics["charge"]["obliterate_atk_pct"]) / 100.0, {})
+		return
+	if u.boss_turns % int(tactics["charge"]["every"]) == 0:
+		u.charging = 1
+		u.flags["charge_turn"] = true
+		_emit({"type": "charge", "actor": u})
 
 
 # --- Requêtes ---------------------------------------------------------------
@@ -89,6 +215,11 @@ func usable_skills(u: BattleUnit) -> Array[int]:
 			continue
 		if i == 2 and u.has_effect("silence"):
 			continue
+		if not tactics.is_empty() and u.team == 0:
+			if i == 2:
+				continue  # mode tactique : l'ultime se lance avec l'énergie (cast_ultimate)
+			if sp < int(tactics["sp_cost"][i]):
+				continue  # pas assez de Sceaux
 		out.append(i)
 	return out
 
@@ -156,6 +287,8 @@ func compute_damage(att: BattleUnit, tgt: BattleUnit, raw: float, opts: Dictiona
 ## Multiplicateur de dégâts subis (réductions passives, postures, auras, Vulnérabilité, statuts).
 func _taken_mult(tgt: BattleUnit) -> float:
 	var m := 1.0 - float(tgt.get_trait("damage_reduction", 0.0)) / 100.0
+	if tgt.broken:  # Rupture : vulnérable jusqu'à son prochain tour
+		m *= 1.0 + float(tactics.get("break_dmg_taken_pct", 0.0)) / 100.0
 	for e in tgt.effects:
 		var d: Dictionary = rules["effects"][e["id"]]
 		if d.has("dmg_taken_from_value"):
@@ -219,6 +352,7 @@ func next_turn() -> BattleUnit:
 
 func skip_turn(u: BattleUnit) -> void:
 	_emit({"type": "skip", "actor": u})
+	u.flags.erase("charge_turn")
 	if u.has_effect("stun"):
 		_remove_effect(u, "stun")
 	_end_turn(u)
@@ -228,6 +362,10 @@ func use_skill(u: BattleUnit, idx: int, target: BattleUnit = null) -> void:
 	assert(idx in usable_skills(u), "Compétence indisponible")
 	var sk := u.skill(idx)
 	u.skill_history.append(idx)
+	if not tactics.is_empty() and u.team == 0:  # économie d'équipe : S1 donne un Sceau, S2 en coûte
+		sp = clampi(sp + int(tactics["sp_gain"][idx]) - int(tactics["sp_cost"][idx]), 0, sp_max)
+		team_actions += 1
+		_gain_energy(u, float(tactics["energy_gain"][idx]))
 	execute(u, sk, target, idx)
 	u.cooldowns[idx] = u.skill_cd(idx)
 	if sk.has("lock_skill"):  # « ne peut pas utiliser S2 au tour suivant »
@@ -269,6 +407,8 @@ func execute(u: BattleUnit, sk: Dictionary, target: BattleUnit, idx: int, power 
 			continue
 		for p in passes:
 			_hit_target(u, t, sk, ctx)
+		if not tactics.is_empty() and sk.has("hits") and u.team == 0 and t.team == 1 and not t in ctx["missed"]:
+			_hit_toughness(u, t, idx, sk.get("target", "") == "all_enemies")
 		if t.is_alive() and not t in ctx["missed"]:
 			for ef: Dictionary in sk.get("effects", []):
 				_apply_action(u, t, ef, ctx)
@@ -469,6 +609,11 @@ func ai_choose(u: BattleUnit) -> Dictionary:
 ## Joue le combat jusqu'au bout avec l'IA des deux côtés. Renvoie l'équipe gagnante.
 func run_auto() -> int:
 	while winner == ONGOING:
+		for hero in ready_ultimates():  # mode tactique : les ultimes coupent la ligne de temps
+			if ult_ready(hero):
+				cast_ultimate(hero)
+		if winner != ONGOING:
+			break
 		var a := next_turn()
 		if a == null:
 			break
@@ -480,6 +625,11 @@ func run_auto() -> int:
 			var c := ai_choose(a)
 			use_skill(a, c["skill"], c["target"])
 	return winner
+
+
+## Cible choisie par l'IA pour une compétence (ultimes hors tour, mode Auto).
+func ai_target(u: BattleUnit, idx: int) -> BattleUnit:
+	return _ai_target(u, idx)
 
 
 # --- Interne ----------------------------------------------------------------
@@ -513,6 +663,12 @@ func _lowest_hp(group: Array[BattleUnit]) -> BattleUnit:
 
 func _start_turn(u: BattleUnit) -> void:
 	u.flags.erase("countered")
+	if u.broken:  # fin de la Rupture : la Ténacité se reconstitue
+		u.broken = false
+		u.toughness = u.max_toughness
+		_emit({"type": "recover", "target": u})
+	if not tactics.is_empty() and u.team == 1 and u.get_trait("boss") != null:
+		_boss_charge(u)
 	if u.has_passive("breeze"):
 		_heal(_lowest_hp(allies_of(u)), _lowest_hp(allies_of(u)).max_hp() * 0.10, u)
 	if u.get_trait("ramp_dmg_per_turn") != null:  # montée en puissance (Etheria)
@@ -723,6 +879,8 @@ func _apply_damage(tgt: BattleUnit, dmg: float, source: BattleUnit, info: Dictio
 		_check_phases(tgt)
 		_check_bars(tgt)
 		if direct:
+			if tgt.team == 0 and dmg > 0.0:
+				_gain_energy(tgt, float(tactics.get("energy_hit", 0.0)))
 			if tgt.has_effect("sleep"):
 				_remove_effect(tgt, "sleep")
 			if tgt.has_passive("spark"):
@@ -744,6 +902,8 @@ func _apply_damage(tgt: BattleUnit, dmg: float, source: BattleUnit, info: Dictio
 		tgt.ap = 0.0
 		tgt.stacks.clear()
 		_emit({"type": "death", "target": tgt})
+		if source != null and source.team == 0 and tgt.team == 1:
+			_gain_energy(source, float(tactics.get("energy_kill", 0.0)))
 		_on_death(tgt)
 	return dmg
 

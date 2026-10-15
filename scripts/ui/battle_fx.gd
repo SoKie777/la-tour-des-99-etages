@@ -286,7 +286,16 @@ static func hp_bar(c: Color) -> Dictionary:
 	sh.material_override = glow_material(Color("d8f2ff"), 1.2)
 	shield_root.add_child(sh)
 	shield_root.scale.x = 0.0
-	return {"root": root, "fill": fill_root, "shield": shield_root}
+	var tough_root := Node3D.new()  # Ténacité (mode tactique de la Tour), sous la barre de vie
+	tough_root.position = Vector3(-0.48, -0.075, 0.006)
+	root.add_child(tough_root)
+	var tg := MeshInstance3D.new()
+	tg.mesh = _box(Vector3(0.96, 0.03, 0.01))
+	tg.position = Vector3(0.48, 0, 0)
+	tg.material_override = glow_material(Color("e8dec5"), 0.9)
+	tough_root.add_child(tg)
+	tough_root.scale.x = 0.0
+	return {"root": root, "fill": fill_root, "shield": shield_root, "tough": tough_root}
 
 
 static func _box(s: Vector3) -> BoxMesh:

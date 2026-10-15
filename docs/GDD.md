@@ -194,6 +194,39 @@ Intention : l'équipe de départ bute aux étages 5-6 (il faut invoquer ou s'éq
 demande une bonne composition et le boss demande des reliques. `tools/tune_tower.gd` mesure les taux pour
 plusieurs puissances.
 
+### Mode tactique de la Tour (v0.7, inspiré de Honkai: Star Rail)
+
+Seulement dans l'Ascension : le JcJ, les combats libres et les boss de butin gardent les règles de base.
+Réglages : `data/rules.json` → `tower_tactics` ; moteur : `BattleEngine.enable_tactics()`.
+
+- **Sceaux d'équipe** (réserve commune, 5 max, 3 au départ) : S1 en donne 1, S2 en coûte 1. Les
+  personnages à S2 passive alimentent naturellement les autres.
+- **Énergie et ultime hors tour** : chaque héros remplit sa jauge (S1 +20, S2 +30, coup reçu +8,
+  ennemi achevé +10, départ 40). Pleine, l'ultime se lance d'un bouton sur la fiche du héros, **à tout
+  moment** : il coupe la ligne de temps sans consommer le tour ni la jauge d'action.
+- **Ténacité et Rupture** : chaque ennemi a une Ténacité (60, Élite 100, boss 180). Seule la
+  constellation qui domine la sienne l'entame (S1 10, S2 20, ultime 30 ; ×0,6 en zone) ; un boss a ses
+  propres faiblesses (`weakness`). À zéro : recul de 30 % sur la barre d'action, dégâts de Rupture (120 %
+  de l'ATK du briseur), effet selon la constellation du briseur (Orion : Lenteur, Grande Ourse :
+  Brûlure, Sirius : DEF −30 %), +50 % de dégâts subis jusqu'à son prochain tour, et **assaut coordonné**
+  des autres héros (40 % de leur ATK). La Ténacité revient au tour suivant de l'ennemi.
+- **Charge des boss** : tous les 4 tours, le boss charge (son marqueur clignote, icône « ! ») ; s'il n'est
+  pas brisé avant son tour suivant, **Oblitération** sur toute l'équipe (200 % de son ATK).
+- **Résonance** : 2 héros d'une même constellation → Orion +10 % VIT, Grande Ourse +12 % ATK, Sirius
+  +15 % PV ; les 3 constellations (**Triade**) → un Sceau max de plus.
+- **Étoiles** (comme la Mémoire du Chaos) : victoire, aucun héros K.O., victoire en 15 actions d'équipe au
+  plus. Chaque nouvelle étoile rapporte 2 Éclats ; les étoiles et les faiblesses s'affichent dans la Tour.
+
+### Univers 02 : Forêt des Gemmes (étages 13 à 25)
+
+Ennemis du roster v2 (puissance 0,9 à 1,1), Élites aux étages 18 et 24, boss **l'Impératrice Géode**
+(étage 25, faible à Grande Ourse et Sirius ; Éclat tranchant, Pluie de gemmes, Prisme cristallin ; phase
+Cœur de quartz sous 50 % PV). Modèle provisoire (celui de Saraya) en attendant son modèle MPFB.
+Réglage mesuré en mode tactique, sans reliques : une équipe 5★ (Montana, Adrian, Noor-El) passe presque
+tous les étages et bat la Géode environ 1 fois sur 5 ; une équipe d'Épiques bloque dès l'étage 18.
+Le boss demande donc des reliques. Don Selah rend un étage quasi imbattable : il a été retiré de la Tour
+en attendant de revoir son kit.
+
 ## 10. Résultats de simulation (IA simple des deux côtés, 400 combats par duel)
 
 | Duel (équipes d'une seule nation) | Avec triangle | Sans triangle |
