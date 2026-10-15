@@ -65,7 +65,7 @@ def simplify_materials():
                         break
             if diffuse is not None:  # taille utile à l'écran d'un téléphone (APK et dépôt plus légers)
                 oname = ob.name.lower()
-                if "suit" in oname or "shoes" in oname or "fedora" in oname:
+                if any(k in oname for k in ("suit", "shoes", "fedora", "robe", "ninja", "tunic", "jacket", "pants", "boots", "dress", "uniform")):
                     side = 16  # vêtements peints en couleurs de sommets : la texture n'est pas affichée
                 elif "eye" in oname or "brow" in oname or "lash" in oname:
                     side = 256
@@ -98,6 +98,10 @@ def simplify_materials():
             print("MAT", ob.name, mat.name, "->", diffuse.image.name if diffuse else "AUCUNE TEXTURE")
             done[mat.name] = new
             slot.material = new
+
+
+def col_list(c):
+    return (c[0], c[1], c[2], 1.0)
 
 
 def bone_head(rig, name):
@@ -162,6 +166,23 @@ def paint(spec, rig):
                     c = col("collar", top)
                 if not sleeve and "graphic" in rules and w.y < hips.y and abs(w.z - (waist_z + neck.z) / 2) < 0.07                         and ax < 0.13 and rnd.random() < 0.5:
                     c = col("graphic", top)
+            if kind == "clothes":
+                pt = rules.get("patch")  # kente : carrés multicolores sur un pan et sa manche (le côté gauche = +X)
+                if pt and (w.x > 0) == (pt.get("side", "left") == "left") and ax > 0.035 \
+                        and w.z > waist_z - float(pt.get("down", 0.6)):
+                    sz = float(pt.get("size", 0.05))
+                    cell = (int((w.x + 5.0) / sz), int((w.z + 5.0) / sz))
+                    pal = pt["colors"]
+                    k = pal[(cell[0] * 7 + cell[1] * 3) % len(pal)]
+                    c = (k[0], k[1], k[2], 1.0)
+                fl = rules.get("hem_flames")  # flammes qui montent du bas du manteau
+                if fl:
+                    import math
+                    limit = float(fl.get("height", 0.45)) + 0.07 * math.sin(w.x * 45.0) + 0.05 * math.sin(w.y * 33.0 + w.x * 12.0)
+                    if w.z < limit - 0.1:
+                        c = col_list(fl.get("core", fl["color"]))
+                    elif w.z < limit:
+                        c = col_list(fl["color"])
             attr.data[i].color = c
         me.color_attributes.active_color = attr
         print("PAINT", ob.name, kind, len(me.vertices))

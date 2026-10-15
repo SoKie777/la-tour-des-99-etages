@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b8ossybf08clq"
+uid="uid://qubimv1fn627"
 path.s3tc="res://.godot/imported/adrian_5.png-06107390228ed00e4325854e84effde7.s3tc.ctex"
 path.etc2="res://.godot/imported/adrian_5.png-06107390228ed00e4325854e84effde7.etc2.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "b12f811c5b145750b3eb596b7234773c"
+"md5": "f7f1c8079a2078eb288ed0d47d3cbd00"
 }
 
 [deps]

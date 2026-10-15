@@ -46,6 +46,8 @@ const CHAR_MAP := {
 	"serpent": {"idle": "idle_caster", "attack": "kick_high", "skill": "heal", "ultimate": "cast_area"},
 }
 const HOLD_AT_END := ["ko"]
+## Vêtements MPFB (peints en couleurs de sommets, sans texture) : mots-clés des noms d'objets.
+const CLOTH_WORDS := ["suit", "shoes", "robe", "ninja", "tunic", "jacket", "pants", "boots", "dress", "uniform", "coveralls"]
 
 static var _lib: AnimationLibrary
 
@@ -208,7 +210,7 @@ func _toonify(mi: MeshInstance3D) -> void:
 		var name_l := str(mi.name).to_lower()
 		var arrays := mi.mesh.surface_get_arrays(i)
 		var has_col: bool = arrays[Mesh.ARRAY_COLOR] != null and (arrays[Mesh.ARRAY_COLOR] as PackedColorArray).size() > 0
-		var is_cloth: bool = "suit" in name_l or "shoes" in name_l
+		var is_cloth: bool = CLOTH_WORDS.any(func(w: String) -> bool: return w in name_l)
 		if has_col:
 			m.vertex_color_use_as_albedo = true
 			m.vertex_color_is_srgb = true

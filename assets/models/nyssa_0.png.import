@@ -2,12 +2,15 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://blp778lmsmft6"
+uid="uid://b087q86my134v"
 path.s3tc="res://.godot/imported/nyssa_0.png-ec3f56aa34edec1c119a42529696073b.s3tc.ctex"
 path.etc2="res://.godot/imported/nyssa_0.png-ec3f56aa34edec1c119a42529696073b.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
+}
+generator_parameters={
+"md5": "299e2769f0e0badfa873e71ac17e302e"
 }
 
 [deps]
@@ -25,7 +28,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

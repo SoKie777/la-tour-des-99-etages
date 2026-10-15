@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cvd8hcqr441rd"
+uid="uid://c4jkukvmd1mu5"
 path.s3tc="res://.godot/imported/nyssa_4.png-a83a33fe178658c8cd4845f9af472d1a.s3tc.ctex"
 path.etc2="res://.godot/imported/nyssa_4.png-a83a33fe178658c8cd4845f9af472d1a.etc2.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "8aae933827f09fd61ef5a9455101f664"
+"md5": "d45ab9d55bcfe6879ad8ce7723e92740"
 }
 
 [deps]

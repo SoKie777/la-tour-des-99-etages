@@ -2,12 +2,15 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dh0uklkqjr1od"
+uid="uid://c6oiyonihs1e4"
 path.s3tc="res://.godot/imported/tarkhan_0.png-f63d221b42e18f44639eb4ca02c9b43f.s3tc.ctex"
 path.etc2="res://.godot/imported/tarkhan_0.png-f63d221b42e18f44639eb4ca02c9b43f.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
+}
+generator_parameters={
+"md5": "2ae7cb8cdd1a6642f90e8ebda64c4b69"
 }
 
 [deps]
@@ -25,7 +28,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

@@ -2,21 +2,21 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dwxlevmumiete"
-path.s3tc="res://.godot/imported/tarkhan_5.png-aaf85647aa6ca2b74c2e74433fcf0e3a.s3tc.ctex"
-path.etc2="res://.godot/imported/tarkhan_5.png-aaf85647aa6ca2b74c2e74433fcf0e3a.etc2.ctex"
+uid="uid://tw47k06ethka"
+path.s3tc="res://.godot/imported/flint_6.png-f3987303a3ebc8b13bb538f531759c6a.s3tc.ctex"
+path.etc2="res://.godot/imported/flint_6.png-f3987303a3ebc8b13bb538f531759c6a.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
-"md5": "f7f1c8079a2078eb288ed0d47d3cbd00"
+"md5": "86461516f1afc0ffd6d48470c524f79c"
 }
 
 [deps]
 
-source_file="res://assets/models/tarkhan_5.png"
-dest_files=["res://.godot/imported/tarkhan_5.png-aaf85647aa6ca2b74c2e74433fcf0e3a.s3tc.ctex", "res://.godot/imported/tarkhan_5.png-aaf85647aa6ca2b74c2e74433fcf0e3a.etc2.ctex"]
+source_file="res://assets/models/flint_6.png"
+dest_files=["res://.godot/imported/flint_6.png-f3987303a3ebc8b13bb538f531759c6a.s3tc.ctex", "res://.godot/imported/flint_6.png-f3987303a3ebc8b13bb538f531759c6a.etc2.ctex"]
 
 [params]
 

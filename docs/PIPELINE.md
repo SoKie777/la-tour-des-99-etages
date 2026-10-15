@@ -62,6 +62,10 @@ Le même pipeline que **Coup d'État** (dépôt `SoKie777/coup-detat`), déjà v
 3. Lancer `python tools/set_retarget.py`. Ce script active la BoneMap dans les `.import` des nouveaux FBX. Le chemin du squelette d'un modèle est `<id>_body_rig/Skeleton3D`.
 4. Ouvrir Godot pour l'import. La scène de combat prend le modèle automatiquement.
 
+Vêtements supplémentaires : packs communautaires « suits02 » (CC0) et « suits03 » (CC-BY), à installer
+dans les données utilisateur de MPFB (voir `CREDITS.md`). Motifs peints : `patch` (kente) et `hem_flames`
+(flammes au bas d'un manteau), en plus de `sleeve`, `inner`, `stripes`, `sparkle`…
+
 ⚠️ Noms d'assets MPFB : seuls ceux déjà utilisés par Coup d'État sont sûrs :
 - peau `Young african male` ;
 - cheveux `Short01`, `Short02`, `Short04`, `Afro01` ;
