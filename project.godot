@@ -8,7 +8,7 @@ config/name="La Tour des 99 Étages"
 config/description="Gacha RPG tour par tour à barre d'action (MVP)."
 run/main_scene="res://scenes/main.tscn"
 config/icon="res://icon.svg"
-config/features=PackedStringArray("4.5", "Mobile")
+config/features=PackedStringArray("4.7", "Mobile")
 
 [autoload]
 

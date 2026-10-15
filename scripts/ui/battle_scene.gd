@@ -1,8 +1,6 @@
 extends Node3D
-## Scène de combat jouable. Les personnages sont des capsules de couleur tant que
-## leur modèle n'existe pas ; dès qu'un fichier
-## res://assets/characters/<id>/<id>.glb est présent, il est utilisé automatiquement
-## (animations attendues : idle, attack, skill, ultimate, hit, death).
+## Scène de combat jouable. Personnages : modèle MPFB res://assets/models/<id>.fbx s'il existe,
+## sinon le mannequin Y Bot teinté à la couleur de la constellation (voir CharacterModel).
 
 signal finished(winner: int)
 
@@ -12,7 +10,7 @@ const UI_ACCENT := Color("c9a24a")
 
 var engine: BattleEngine
 var pawns := {}        # BattleUnit -> Node3D
-var anim_players := {} # BattleUnit -> AnimationPlayer
+var models := {}       # BattleUnit -> CharacterModel
 var cards := {}        # BattleUnit -> {hp: ProgressBar, info: Label}
 var log_label: RichTextLabel
 var turn_label: Label
@@ -100,7 +98,7 @@ func _on_battle_event(ev: Dictionary) -> void:
 			_float_text(ev["target"], BattleLog.effect_name(ev["effect"]), Color("e0c060"))
 		"death":
 			_play_anim(ev["target"], "death")
-			if not anim_players.has(ev["target"]):
+			if not models.has(ev["target"]):
 				var tw := create_tween()
 				tw.tween_property(pawns[ev["target"]], "scale", Vector3(1, 0.15, 1), 0.3)
 
@@ -145,16 +143,11 @@ func _build_world() -> void:
 
 func _make_pawn(u: BattleUnit) -> Node3D:
 	var root := Node3D.new()
-	var model_path := "res://assets/characters/%s/%s.glb" % [u.id, u.id]
-	if ResourceLoader.exists(model_path):
-		var model: Node3D = load(model_path).instantiate()
+	if CharacterModel.available():
+		var model := CharacterModel.new()
 		root.add_child(model)
-		var ap := model.find_child("AnimationPlayer", true, false) as AnimationPlayer
-		if ap != null:
-			anim_players[u] = ap
-			if ap.has_animation("idle"):
-				ap.get_animation("idle").loop_mode = Animation.LOOP_LINEAR
-				ap.play("idle")
+		model.setup(u.id, COLORS[u.constellation])
+		models[u] = model
 	else:
 		var mesh := MeshInstance3D.new()
 		var capsule := CapsuleMesh.new()
@@ -169,24 +162,18 @@ func _make_pawn(u: BattleUnit) -> Node3D:
 	var label := Label3D.new()
 	label.text = u.display_name
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.position.y = 2.1
+	label.position.y = 2.15
 	label.font_size = 40
 	label.outline_size = 8
+	label.modulate = COLORS[u.constellation].lightened(0.4)
 	root.add_child(label)
 	return root
 
 
-func _play_anim(u: BattleUnit, anim_name: String) -> void:
-	var ap: AnimationPlayer = anim_players.get(u)
-	if ap == null:
-		return
-	if anim_name == "ultimate" and not ap.has_animation("ultimate"):
-		anim_name = "skill"
-	if not ap.has_animation(anim_name):
-		return
-	ap.play(anim_name)
-	if anim_name in ["attack", "skill", "ultimate", "hit"] and ap.has_animation("idle"):
-		ap.queue("idle")
+func _play_anim(u: BattleUnit, action: String) -> void:
+	var model: CharacterModel = models.get(u)
+	if model != null:
+		model.play(action)
 
 
 func _float_text(u: BattleUnit, text: String, color: Color) -> void:
@@ -405,6 +392,9 @@ func _show_result() -> void:
 	v.add_child(b)
 	result_panel.add_child(v)
 	result_panel.visible = true
+	for u in engine.units:
+		if u.is_alive() and u.team == engine.winner:
+			_play_anim(u, "victory")
 	finished.emit(engine.winner)
 	if Session.smoke_test:
 		print("Test de fumée OK : combat terminé (vainqueur %d, %d actions)" % [engine.winner, engine.total_actions])

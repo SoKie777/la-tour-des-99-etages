@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 env:
-  GODOT_VERSION: "4.5.1"
+  GODOT_VERSION: "4.7"
   PROJECT_DIR: "."
 
 jobs:
@@ -28,15 +28,15 @@ jobs:
 
       - name: Installer Godot et les modèles d'export Android
         run: |
-          base=https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable
+          base=https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable
           wget -q "$base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
           unzip -q "Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
           sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
           wget -q "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
           tpl="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
           mkdir -p "$tpl"
-          unzip -q -j "Godot_v${GODOT_VERSION}-stable_export_templates.tpz" \
-            "templates/android_debug.apk" "templates/android_release.apk" "templates/version.txt" -d "$tpl"
+          unzip -q "Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          mv templates/* "$tpl"/
           ls -la "$tpl"
 
       - name: Importer le projet et lancer les tests
@@ -50,7 +50,8 @@ jobs:
             -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           mkdir -p "$HOME/.config/godot"
           minor=$(echo "$GODOT_VERSION" | cut -d. -f1,2)
-          cat > "$HOME/.config/godot/editor_settings-${minor}.tres" <<EOF
+          for v in 4 "$minor"; do
+          cat > "$HOME/.config/godot/editor_settings-${v}.tres" <<EOF
           [gd_resource type="EditorSettings" format=3]
 
           [resource]
@@ -60,6 +61,7 @@ jobs:
           export/android/debug_keystore_user = "androiddebugkey"
           export/android/debug_keystore_pass = "android"
           EOF
+          done
           cat "$HOME/.config/godot/editor_settings-${minor}.tres"
 
       - name: Numéroter la version
@@ -98,3 +100,14 @@ jobs:
           body: |
             APK de test (debug) de La Tour des 99 Étages, version ${{ env.APP_VERSION }}.
             Sur Android : télécharger le fichier .apk, l'ouvrir, autoriser l'installation depuis cette source.
+
+      - name: Release « dernière version » (lien fixe pour le téléphone)
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp "build/$APK_NAME" build/tour99-derniere.apk
+          gh release delete apk-latest --yes --cleanup-tag || true
+          gh release create apk-latest build/tour99-derniere.apk \
+            --title "APK – dernière version (v${APP_VERSION})" \
+            --notes "Toujours la dernière version. Compilé depuis ${GITHUB_SHA::7}." --prerelease

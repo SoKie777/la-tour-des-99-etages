@@ -1,75 +1,80 @@
-# Pipeline de production : qui fait quoi
+# Pipeline de production
 
-Objectif : tu ne fais que te connecter ou télécharger. Le reste passe par Claude et ses MCP.
+Le même pipeline que **Coup d'État** (dépôt `SoKie777/coup-detat`), déjà validé sur ce PC.
 
-## Ce qui est possible depuis où
+```
+ MPFB2 dans Blender ──▶ assets/models/<id>.fbx ─┐
+ (corps, peau, cheveux,  (squelette Mixamo,      │   Godot 4.7 : à l'import, BoneMap humanoïde
+  vêtements peints)       textures embarquées)   ├─▶ (mixamo_bonemap.tres) sur tous les FBX
+                                                 │   → CharacterModel joue les anims sur le modèle
+ Mixamo (web) ─────────▶ assets/mixamo/anims/ ───┘
+ (animations, X/Y Bot,   *.fbx
+  Without Skin)
+```
 
-| Tâche | Session cloud (claude.ai/code) | Claude Code ou Claude Desktop **sur ton PC** |
+## Les outils et leur rôle
+
+| Outil | Rôle | Qui |
 |---|---|---|
-| Code GDScript, données, tests headless, simulations | Oui (fait ici avec Godot 4.5.1 headless) | Oui |
-| Piloter l'éditeur Godot (scènes, lancer le jeu, captures) | Non | Oui, via **godot-mcp** |
-| Piloter Blender (MakeHuman, rig, export) | Non (Blender bloqué par le réseau de cette session) | Oui, via **Blender MCP** ou les scripts `tools/blender` |
-| Mixamo (site Adobe, connexion obligatoire, pas d'API) | Non | Toi : connexion et téléchargements. Ou Claude in Chrome si tu l'utilises |
-| Export Android ou iOS | Non | Oui (modèles d'export Godot à télécharger) |
+| **MPFB2** (MakeHuman dans Blender) | Fabrique chaque personnage : morphologie, peau, cheveux, vêtements, plus un **squelette Mixamo**. Exporte un FBX prêt pour Godot. | Claude : `tools/mpfb/make_characters.py` |
+| **Mixamo** | Banque d'**animations** (Adobe, gratuit, connexion obligatoire, pas d'API). | Toi : téléchargements seulement |
+| **Godot 4.7** | Moteur du jeu. À l'import, il **recible** les animations Mixamo sur chaque personnage grâce à la BoneMap. | Claude (MCP Godot ou code) |
+| **GitHub Actions** | Construit l'APK et le publie dans les Releases. | Automatique |
 
-En pratique : le gameplay, l'équilibrage et l'interface peuvent avancer ici. La 3D et l'éditeur
-Godot demandent une session **sur ta machine**.
+## Déjà en place
 
-## Installation sur ton PC (une seule fois)
+- `assets/mixamo/ybot_idle.fbx` : le mannequin Y Bot, utilisé tant qu'un personnage n'a pas son modèle.
+- `assets/mixamo/anims/` : 7 animations reprises de Coup d'État :
 
-Ce que tu dois télécharger ou installer :
-1. **Godot 4.5.1** : https://godotengine.org/download (version standard, pas .NET).
-2. **Blender 4.5 LTS** : https://www.blender.org/download/
-3. **MPFB2** (MakeHuman pour Blender) : dans Blender, Edit → Preferences → Get Extensions →
-   chercher « MPFB », puis installer le pack d'assets **makehuman_system_assets**
-   (https://static.makehumancommunity.org/asset_packs/makehuman_system_assets.html). Dans les préférences de MPFB,
-   indiquer le dossier des assets.
-4. **Node.js LTS** (pour godot-mcp) et **uv** (pour Blender MCP) :
-   https://nodejs.org et https://docs.astral.sh/uv/getting-started/installation/
-5. **Claude Code** sur ton PC, puis dans un terminal :
+  | Fichier | Utilisé pour |
+  |---|---|
+  | `idle` | Attente |
+  | `cross` | Compétence 1 |
+  | `punch_combo` | Compétence 2 |
+  | `hurricane_kick` | Ultime |
+  | `hit` | Coup reçu |
+  | `ko` | Mort |
+  | `victory` | Victoire |
+
+  La correspondance est dans `MAP`, dans `scripts/ui/character_model.gd`.
+- `assets/mixamo/mixamo_bonemap.tres` : la correspondance entre les os Mixamo et le profil humanoïde de Godot, générée par `tools/make_bonemap.gd`.
+
+## Créer un personnage
+
+1. Régler sa fiche dans `tools/mpfb/characters.json` : macros, `race`, `skin`, `hair`, `eyebrows`, `clothes` et les couleurs de `paint` (vêtements en aplats).
+2. Lancer :
    ```
-   claude mcp add godot -e GODOT_PATH=<chemin vers Godot> -- npx @coding-solo/godot-mcp
-   claude mcp add blender uvx mcp-for-blender
-   uvx mcp-for-blender install-addon
+   blender --background --python tools/mpfb/make_characters.py -- eirikr
    ```
-   Dans Blender : activer l'add-on « Blender MCP », puis dans la vue 3D, touche N → onglet
-   BlenderMCP → *Start MCP Server*.
-6. Cloner ce dépôt et ouvrir `project.godot` dans Godot une fois.
+   Sans id, le script fabrique tout le roster. Sortie : `assets/models/eirikr.fbx`.
+3. Lancer `python tools/set_retarget.py`. Ce script active la BoneMap dans les `.import` des nouveaux FBX. Le chemin du squelette d'un modèle est `<id>_body_rig/Skeleton3D`.
+4. Ouvrir Godot pour l'import. La scène de combat prend le modèle automatiquement.
 
-## Personnages : MakeHuman → Mixamo → Godot
+⚠️ Noms d'assets MPFB : seuls ceux déjà utilisés par Coup d'État sont sûrs :
+- peau `Young african male` ;
+- cheveux `Short01`, `Short02`, `Short04`, `Afro01` ;
+- vêtements `Male casualsuit01` et `Male casualsuit04`, chaussures `Shoes01` à `Shoes06`.
 
-L'astuce : MPFB2 sait poser un squelette **« mixamo »** sur un humain MakeHuman, avec les mêmes noms
-d'os que Mixamo. Les animations téléchargées **une seule fois** sur Mixamo servent donc à **tous** les
-personnages. Pas besoin d'envoyer chaque modèle sur Mixamo.
+Les autres (peaux caucasienne et asiatique, `Female casualsuit01`, `Long01`, `Ponytail01`) sont à vérifier. En cas d'erreur, le script affiche la liste des noms disponibles.
 
-1. **Créer le personnage** (Claude, via Blender MCP ou en ligne de commande) :
-   ```
-   blender --background --python tools/blender/make_character.py -- --id eirikr
-   ```
-   Les morphologies, peaux, cheveux et vêtements sont dans `tools/blender/characters.json`.
-   Sortie : `art/characters/eirikr/eirikr.blend`.
-2. **Animations Mixamo** (toi, une fois pour tout le roster) : sur https://www.mixamo.com, connexion
-   Adobe, personnage par défaut (X Bot). Pour chaque animation : Download → FBX Binary,
-   **Without Skin**, 30 ips. Les ranger dans `art/animations/mixamo/` sous ces noms :
-   `idle.fbx`, `attack.fbx`, `skill.fbx`, `ultimate.fbx`, `hit.fbx`, `death.fbx`.
-   Suggestions : *Fighting Idle*, *Punching* ou *Sword Slash*, *Standing Magic Attack*,
-   *Great Sword Slash* ou *Spell Casting*, *Hit Reaction*, *Dying*.
-3. **Appliquer et exporter** (Claude) :
-   ```
-   blender --background art/characters/eirikr/eirikr.blend --python tools/blender/apply_mixamo_anims.py -- --id eirikr
-   ```
-   Sortie : `assets/characters/eirikr/eirikr.glb`.
-4. **Dans Godot, rien à faire** : la scène de combat utilise automatiquement le `.glb` s'il existe,
-   sinon elle affiche une capsule.
+## Ajouter une animation
 
-> Les deux scripts Blender suivent l'API réelle de MPFB2 (exemples officiels `script_samples`), mais
-> ils **n'ont pas encore été exécutés** : Blender n'a pas pu être téléchargé dans la session cloud.
-> Premier test à faire sur ton PC avec un seul personnage.
+1. Mixamo, avec le personnage X Bot ou Y Bot → *FBX Binary, Without Skin*.
+2. Mettre le fichier dans `assets/mixamo/anims/<nom>.fbx`, puis lancer `python tools/set_retarget.py` et ouvrir Godot.
+3. L'associer à une action dans `MAP` (`scripts/ui/character_model.gd`).
 
-## Tests (n'importe où)
+Tu peux aussi copier n'importe quelle animation de `coup-detat/assets/mixamo/anims/`, avec son `.import` : 32 sont disponibles (coups de pied, chopes, provocation…).
+
+## Tests
 
 ```
 godot --headless --path . --import
 godot --headless --path . --script res://tests/run_tests.gd -- --sims=400
 godot --headless --path . res://scenes/battle.tscn -- --smoke
 ```
+
+## APK
+
+Changer `VERSION`, puis committer et pousser sur `main`. On obtient :
+- une Release `vX.Y.Z` ;
+- la Release fixe **`apk-latest`**, qui contient toujours la dernière version (le lien ne change pas).
