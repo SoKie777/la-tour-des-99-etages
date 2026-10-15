@@ -144,13 +144,17 @@ func compute_damage(att: BattleUnit, tgt: BattleUnit, raw: float, opts: Dictiona
 	return dmg * _taken_mult(tgt)
 
 
-## Multiplicateur de dégâts subis (réductions passives, postures, auras, Vulnérabilité).
+## Multiplicateur de dégâts subis (réductions passives, postures, auras, Vulnérabilité, statuts).
 func _taken_mult(tgt: BattleUnit) -> float:
 	var m := 1.0 - float(tgt.get_trait("damage_reduction", 0.0)) / 100.0
 	for e in tgt.effects:
 		var d: Dictionary = rules["effects"][e["id"]]
 		if d.has("dmg_taken_from_value"):
 			m *= 1.0 + float(d["dmg_taken_from_value"]) * float(e["value"]) / 100.0
+		if d.has("dmg_taken_per_stack"):
+			m *= 1.0 + float(d["dmg_taken_per_stack"]) * int(e.get("stacks", 1)) / 100.0
+		if d.has("dmg_taken_pct"):
+			m *= 1.0 + float(d["dmg_taken_pct"]) / 100.0
 	return maxf(0.0, m)
 
 
@@ -171,7 +175,11 @@ func next_turn() -> BattleUnit:
 			ready.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool:
 				if not is_equal_approx(a.stat("spd"), b.stat("spd")):
 					return a.stat("spd") > b.stat("spd")
-				return a.ap > b.ap)
+				if not is_equal_approx(a.ap, b.ap):
+					return a.ap > b.ap
+				if a.slot != b.slot:  # à VIT égale : la position dans l'équipe (fiche, partie 4)
+					return a.slot < b.slot
+				return a.team < b.team)
 			current = ready[0]
 			break
 		var step := 1.0
@@ -219,13 +227,26 @@ func use_skill(u: BattleUnit, idx: int, target: BattleUnit = null) -> void:
 
 ## Résout une compétence (sans finir le tour) : utilisée par use_skill, la copie de Nyssa,
 ## les relances gratuites et les contre-attaques.
-func execute(u: BattleUnit, sk: Dictionary, target: BattleUnit, idx: int) -> void:
+func execute(u: BattleUnit, sk: Dictionary, target: BattleUnit, idx: int, power := 1.0) -> void:
 	var targets := _resolve_targets(u, sk, target, idx)
 	_emit({"type": "skill", "actor": u, "skill": sk["name"], "index": idx, "targets": targets})
+	if u.flags.has("shield_next_skill"):  # Inertie au maximum (Selene)
+		_try_apply(u, u, {"id": "shield", "value": float(u.flags["shield_next_skill"]), "of": "target_max_hp", "turns": 2})
+		u.flags.erase("shield_next_skill")
 	if sk.has("revive"):
 		_revive(u, sk["revive"])
-	var ctx := {"removed": 0, "dealt": 0.0, "success": []}
+	var ctx := {"removed": 0, "dealt": 0.0, "success": [], "power": power, "missed": []}
+	if u.flags.has("ignore_def_next") and sk.has("hits"):  # Visage au maximum (Mello)
+		ctx["ignore_def"] = float(u.flags["ignore_def_next"])
+		u.flags.erase("ignore_def_next")
+	var passes := 1
+	if sk.get("target", "") == "all_enemies" and u.flags.has("double_aoe") and sk.has("hits"):  # Espéra au maximum
+		passes = 2
+		u.flags.erase("double_aoe")
 	for t in targets:
+		if t.team != u.team and sk.has("hits") and _rolls_miss(u, t, sk):
+			ctx["missed"].append(t)
+			_emit({"type": "miss", "actor": u, "target": t})
 		for ef: Dictionary in sk.get("pre_effects", []):
 			ctx["removed"] += _apply_action(u, t, ef, ctx)
 	if sk.has("detonate") and not targets.is_empty():
@@ -233,8 +254,9 @@ func execute(u: BattleUnit, sk: Dictionary, target: BattleUnit, idx: int) -> voi
 	for t in targets:
 		if not t.is_alive():
 			continue
-		_hit_target(u, t, sk, ctx)
-		if t.is_alive():
+		for p in passes:
+			_hit_target(u, t, sk, ctx)
+		if t.is_alive() and not t in ctx["missed"]:
 			for ef: Dictionary in sk.get("effects", []):
 				_apply_action(u, t, ef, ctx)
 		_consume_bonus_stacks(u, t, sk)
@@ -277,10 +299,18 @@ func execute(u: BattleUnit, sk: Dictionary, target: BattleUnit, idx: int) -> voi
 	if sk.get("copy_last_skill", false):
 		_copy_last_skill(u)
 	if sk.has("clones_strike"):
-		_clones_strike(u, float(sk["clones_strike"]), true)
+		_clones_strike(u, float(sk["clones_strike"]))
+	elif not _in_reaction and power >= 1.0 and sk.has("hits") and u.status_stacks("clone") > 0 and not targets.is_empty() 			and targets[0].team != u.team:
+		_clone_copies(u, sk, targets)
 	if not targets.is_empty() and u.team != targets[0].team and not _in_reaction:
 		_on_targeted(u, targets)
-		_ally_clones_follow(u, targets)
+
+
+## Raté (Dislyte) : seul le dominé peut rater, une fois par cible et par compétence.
+func _rolls_miss(u: BattleUnit, t: BattleUnit, sk: Dictionary) -> bool:
+	if sk.get("cannot_miss", false) or not dominates(t.constellation, u.constellation):
+		return false
+	return rng.randf() * 100.0 < float(rules["triangle"].get("dominated_miss_chance", 0.0))
 
 
 func _resolve_targets(u: BattleUnit, sk: Dictionary, target: BattleUnit, idx: int) -> Array[BattleUnit]:
@@ -316,6 +346,7 @@ func _valid_for(u: BattleUnit, kind: String) -> Array[BattleUnit]:
 
 
 func _hit_target(u: BattleUnit, t: BattleUnit, sk: Dictionary, ctx: Dictionary) -> void:
+	var missed: bool = t in ctx.get("missed", [])
 	for h: Dictionary in sk.get("hits", []):
 		if h.has("if") and not _condition(h["if"], u, t):
 			continue
@@ -329,11 +360,23 @@ func _hit_target(u: BattleUnit, t: BattleUnit, sk: Dictionary, ctx: Dictionary) 
 			if not tt.is_alive() or not u.is_alive():
 				return
 			var raw := _raw(u, h) + tt.max_hp() * float(h.get("target_max_hp_pct", 0.0)) / 100.0
-			raw *= _damage_bonus(u, tt, sk, ctx)
-			ctx["dealt"] += _deal_damage(u, tt, raw, h)
+			raw *= _damage_bonus(u, tt, sk, ctx) * float(ctx.get("power", 1.0))
+			if h.get("pursuit", false) and tt.has_effect("room"):
+				raw *= 1.0 + float(rules["effects"]["room"]["pursuit_taken_pct"]) / 100.0
+			var opts := h
+			if ctx.has("ignore_def") or (missed and tt == t):
+				opts = h.duplicate()
+				opts["ignore_def"] = float(h.get("ignore_def", 0.0)) + float(ctx.get("ignore_def", 0.0))
+				if missed and tt == t:
+					opts["missed"] = true
+			ctx["dealt"] += _deal_damage(u, tt, raw, opts)
+			if missed and tt == t:
+				continue  # un raté n'applique pas d'effet
 			for ef: Dictionary in h.get("on_hit", []):
 				if tt.is_alive():
 					_apply_action(u, tt, ef, ctx)
+			if sk.get("target", "") == "all_enemies" and u.get_trait("aoe_mark") != null and tt.is_alive():
+				_try_apply(u, tt, {"id": u.get_trait("aoe_mark"), "chance": 100})  # Espéra : chaque dégât de zone
 
 
 ## Puissance brute d'un coup : une stat x multiplicateur, ou plusieurs stats {"atk": 0.35, "def": 0.3}.
@@ -353,9 +396,9 @@ func _damage_bonus(u: BattleUnit, t: BattleUnit, sk: Dictionary, ctx: Dictionary
 	var m := 1.0
 	for b: Dictionary in sk.get("bonus", []):
 		if b.has("per_stack"):
-			m *= 1.0 + float(b["pct"]) / 100.0 * t.stack(b["per_stack"])
+			m *= 1.0 + float(b["pct"]) / 100.0 * t.marks(b["per_stack"])
 		elif b.has("per_self_stack"):
-			m *= 1.0 + float(b["pct"]) / 100.0 * u.stack(b["per_self_stack"])
+			m *= 1.0 + float(b["pct"]) / 100.0 * u.marks(b["per_self_stack"])
 		elif b.has("per_ally_alive"):
 			m *= 1.0 + float(b["per_ally_alive"]) / 100.0 * allies_of(u).size()
 		elif b.has("per_removed"):
@@ -366,9 +409,6 @@ func _damage_bonus(u: BattleUnit, t: BattleUnit, sk: Dictionary, ctx: Dictionary
 		m *= 1.0 + float(u.get_trait("dmg_per_spd")) / 100.0 * u.stat("spd")
 	if u.get_trait("dmg_if_ally_low") != null and allies_of(u).any(func(a: BattleUnit) -> bool: return a.hp_ratio() < 0.5):
 		m *= 1.0 + float(u.get_trait("dmg_if_ally_low")) / 100.0
-	var clones: Variant = u.get_trait("clones")
-	if clones != null and sk.get("target", "") == "all_enemies":
-		m *= 1.0 + float(clones["aoe_bonus_pct"]) / 100.0 * u.stack("clone")
 	return m
 
 
@@ -376,10 +416,12 @@ func _consume_bonus_stacks(u: BattleUnit, t: BattleUnit, sk: Dictionary) -> void
 	for b: Dictionary in sk.get("bonus", []):
 		if not b.get("consume", false):
 			continue
-		if b.has("per_stack"):
-			t.stacks[b["per_stack"]] = 0
-		elif b.has("per_self_stack"):
-			u.stacks[b["per_self_stack"]] = 0
+		var who := t if b.has("per_stack") else u
+		var name: String = b.get("per_stack", b.get("per_self_stack", ""))
+		if name != "":
+			who.stacks[name] = 0
+			if who.has_effect(name):
+				_remove_effect(who, name)
 
 
 func _condition(cond: String, u: BattleUnit, t: BattleUnit) -> bool:
@@ -445,13 +487,17 @@ func _start_turn(u: BattleUnit) -> void:
 	u.flags.erase("countered")
 	if u.has_passive("breeze"):
 		_heal(_lowest_hp(allies_of(u)), _lowest_hp(allies_of(u)).max_hp() * 0.10, u)
-	var clones: Variant = u.get_trait("clones")
-	if clones != null:
-		u.add_stack("clone", 1, int(clones["max"]))
+	if u.get_trait("clone_per_turn", false):  # Clones temporels (Nyssa)
+		_try_apply(u, u, {"id": "clone"})
 	for e in u.effects.duplicate():
 		var d: Dictionary = rules["effects"][e["id"]]
-		if d.get("dot_on", "") == "turn_start" and u.is_alive():
+		if not u.is_alive():
+			return
+		if d.get("dot_on", "") == "turn_start":
 			_apply_damage(u, _dot_amount(u, e, d), e["source"].get_ref(), {"dot": e["id"]})
+		if d.has("regen_pct_max_hp"):
+			_heal(u, u.max_hp() * float(d["regen_pct_max_hp"]) / 100.0, e["source"].get_ref())
+		_run_hooks(u, e, "on_turn_start", null)
 
 
 func _dot_amount(u: BattleUnit, e: Dictionary, d: Dictionary) -> float:
@@ -466,27 +512,35 @@ func _end_turn(u: BattleUnit) -> void:
 			var d: Dictionary = rules["effects"][e["id"]]
 			if d.get("dot_on", "") == "after_action" and u.is_alive():
 				_apply_damage(u, _dot_amount(u, e, d), e["source"].get_ref(), {"dot": e["id"]})
+			if u.is_alive():
+				_run_hooks(u, e, "on_turn_end", null)
 	for e in u.effects.duplicate():
+		if not e in u.effects:
+			continue
 		if e["skip_tick"]:
 			e["skip_tick"] = false
 			continue
 		e["turns"] -= 1
 		if e["turns"] <= 0:
-			_remove_effect(u, e["id"])
+			_remove_effect(u, e["id"], true)
 	for i in 3:
 		u.cooldowns[i] = maxi(0, u.cooldowns[i] - 1)
 	_emit({"type": "turn_end", "actor": u})
 	_check_end()
 
 
-## Réactions d'une cible attaquée : contre-attaques, perte de PA de l'attaquant, sets de reliques.
+## Réactions d'une cible attaquée : contre-attaques, perte de PA de l'attaquant, statuts, sets de reliques.
 func _on_targeted(attacker: BattleUnit, targets: Array[BattleUnit]) -> void:
 	for t in targets:
 		if not attacker.is_alive():
 			return
 		var was_crit: bool = t.flags.get("hit_crit", false)
 		t.flags.erase("hit_crit")
-		if not t.is_alive() or t.is_hard_cc():
+		if not t.is_alive():
+			continue
+		for e in t.effects.duplicate():
+			_run_hooks(t, e, "on_attacked", attacker)
+		if t.is_hard_cc():
 			continue
 		if t.get_trait("attacker_ap_down") != null:
 			attacker.ap = maxf(0.0, attacker.ap - float(t.get_trait("attacker_ap_down")) / 100.0)
@@ -507,39 +561,38 @@ func _counter(t: BattleUnit, attacker: BattleUnit, counter: Dictionary) -> void:
 	if not attacker.is_alive():
 		return
 	_emit({"type": "counter", "actor": t, "target": attacker})
+	var was := _in_reaction
 	_in_reaction = true
 	if counter.has("skill"):
 		execute(t, t.skill(int(counter["skill"])), attacker, int(counter["skill"]))
 	else:
 		_hit_target(t, attacker, {"hits": counter["hits"]}, {"removed": 0, "dealt": 0.0, "success": []})
-	_in_reaction = false
+	_in_reaction = was
 
 
-## Clones de Nyssa : ils frappent quand un allié attaque.
-func _ally_clones_follow(attacker: BattleUnit, targets: Array[BattleUnit]) -> void:
-	for a in allies_of(attacker):
-		if a == attacker or a.get_trait("clones") == null or a.stack("clone") == 0:
-			continue
-		var tgt: BattleUnit = targets[0] if targets[0].is_alive() else null
-		if tgt == null and not enemies_of(a).is_empty():
-			tgt = enemies_of(a)[0]
-		if tgt == null:
-			return
-		_in_reaction = true
-		for c in a.stack("clone"):
-			if tgt.is_alive():
-				_deal_damage(a, tgt, a.stat("atk") * float(a.get_trait("clones")["strike_pct"]) / 100.0, {})
-		_in_reaction = false
-
-
-func _clones_strike(u: BattleUnit, pct: float, consume: bool) -> void:
-	for c in u.stack("clone"):
+## S3 de Nyssa : chaque clone frappe un ennemi au hasard, puis les clones disparaissent.
+func _clones_strike(u: BattleUnit, pct: float) -> void:
+	for c in u.status_stacks("clone"):
 		var foes := enemies_of(u)
 		if foes.is_empty():
 			break
 		_deal_damage(u, foes[rng.randi() % foes.size()], u.stat("atk") * pct / 100.0, {})
-	if consume:
-		u.stacks["clone"] = 0
+	if u.has_effect("clone"):
+		_remove_effect(u, "clone")
+
+
+## Clones de Nyssa : chaque clone copie son attaque à 40 % de puissance (sans effets).
+func _clone_copies(u: BattleUnit, sk: Dictionary, targets: Array[BattleUnit]) -> void:
+	var pct := float(rules["effects"]["clone"]["clone"]["copy_pct"]) / 100.0
+	var was := _in_reaction
+	_in_reaction = true
+	for c in u.status_stacks("clone"):
+		var t: BattleUnit = targets[0] if targets[0].is_alive() else (enemies_of(u)[0] if not enemies_of(u).is_empty() else null)
+		if t == null:
+			break
+		_emit({"type": "clone_copy", "actor": u})
+		_hit_target(u, t, {"hits": sk["hits"]}, {"removed": 0, "dealt": 0.0, "success": [], "power": pct})
+	_in_reaction = was
 
 
 func _copy_last_skill(u: BattleUnit) -> void:
@@ -554,28 +607,50 @@ func _copy_last_skill(u: BattleUnit) -> void:
 
 
 func _deal_damage(att: BattleUnit, tgt: BattleUnit, raw: float, opts: Dictionary) -> float:
-	var is_crit := rng.randf() * 100.0 < crit_chance(att, tgt)
+	var missed: bool = opts.get("missed", false)
+	var is_crit := not missed and rng.randf() * 100.0 < crit_chance(att, tgt)
 	var variance := rng.randf_range(float(rules["variance_min"]), float(rules["variance_max"]))
 	var dmg := compute_damage(att, tgt, raw, opts, is_crit, variance)
+	if missed:
+		dmg *= float(rules["triangle"].get("miss_damage_mult", 0.25))
+	if tgt.has_effect("sleep"):  # le premier coup sur un dormeur frappe plus fort (Etheria)
+		dmg *= 1.0 + float(rules.get("sleep_first_hit_bonus", 0.0)) / 100.0
 	if is_crit:
 		tgt.flags["hit_crit"] = true
-	var dealt := _apply_damage(tgt, dmg, att, {"crit": is_crit})
+	var dealt := _apply_damage(tgt, dmg, att, {"crit": is_crit, "missed": missed} if missed else {"crit": is_crit})
 	if att.set_specials.has("lifesteal_20") and att.is_alive():
 		_heal(att, dealt * 0.20, att)
 	return dealt
 
 
-## Applique des dégâts (garde du Titan, bouclier d'abord). Renvoie les dégâts réellement encaissés.
+## Applique des dégâts (invincibilité, clones, partages, bouclier). Renvoie les dégâts réellement encaissés.
 func _apply_damage(tgt: BattleUnit, dmg: float, source: BattleUnit, info: Dictionary) -> float:
+	if not tgt.is_alive():
+		return 0.0
 	dmg = roundf(dmg)
 	var direct := not info.has("dot") and not info.has("reflect")
-	var guard := tgt.get_effect("guarded")
-	if direct and not guard.is_empty():
-		var guardian: BattleUnit = guard["source"].get_ref()
-		if guardian != null and guardian.is_alive() and guardian != tgt:
-			var part := roundf(dmg * float(guard["value"]) / 100.0)
-			dmg -= part
-			_apply_damage(guardian, part, source, {"guard": true})
+	if tgt.effect_flag("invincible"):
+		_emit({"type": "invincible", "target": tgt})
+		return 0.0
+	if direct and source != null and source != tgt and tgt.status_stacks("clone") > 0:
+		# un clone absorbe le coup et renvoie 30 % de l'ATK de Nyssa à l'attaquant
+		_set_stacks(tgt, "clone", tgt.status_stacks("clone") - 1)
+		_emit({"type": "clone_absorb", "target": tgt})
+		var pct := float(rules["effects"]["clone"]["clone"]["absorb_reflect_pct_atk"])
+		if source.is_alive():
+			_apply_damage(source, tgt.stat("atk") * pct / 100.0, tgt, {"reflect": true})
+		return 0.0
+	if direct:
+		for sid in ["guarded", "lien"]:  # partage des dégâts avec le Titan
+			var share := tgt.get_effect(sid)
+			if share.is_empty():
+				continue
+			var guardian: BattleUnit = share["source"].get_ref()
+			if guardian != null and guardian.is_alive() and guardian != tgt:
+				var pct := float(share["value"]) if sid == "guarded" else float(rules["effects"]["lien"]["share_with_source_pct"])
+				var part := roundf(dmg * pct / 100.0)
+				dmg -= part
+				_apply_damage(guardian, part, source, {"guard": true})
 	var shield := tgt.get_effect("shield")
 	if not shield.is_empty():
 		var absorbed := minf(dmg, float(shield["value"]))
@@ -609,26 +684,34 @@ func _apply_damage(tgt: BattleUnit, dmg: float, source: BattleUnit, info: Dictio
 			var soh: Variant = tgt.get_trait("stack_on_hit_taken")
 			if soh != null:
 				tgt.add_stack(soh["stack"], 1, int(soh["max"]))
-			if tgt.stack("clone") > 0:
-				tgt.add_stack("clone", -1, 99)
+			for sid: String in tgt.get_trait("status_on_hit_taken", []):  # Inertie, Rage, Garde de fer
+				_try_apply(tgt, tgt, {"id": sid}, source)
 			if tgt.get_trait("reflect_pct") != null and source != null and source.is_alive() and source != tgt:
 				_apply_damage(source, dmg * float(tgt.get_trait("reflect_pct")) / 100.0, tgt, {"reflect": true})
+		for e in tgt.effects.duplicate():
+			var below: Variant = rules["effects"][e["id"]].get("hooks", {}).get("below_hp")
+			if below != null and tgt.is_alive() and tgt.hp_ratio() * 100.0 < float(below["pct"]):
+				_run_actions(tgt, e, below["do"], source)
 	else:
 		tgt.hp = 0.0
 		tgt.effects.clear()
 		tgt.ap = 0.0
 		tgt.stacks.clear()
 		_emit({"type": "death", "target": tgt})
-		_drop_auras_of(tgt)
+		_on_death(tgt)
 	return dmg
 
 
-## Les auras d'un personnage tombé disparaissent (sol gelé de Ghost, bonus « tant que en recharge »).
-func _drop_auras_of(dead: BattleUnit) -> void:
+## Mort d'un personnage : ses auras disparaissent, ses statuts posés sur les autres réagissent (Lien).
+func _on_death(dead: BattleUnit) -> void:
 	for u in units:
 		for e in u.effects.duplicate():
-			if rules["effects"][e["id"]]["kind"] == "aura" and e["source"].get_ref() == dead:
+			if e["source"].get_ref() != dead:
+				continue
+			if rules["effects"][e["id"]]["kind"] == "aura":
 				_remove_effect(u, e["id"])
+			else:
+				_run_hooks(u, e, "on_source_death", null)
 
 
 func _zero_loss_saver(tgt: BattleUnit) -> BattleUnit:
@@ -641,6 +724,13 @@ func _zero_loss_saver(tgt: BattleUnit) -> BattleUnit:
 func _heal(tgt: BattleUnit, amount: float, source: BattleUnit) -> void:
 	if tgt == null or not tgt.is_alive():
 		return
+	if tgt.effect_flag("blocks_heal"):  # Anti-soin, Vide
+		_emit({"type": "no_heal", "target": tgt})
+		return
+	for e in tgt.effects:
+		var d: Dictionary = rules["effects"][e["id"]]
+		if d.has("heal_received_per_stack"):
+			amount *= 1.0 + float(d["heal_received_per_stack"]) * int(e.get("stacks", 1)) / 100.0
 	var healed := minf(roundf(amount), tgt.max_hp() - tgt.hp)
 	tgt.hp += healed
 	if healed > 0.0:
@@ -674,8 +764,10 @@ func _revive(u: BattleUnit, cfg: Dictionary) -> void:
 func _detonate(u: BattleUnit, t: BattleUnit, cfg: Dictionary) -> void:
 	if not t.is_alive():
 		return
-	var n := t.stack(cfg["stack"])
+	var n := t.marks(cfg["stack"])
 	t.stacks[cfg["stack"]] = 0
+	if t.has_effect(cfg["stack"]):
+		_remove_effect(t, cfg["stack"])
 	if n > 0:
 		_deal_damage(u, t, u.stat("atk") * float(cfg["pct_atk"]) / 100.0 * n, {})
 	if cfg.get("consume_curse", false) and t.is_alive() and t.has_effect("curse"):
@@ -696,7 +788,7 @@ func _apply_action(caster: BattleUnit, tgt: BattleUnit, ef: Dictionary, ctx: Dic
 	var value := float(ef.get("value", 0.0))
 	match eid:
 		"ap_down":
-			if not ef.get("no_roll", false) and caster.team != tgt.team:
+			if not (ef.get("no_roll", false) or ef.get("cannot_resist", false)) and caster.team != tgt.team:
 				if rng.randf() * 100.0 >= effect_chance(caster, tgt, float(ef.get("chance", 100.0))):
 					return 0
 			tgt.ap = maxf(0.0, tgt.ap - value / 100.0)
@@ -711,7 +803,7 @@ func _apply_action(caster: BattleUnit, tgt: BattleUnit, ef: Dictionary, ctx: Dic
 		"strip_buffs":
 			var removed := 0
 			for e in tgt.effects.duplicate():
-				if rules["effects"][e["id"]]["kind"] == "buff" and (int(ef.get("count", 0)) == 0 or removed < int(ef["count"])):
+				if _dispellable(e, "buff") and (int(ef.get("count", 0)) == 0 or removed < int(ef["count"])):
 					_remove_effect(tgt, e["id"])
 					removed += 1
 			return removed
@@ -719,16 +811,16 @@ func _apply_action(caster: BattleUnit, tgt: BattleUnit, ef: Dictionary, ctx: Dic
 			if rng.randf() * 100.0 >= float(ef.get("chance", 100.0)):
 				return 0
 			for e in tgt.effects.duplicate():
-				if rules["effects"][e["id"]]["kind"] == "buff" and e["id"] != "shield":
+				if _dispellable(e, "buff") and e["id"] != "shield":
 					_remove_effect(tgt, e["id"])
-					_try_apply(caster, caster, {"id": e["id"], "turns": int(e["turns"]), "value": float(e["value"])})
+					_try_apply(caster, caster, {"id": e["id"], "turns": int(e["turns"]), "value": float(e["value"]), "stacks": int(e.get("stacks", 1))})
 					_emit({"type": "steal", "actor": caster, "target": tgt, "effect": e["id"]})
 					return 1
 			return 0
 		"cleanse":
 			var n := 0
 			for e in tgt.effects.duplicate():
-				if rules["effects"][e["id"]]["kind"] in ["debuff", "cc"]:
+				if _dispellable(e, "debuff") or _dispellable(e, "cc") or _dispellable(e, "mark"):
 					_remove_effect(tgt, e["id"])
 					n += 1
 			return n
@@ -738,6 +830,9 @@ func _apply_action(caster: BattleUnit, tgt: BattleUnit, ef: Dictionary, ctx: Dic
 			return 1
 		"stack":
 			var who := caster if ef.get("on", "target") == "self" else tgt
+			if rules["effects"].has(ef["stack"]):  # marque devenue statut signature
+				return 1 if _try_apply(caster, who, {"id": ef["stack"], "stacks": int(ef.get("value", 1)), "chance": ef.get("chance", 100),
+					"no_roll": ef.get("no_roll", who.team == caster.team)}) else 0
 			who.add_stack(ef["stack"], int(ef.get("value", 1)), int(ef.get("max", 99)))
 			return 1
 		"cd_reduce":
@@ -750,6 +845,11 @@ func _apply_action(caster: BattleUnit, tgt: BattleUnit, ef: Dictionary, ctx: Dic
 	return 1 if ok else 0
 
 
+func _dispellable(e: Dictionary, kind: String) -> bool:
+	var d: Dictionary = rules["effects"][e["id"]]
+	return d["kind"] == kind and d.get("dispellable", true)
+
+
 func _lowest_ap(group: Array[BattleUnit]) -> BattleUnit:
 	var best: BattleUnit = null
 	for x in group:
@@ -758,29 +858,41 @@ func _lowest_ap(group: Array[BattleUnit]) -> BattleUnit:
 	return best
 
 
-func _try_apply(caster: BattleUnit, tgt: BattleUnit, ef: Dictionary) -> bool:
+## Pose un effet ou un statut. Drapeaux de la fiche : cannot_resist (pas de jet), ignores_immunity.
+## Les statuts à cumuls s'empilent jusqu'à max_stacks ; atteindre le maximum déclenche on_max.
+func _try_apply(caster: BattleUnit, tgt: BattleUnit, ef: Dictionary, attacker: BattleUnit = null) -> bool:
 	var eid: String = ef["id"]
 	var d: Dictionary = rules["effects"][eid]
-	var turns := int(ef.get("turns", 1))
+	var turns := int(ef.get("turns", d.get("duration", 1)))
 	var value := float(ef.get("value", 0.0))
-	var hostile: bool = d["kind"] in ["debuff", "cc"]
+	var hostile: bool = d["kind"] in ["debuff", "cc", "mark"]
+	var ignore_imm: bool = ef.get("ignore_immunity", false) or ef.get("ignores_immunity", false) or d.get("ignores_immunity", false)
+	if d["kind"] == "buff" and tgt.effect_flag("blocks_buffs"):  # Bloc, Vide
+		_emit({"type": "immune", "target": tgt, "effect": eid})
+		return false
+	for e in tgt.effects:
+		if eid in rules["effects"][e["id"]].get("blocks", []):  # Gravité (VIT), Révélé (Immunité)
+			return false
 	if hostile and not ef.get("self_cost", false):
-		if tgt.get_trait("debuff_immune", false) or (d["kind"] == "cc" and tgt.get_trait("cc_immune", false)):
+		if tgt.get_trait("debuff_immune", false) or tgt.effect_flag("debuff_immune") \
+				or (d["kind"] == "cc" and tgt.get_trait("cc_immune", false)):
 			_emit({"type": "immune", "target": tgt, "effect": eid})
 			return false
-		if tgt.has_effect("immunity") and not ef.get("ignore_immunity", false):
+		if tgt.has_effect("immunity") and not ignore_imm:
 			_emit({"type": "immune", "target": tgt, "effect": eid})
 			return false
 		if d.get("hard_cc", false) and tgt.has_passive("cc_immune"):
 			_emit({"type": "immune", "target": tgt, "effect": eid})
 			return false
-		var certain: bool = ef.get("no_roll", false)
+		var certain: bool = ef.get("no_roll", false) or ef.get("cannot_resist", false) or not d.get("resistable", true)
 		var cis: Variant = ef.get("certain_if_stack")
-		if cis != null and tgt.stack(cis["stack"]) >= int(cis["min"]):
+		if cis != null and tgt.marks(cis["stack"]) >= int(cis["min"]):
 			certain = true
 		if not certain:
-			var chance := effect_chance(caster, tgt, float(ef.get("chance", 100.0)))
-			if rng.randf() * 100.0 >= chance:
+			var chance := float(ef.get("chance", 100.0))
+			if eid == "freeze" and tgt.has_effect("givre"):
+				chance += float(rules["effects"]["givre"]["freeze_chance_per_stack"]) * tgt.status_stacks("givre")
+			if rng.randf() * 100.0 >= effect_chance(caster, tgt, chance):
 				_emit({"type": "resist", "target": tgt, "effect": eid})
 				return false
 		if eid == "poison" and caster.has_passive("lasting_poison"):
@@ -792,24 +904,48 @@ func _try_apply(caster: BattleUnit, tgt: BattleUnit, ef: Dictionary) -> bool:
 			"target_max_hp":
 				value = tgt.max_hp() * value / 100.0
 	var own_turn := tgt == current
+	var max_stacks := int(d.get("max_stacks", 1))
+	var add := int(ef.get("stacks", 1))
 	var existing := tgt.get_effect(eid)
+	var e: Dictionary
+	var before := 0
 	if not existing.is_empty():
-		existing["turns"] = maxi(int(existing["turns"]), turns)
-		existing["value"] = maxf(float(existing["value"]), value)
-		existing["source"] = weakref(caster)
-		existing["caster_atk"] = caster.stat("atk")
-		existing["skip_tick"] = own_turn
+		e = existing
+		before = int(e.get("stacks", 1))
+		e["turns"] = maxi(int(e["turns"]), turns)
+		e["value"] = maxf(float(e["value"]), value)
+		e["source"] = weakref(caster)
+		e["caster_atk"] = caster.stat("atk")
+		e["skip_tick"] = own_turn
+		e["stacks"] = mini(max_stacks, before + add)
 	else:
-		tgt.effects.append(_make_effect(eid, turns, value, caster, own_turn))
-	_emit({"type": "effect", "target": tgt, "source": caster, "effect": eid, "turns": turns})
+		e = _make_effect(eid, turns, value, caster, own_turn)
+		e["stacks"] = mini(max_stacks, add)
+		tgt.effects.append(e)
+	_emit({"type": "effect", "target": tgt, "source": caster, "effect": eid, "turns": turns, "stacks": int(e["stacks"])})
+	_run_hooks(tgt, e, "on_apply", attacker)
+	if max_stacks > 1 and before < max_stacks and int(e["stacks"]) >= max_stacks and e in tgt.effects:
+		_run_hooks(tgt, e, "on_max", attacker)
 	return true
 
 
 func _make_effect(eid: String, turns: int, value: float, caster: BattleUnit, skip_tick: bool) -> Dictionary:
-	return {"id": eid, "turns": turns, "value": value, "source": weakref(caster), "caster_atk": caster.stat("atk"), "skip_tick": skip_tick}
+	return {"id": eid, "turns": turns, "value": value, "source": weakref(caster), "caster_atk": caster.stat("atk"),
+		"skip_tick": skip_tick, "stacks": 1}
 
 
-func _remove_effect(u: BattleUnit, eid: String) -> void:
+func _set_stacks(u: BattleUnit, eid: String, n: int) -> void:
+	var e := u.get_effect(eid)
+	if e.is_empty():
+		return
+	if n <= 0:
+		_remove_effect(u, eid)
+	else:
+		e["stacks"] = n
+
+
+## expired : l'effet arrive au bout de sa durée (déclenche on_expire), pas une purge ni un retrait.
+func _remove_effect(u: BattleUnit, eid: String, expired := false) -> void:
 	for i in u.effects.size():
 		if u.effects[i]["id"] == eid:
 			var e: Dictionary = u.effects[i]
@@ -817,7 +953,82 @@ func _remove_effect(u: BattleUnit, eid: String) -> void:
 			_emit({"type": "effect_end", "target": u, "effect": eid})
 			if eid == "bastion" and u.is_alive():
 				_release_bastion(u, e)
+			if expired and u.is_alive():
+				_run_hooks(u, e, "on_expire", null)
 			return
+
+
+# --- Déclencheurs des statuts signature (data/statuses.json) -----------------
+
+func _run_hooks(holder: BattleUnit, e: Dictionary, hook: String, attacker: BattleUnit) -> void:
+	var hooks: Dictionary = rules["effects"][e["id"]].get("hooks", {})
+	if hooks.has(hook):
+		_run_actions(holder, e, hooks[hook], attacker)
+
+
+func _run_actions(holder: BattleUnit, e: Dictionary, actions: Array, attacker: BattleUnit) -> void:
+	var source: BattleUnit = e["source"].get_ref()
+	var n := int(e.get("stacks", 1))
+	for a: Dictionary in actions:
+		if not holder.is_alive():
+			return
+		if a.has("if_holder_has") and not holder.has_effect(a["if_holder_has"]):
+			continue
+		var v := float(a.get("value", 0.0))
+		match a["do"]:
+			"ap_steal":  # Room : la jauge volée passe à Montana
+				var stolen := minf(holder.ap, v / 100.0)
+				holder.ap -= stolen
+				if source != null and source.is_alive():
+					source.ap = minf(1.0, source.ap + stolen)
+				_emit({"type": "ap", "target": holder, "amount": -stolen * 100.0})
+			"apply":
+				_try_apply(source if source != null else holder, holder, {"id": a["id"], "turns": int(a.get("turns", 1)), "no_roll": true})
+			"apply_if_no_ap":
+				if holder.ap <= 0.001:
+					_try_apply(source if source != null else holder, holder, {"id": a["id"], "turns": int(a.get("turns", 1)), "no_roll": true})
+			"clear", "remove":
+				_remove_effect(holder, e["id"])
+			"set_stacks":
+				_set_stacks(holder, e["id"], int(v))
+			"flag_holder":
+				holder.flags[a["flag"]] = v
+			"flag_source":
+				if source != null:
+					source.flags[a["flag"]] = v
+			"counter":  # Garde de fer au maximum
+				if attacker != null and attacker.is_alive() and attacker != holder:
+					_emit({"type": "counter", "actor": holder, "target": attacker})
+					_deal_damage(holder, attacker, holder.stat("atk") * float(a["pct_atk"]) / 100.0, {})
+			"aoe":  # Rage au maximum
+				_emit({"type": "release", "actor": holder, "amount": holder.stat("atk") * float(a["pct_atk"]) / 100.0})
+				for f in enemies_of(holder):
+					_deal_damage(holder, f, holder.stat("atk") * float(a["pct_atk"]) / 100.0, {})
+			"self_cost":
+				_pay(holder, {"hp_pct": float(a["hp_pct"])})
+			"true_damage":  # Dette : dégâts réels en fin de tour
+				var amount := holder.max_hp() * float(a.get("pct_max_hp", 0.0)) / 100.0
+				if a.has("pct_source_atk"):
+					amount = float(e["caster_atk"]) * float(a["pct_source_atk"]) / 100.0
+				if a.get("per_stack", false):
+					amount *= n
+				_apply_damage(holder, amount, source, {"dot": e["id"]})
+			"heal":
+				_heal(holder, holder.max_hp() * float(a["pct_max_hp"]) / 100.0, source)
+			"shield":
+				_try_apply(holder, holder, {"id": "shield", "value": float(a["pct_max_hp"]), "of": "target_max_hp", "turns": 2})
+			"extend_if_cc":  # Vide : un tour de plus sur une cible Étourdie
+				if holder.is_hard_cc():
+					e["turns"] = int(e["turns"]) + int(v)
+			"remove_effect":
+				if holder.has_effect(a["id"]):
+					_remove_effect(holder, a["id"])
+			"ap_up_attacker":  # Révélé : un allié du lanceur qui attaque la cible gagne de la jauge
+				if attacker != null and source != null and attacker.team == source.team:
+					attacker.ap = minf(1.0, attacker.ap + v / 100.0)
+			"backlash":  # Scellement : contrecoup sur toute l'équipe ennemie
+				for f in enemies_of(holder):
+					_apply_damage(f, f.max_hp() * float(a["pct_max_hp"]) / 100.0, holder, {"dot": e["id"]})
 
 
 ## Fin de la Contre-attaque minimale de Selene : renvoie les dégâts accumulés à tous les ennemis.

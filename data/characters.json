@@ -44,7 +44,8 @@
          "value": 10,
          "chance": 30
         }
-       ]
+       ],
+       "pursuit": true
       },
       {
        "scale": "atk",
@@ -56,10 +57,11 @@
          "value": 10,
          "chance": 30
         }
-       ]
+       ],
+       "pursuit": true
       }
      ],
-     "desc": "Poursuite : 2e frappe à 50 %, deux fois si la cible est sous contrôle. Chaque frappe : 30 % de chance de -10 % PA."
+     "desc": "Poursuite : 2e frappe à 50 %, deux fois si la cible est sous contrôle ; +15 % sur une cible sous Room. Chaque frappe : 30 % de chance de -10 % PA."
     },
     {
      "name": "Kairos, la Room",
@@ -79,9 +81,7 @@
        "no_roll": true
       },
       {
-       "id": "spd_down",
-       "value": 15,
-       "turns": 2,
+       "id": "room",
        "chance": 100
       }
      ],
@@ -91,7 +91,7 @@
        "value": 10
       }
      ],
-     "desc": "-15 % VIT 2 tours ; les ennemis déjà ralentis perdent 10 % PA. Tant qu'en recharge : alliés +10 % VIT."
+     "desc": "Pose Room (2 tours, non purgeable) : -25 % VIT, Montana vole 10 % de jauge à chacun de ses tours. Ennemis déjà ralentis : -10 % PA. Tant qu'en recharge : alliés +10 % VIT."
     },
     {
      "name": "Selah",
@@ -150,14 +150,12 @@
      ],
      "effects": [
       {
-       "id": "def_down",
-       "value": 15,
-       "turns": 2,
+       "id": "vieillissement",
        "chance": 50
       }
      ],
      "heal_lowest_ally_pct_dmg": 40,
-     "desc": "Soigne l'allié le plus blessé de 40 % des dégâts infligés."
+     "desc": "50 % de chance de Vieillissement. Soigne l'allié le plus blessé de 40 % des dégâts infligés."
     },
     {
      "name": "Chronomasse",
@@ -206,13 +204,12 @@
        "chance": 100
       },
       {
-       "id": "aging",
-       "value": 5,
-       "turns": 2,
+       "id": "vieillissement",
+       "stacks": 2,
        "chance": 100
       }
      ],
-     "desc": "Alliés : purge, Immunité 1 tour, +30 % PA. Ennemis : -20 % PA, Vieillissement (5 % PV max par tour). Ressuscite un allié (20 % PV, 100 % PA), une fois par combat."
+     "desc": "Alliés : purge, Immunité 1 tour, +30 % PA. Ennemis : -20 % PA, 2 cumuls de Vieillissement. Ressuscite un allié (20 % PV, 100 % PA), une fois par combat."
     }
    ]
   },
@@ -248,16 +245,20 @@
          "id": "ap_down",
          "value": 10,
          "chance": 30
+        },
+        {
+         "id": "givre",
+         "chance": 50
         }
        ]
       }
-     ]
+     ],
+     "desc": "Chaque coup : 30 % de chance de -10 % PA, 50 % de chance de Givre."
     },
     {
      "name": "Givre glissant",
      "passive": "kit",
      "params": {
-      "enemy_spd_aura": 10,
       "counter": {
        "chance": 50,
        "crit_chance": 100,
@@ -270,7 +271,7 @@
        ]
       }
      },
-     "desc": "Ennemis -10 % VIT. Attaqué : contre-attaque à 70 % ATK (50 %, certaine contre un critique), une fois par tour."
+     "desc": "Attaqué : contre-attaque à 70 % ATK (50 %, certaine contre un critique), une fois par tour. Givre : -10 % VIT par cumul, Gel plus probable ; à 3 cumuls, Gel garanti."
     },
     {
      "name": "Prison de Glace",
@@ -286,6 +287,10 @@
          "id": "ap_down",
          "value": 20,
          "chance": 40
+        },
+        {
+         "id": "givre",
+         "chance": 70
         }
        ]
       }
@@ -340,13 +345,9 @@
      "name": "Clones temporels",
      "passive": "kit",
      "params": {
-      "clones": {
-       "max": 3,
-       "aoe_bonus_pct": 25,
-       "strike_pct": 30
-      }
+      "clone_per_turn": true
      },
-     "desc": "Un clone à chaque tour (3 max) : +25 % ATK en zone par clone, chaque clone frappe à 30 % quand un allié attaque. Perd un clone quand elle est touchée."
+     "desc": "Un clone à chaque tour (3 max, 3 tours). Un clone absorbe un coup (et renvoie 30 % ATK) ou copie chacune de ses attaques à 40 %."
     },
     {
      "name": "Copie de technique",
@@ -400,20 +401,12 @@
      "passive": "kit",
      "params": {
       "damage_reduction": 25,
-      "stack_on_hit_taken": {
-       "stack": "inertia",
-       "max": 5
-      },
-      "stat_per_stack": [
-       {
-        "stack": "inertia",
-        "stat": "def",
-        "pct": 4
-       }
+      "status_on_hit_taken": [
+       "inertie"
       ],
       "attacker_ap_down": 5
      },
-     "desc": "-25 % de dégâts subis. Inertie à chaque coup reçu (+4 % DEF, 5 max). Ses attaquants perdent 5 % PA."
+     "desc": "-25 % de dégâts subis. Inertie à chaque coup reçu (+4 % DEF, +2 RÉS, 6 max, jusqu'à son tour ; à 6, sa compétence suivante lui donne un bouclier de 20 % PV). Ses attaquants perdent 5 % PA."
     },
     {
      "name": "Contre-attaque minimale",
@@ -483,9 +476,12 @@
         }
        ]
       },
-      "reflect_pct": 10
+      "reflect_pct": 10,
+      "status_on_hit_taken": [
+       "garde_de_fer"
+      ]
      },
-     "desc": "Contre-attaque (30 %, certaine contre un critique) à 70 % ATK + 50 % DEF. Renvoie 10 % des dégâts reçus."
+     "desc": "Contre-attaque (30 %, certaine contre un critique) à 70 % ATK + 50 % DEF ; renvoie 10 % des dégâts. Garde de fer à chaque coup reçu (-12 % de dégâts par cumul ; à 4, contre-attaque à 120 % ATK)."
     },
     {
      "name": "Brasier du Roi",
@@ -549,13 +545,12 @@
         {
          "id": "stack",
          "stack": "visage",
-         "value": 1,
-         "max": 5
+         "on": "self"
         }
        ]
       }
      ],
-     "desc": "Chaque coup ajoute 1 Visage (5 max)."
+     "desc": "Chaque coup donne 1 Visage (+6 DC, +4 % ATK par cumul, 6 max ; à 6, l'attaque suivante ignore 30 % DEF et les Visages retombent à 2)."
     },
     {
      "name": "Respiration du Feu",
@@ -576,18 +571,11 @@
        "ignore_def": 0.3
       }
      ],
-     "bonus": [
-      {
-       "per_stack": "visage",
-       "pct": 40,
-       "consume": true
-      }
-     ],
      "self_cost": {
       "hp_pct": 15,
       "unhealable": true
      },
-     "desc": "+40 % de dégâts par Visage (consommés). Prix : 15 % des PV max, non soignables."
+     "desc": "Prix : 15 % des PV max, non soignables."
     }
    ]
   },
@@ -635,20 +623,12 @@
      "name": "Immunité à la douleur",
      "passive": "kit",
      "params": {
-      "stack_on_hit_taken": {
-       "stack": "rage",
-       "max": 5
-      },
-      "survive_lethal_once": true,
-      "stat_per_stack": [
-       {
-        "stack": "rage",
-        "stat": "atk",
-        "pct": 4
-       }
-      ]
+      "status_on_hit_taken": [
+       "rage"
+      ],
+      "survive_lethal_once": true
      },
-     "desc": "1 Rage par coup reçu. Survit une fois à un coup mortel. +4 % ATK par Rage."
+     "desc": "Rage à chaque coup reçu (+5 % ATK, -3 % DEF par cumul, 8 max ; à 8, explosion de zone à 150 % ATK et perte de 10 % PV). Survit une fois à un coup mortel."
     },
     {
      "name": "Explosion de rage",
@@ -708,14 +688,12 @@
        "on_hit": [
         {
          "id": "stack",
-         "stack": "dette",
-         "value": 1,
-         "max": 4
+         "stack": "dette"
         }
        ]
       }
      ],
-     "desc": "Chaque coup ajoute 1 Dette (4 max)."
+     "desc": "Chaque coup pose 1 Dette (5 max, 3 tours) : 2 % des PV max par cumul à la fin du tour de la cible, +15 % ATK de Yass par cumul si elle est Maudite."
     },
     {
      "name": "Dette d'Amour",
@@ -752,8 +730,8 @@
       {
        "id": "curse",
        "turns": 2,
-       "no_roll": true,
-       "ignore_immunity": true
+       "cannot_resist": true,
+       "ignores_immunity": true
       }
      ],
      "lock_skill": 1,
@@ -808,9 +786,13 @@
        "value": 10,
        "of": "target_max_hp",
        "turns": 2
+      },
+      {
+       "id": "benediction",
+       "stacks": 2
       }
      ],
-     "desc": "Soigne un autre allié de 30 % de ses PV max, bouclier de 10 % (jamais elle-même)."
+     "desc": "Soigne un autre allié de 30 % de ses PV max, bouclier de 10 %, 2 Bénédictions (jamais elle-même)."
     },
     {
      "name": "Jardin du Crépuscule",
@@ -839,9 +821,12 @@
       {
        "id": "ap_up",
        "value": 20
+      },
+      {
+       "id": "benediction"
       }
      ],
-     "desc": "Alliés : soin 22 %, purge, +20 % PA. Ennemis : 90 % ATK, Sommeil 30 %."
+     "desc": "Alliés : soin 22 %, purge, +20 % PA, Bénédiction. Ennemis : 90 % ATK, Sommeil 30 %."
     }
    ]
   },
@@ -903,7 +888,8 @@
        "value": 10,
        "chance": 40
       }
-     ]
+     ],
+     "desc": "Chaque coup de zone pose Espéra (+5 % de dégâts subis par cumul ; à 5, son attaque de zone suivante frappe deux fois)."
     },
     {
      "name": "Bombardement aérien",
@@ -928,7 +914,10 @@
      ],
      "desc": "+10 % par allié vivant. En recharge : alliés -15 % de dégâts subis."
     }
-   ]
+   ],
+   "traits": {
+    "aoe_mark": "espera"
+   }
   },
   {
    "id": "jo_prince",
@@ -979,12 +968,11 @@
      ],
      "effects": [
       {
-       "id": "spd_down",
-       "value": 15,
-       "turns": 2,
+       "id": "gravite",
        "chance": 100
       }
-     ]
+     ],
+     "desc": "Gravité : -15 % VIT par cumul (2 max), plus de bonus de VIT ; une cible sans jauge est entravée 1 tour."
     },
     {
      "name": "Singularité de Kepler",
@@ -1000,6 +988,10 @@
       {
        "id": "ap_down",
        "value": 30,
+       "chance": 100
+      },
+      {
+       "id": "gravite",
        "chance": 100
       },
       {
@@ -1077,7 +1069,13 @@
        "per_removed": 15
       }
      ],
-     "desc": "Supprime tous ses buffs, +15 % de dégâts par buff retiré."
+     "desc": "Supprime tous ses buffs (+15 % de dégâts par buff retiré) et pose Vide : plus de buffs ni de soins pendant 2 tours (un de plus si elle est Étourdie).",
+     "effects": [
+      {
+       "id": "vide",
+       "chance": 100
+      }
+     ]
     },
     {
      "name": "Null Void déplacé",
@@ -1093,7 +1091,7 @@
        "id": "stun",
        "chance": 70,
        "turns": 1,
-       "ignore_immunity": true
+       "ignores_immunity": true
       }
      ],
      "strip_all_buffs": true,
@@ -1131,13 +1129,11 @@
      ],
      "effects": [
       {
-       "id": "res_down",
-       "value": 15,
-       "turns": 2,
+       "id": "revele",
        "chance": 40
       }
      ],
-     "desc": "40 % de chance de révéler la cible (-15 RÉS, 2 tours)."
+     "desc": "40 % de chance de Révéler (3 max, non purgeable) : la cible perd son Immunité, subit +10 % de dégâts par cumul ; un allié qui la frappe gagne 5 % de jauge."
     },
     {
      "name": "Détection de mensonge",
@@ -1270,9 +1266,7 @@
      ],
      "to_allies": [
       {
-       "id": "guarded",
-       "value": 30,
-       "turns": 2
+       "id": "lien"
       },
       {
        "id": "def_up",
@@ -1284,7 +1278,12 @@
       "hp_pct": 8,
       "unhealable": true
      },
-     "desc": "Ennemis : -30 % ATK et -30 % PA. Pendant 2 tours, absorbe 30 % des dégâts des alliés, alliés +30 % DEF. Prix : 8 % des PV max, non soignables."
+     "desc": "Ennemis : -30 % ATK et -30 % PA. Alliés : Lien (3 tours : 30 % de leurs dégâts partagés avec Don, +10 % ATK ; s'il tombe, bouclier de 20 %) et +30 % DEF. Scellement : -30 % de dégâts subis ; à la fin, contrecoup de 15 % des PV max à tous les ennemis. Prix : 8 % des PV max, non soignables.",
+     "self_effects": [
+      {
+       "id": "scellement"
+      }
+     ]
     }
    ]
   },

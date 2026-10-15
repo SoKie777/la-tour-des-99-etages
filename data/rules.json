@@ -13,8 +13,12 @@
     "beats": {"orion": "grande_ourse", "grande_ourse": "sirius", "sirius": "orion"},
     "nation_constellation": {"A": "orion", "B": "grande_ourse", "C": "sirius"},
     "dominant_crit_bonus": 20,
-    "dominated_damage_mult": 0.85
+    "dominated_damage_mult": 0.85,
+    "dominated_miss_chance": 0,
+    "_miss": "Raté (Dislyte) : le dominé a cette chance (en %) de rater ; un raté fait miss_damage_mult des dégâts, sans critique ni effet. Les compétences cannot_miss ne ratent jamais.",
+    "miss_damage_mult": 0.25
   },
+  "sleep_first_hit_bonus": 25,
   "skill2_cd_default": 3,
   "skill3_cd_default": 5,
   "skill3_initial_cd": 2,
@@ -51,6 +55,11 @@
     "aura_dmg_reduce": {"kind": "aura", "dmg_taken_from_value": -1},
     "aura_chill": {"kind": "aura", "stat": "spd", "pct_from_value": -1},
     "guarded":   {"kind": "aura"},
-    "bastion":   {"kind": "stance", "skip_turn": true, "dmg_taken_from_value": -1, "release_pct": 150}
+    "bastion":   {"kind": "stance", "skip_turn": true, "dmg_taken_from_value": -1, "release_pct": 150},
+    "invincible": {"kind": "buff", "invincible": true},
+    "block":     {"kind": "debuff", "blocks_buffs": true},
+    "no_heal":   {"kind": "debuff", "blocks_heal": true},
+    "regen":     {"kind": "buff", "regen_pct_max_hp": 15},
+    "entrave":   {"kind": "debuff", "stat": "spd", "pct": -60}
   }
 }

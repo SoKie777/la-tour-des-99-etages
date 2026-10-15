@@ -17,8 +17,15 @@ static func load_json(path: String) -> Dictionary:
 	return parsed
 
 
+## Règles de combat ; les statuts signature (data/statuses.json) rejoignent les effets.
 static func rules() -> Dictionary:
-	return load_json("res://data/rules.json")
+	var r := load_json("res://data/rules.json")
+	if not r.has("_statuses_merged"):
+		r["_statuses_merged"] = true
+		for id: String in load_json("res://data/statuses.json"):
+			if not id.begins_with("_"):
+				r["effects"][id] = load_json("res://data/statuses.json")[id]
+	return r
 
 
 static func gacha() -> Dictionary:

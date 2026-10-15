@@ -16,6 +16,7 @@ func _init() -> void:
 	test_effects()
 	test_passives()
 	test_kits_v2()
+	test_generic_effects()
 	test_gacha()
 	test_relics()
 	test_profile()
@@ -150,9 +151,9 @@ func test_passives() -> void:
 	check(not issa.is_alive(), "Zéro perte : une seule fois par combat")
 
 
-## Moteur v2 : chaque mécanique des kits de la fiche « Personnages jouables et boss ».
+## Moteur v2 : mécaniques des kits (fiche, partie 1) et statuts signature (partie 6).
 func test_kits_v2() -> void:
-	print("Kits v2")
+	print("Kits v2 et statuts signature")
 	var evs: Array[Dictionary] = []
 	var count := func(type: String) -> int: return evs.filter(func(ev: Dictionary) -> bool: return ev["type"] == type).size()
 	# Coups multiples
@@ -178,57 +179,74 @@ func test_kits_v2() -> void:
 	e.execute(mon, mon.skill(2), mou, 2)
 	check(count.call("bonus_action") == 1 and count.call("skill") == 2, "Selah : Gel réussi -> S1 gratuit")
 	check(mon.hp < mon.max_hp(), "Selah : prix de 10 % des PV")
-	# Visages de Mello : cumulés puis consommés, PV max perdus
-	e = BattleEngine.new(["mello"], ["selene"], 4)
-	var mel := unit_of(e, "mello")
-	var sel := unit_of(e, "selene")
-	e.execute(mel, mel.skill(0), sel, 0)
-	check(sel.stack("visage") == 2, "Flamme bleue : 2 Visages")
-	var max_before := mel.max_hp()
-	e.execute(mel, mel.skill(2), sel, 2)
-	check(sel.stack("visage") == 0 and mel.max_hp() < max_before, "Seimei : Visages consommés, PV max perdus")
-	# Dette de Yass : Malédiction certaine à 2 Dettes, explosion, S2 bloquée
-	e = BattleEngine.new(["yass"], ["adrian"], 4)
-	var yas := unit_of(e, "yass")
-	var adr := unit_of(e, "adrian")
-	adr.base["res"] = 500
-	e.execute(yas, yas.skill(0), adr, 0)
-	check(adr.stack("dette") == 2, "Chaînes : 2 Dettes")
-	e.execute(yas, yas.skill(1), adr, 1)
-	check(adr.has_effect("curse"), "Dette d'Amour : Malédiction certaine malgré 500 RÉS")
-	e._try_apply(adr, adr, {"id": "immunity", "turns": 2})
-	yas.cooldowns = [0, 0, 0]
-	e.current = yas
-	e.use_skill(yas, 2, adr)
-	check(adr.stack("dette") == 0 and adr.has_effect("curse"), "Banqueroute : Dette explosée, Malédiction malgré l'Immunité")
-	check(yas.cooldowns[1] >= 1, "Banqueroute : pas de S2 au tour suivant")
-	# Ezra : suppression des buffs avec bonus, vol de buff
-	e = BattleEngine.new(["ezra"], ["noor_el", "flint"], 4)
-	var ez := unit_of(e, "ezra")
-	var noor := unit_of(e, "noor_el")
-	for b in ["atk_up", "def_up", "cr_up"]:
-		e._try_apply(noor, noor, {"id": b, "value": 20, "turns": 3})
-	e.execute(ez, ez.skill(1), noor, 1)
-	check(not noor.has_buff(), "Null Void ciblé : buffs supprimés")
-	e._try_apply(noor, noor, {"id": "atk_up", "value": 20, "turns": 3})
-	for i in 6:
-		if ez.has_effect("atk_up"):
-			break
-		e.execute(ez, ez.skill(0), noor, 0)
-	check(ez.has_effect("atk_up") and not noor.has_effect("atk_up"), "Muay Thai : buff volé")
-	# Mikhaïla : résurrection une fois, purge, Vieillissement
-	e = BattleEngine.new(["mikhaila", "ghost"], ["moussa"], 4)
+	# Room : -25 % VIT, Montana vole 10 % de jauge au début du tour de la cible
+	mou.effects.clear()
+	e._try_apply(mon, mou, {"id": "room", "no_roll": true})
+	approx(mou.stat("spd"), 94.0 * 0.75, "Room : -25 % VIT")
+	mou.ap = 0.5
+	mon.ap = 0.0
+	e._start_turn(mou)
+	check(is_equal_approx(mou.ap, 0.4) and is_equal_approx(mon.ap, 0.1), "Room : 10 % de jauge volée à Montana")
+	e._apply_action(mon, mou, {"id": "cleanse"}, {})
+	check(mou.has_effect("room"), "Room : non purgeable")
+	# Vieillissement : -8 % ATK et DEF par cumul ; à 5, Étourdissement et cumuls retirés
+	e = BattleEngine.new(["mikhaila"], ["mello"], 4)
 	var mik := unit_of(e, "mikhaila")
+	var mel := unit_of(e, "mello")
+	e._try_apply(mik, mel, {"id": "vieillissement", "stacks": 2, "no_roll": true})
+	approx(mel.stat("atk"), 1410.0 * 0.84, "Vieillissement x2 : -16 % ATK")
+	e._try_apply(mik, mel, {"id": "vieillissement", "stacks": 3, "no_roll": true})
+	check(mel.has_effect("stun") and not mel.has_effect("vieillissement"), "Vieillissement x5 : Étourdi, cumuls retirés")
+	# Mikhaïla : résurrection une fois, purge, Vieillissement sur les ennemis
+	e = BattleEngine.new(["mikhaila", "ghost"], ["moussa"], 4)
+	mik = unit_of(e, "mikhaila")
 	var gho := unit_of(e, "ghost")
 	e._apply_damage(gho, 99999.0, unit_of(e, "moussa"), {})
 	e._try_apply(unit_of(e, "moussa"), mik, {"id": "def_break", "turns": 2, "no_roll": true})
 	e.execute(mik, mik.skill(2), null, 2)
 	check(gho.is_alive() and is_equal_approx(gho.ap, 1.0), "Le temps ressenti : allié ressuscité à 100 % PA")
 	check(not mik.has_effect("def_break") and mik.has_effect("immunity"), "Le temps ressenti : purge et Immunité")
-	check(unit_of(e, "moussa").has_effect("aging"), "Le temps ressenti : Vieillissement sur l'ennemi")
+	check(unit_of(e, "moussa").status_stacks("vieillissement") == 2, "Le temps ressenti : 2 Vieillissements sur l'ennemi")
 	e._apply_damage(gho, 99999.0, unit_of(e, "moussa"), {})
 	e.execute(mik, mik.skill(2), null, 2)
 	check(not gho.is_alive(), "Résurrection : une seule fois par combat")
+	# Givre : à 3 cumuls, Gel garanti
+	e = BattleEngine.new(["ghost"], ["moussa"], 4)
+	gho = unit_of(e, "ghost")
+	mou = unit_of(e, "moussa")
+	for i in 3:
+		e._try_apply(gho, mou, {"id": "givre", "no_roll": true})
+	check(mou.has_effect("freeze") and not mou.has_effect("givre"), "Givre x3 : Gel garanti")
+	# Clone de Nyssa : un par tour (3 max), absorbe un coup en renvoyant 30 % ATK, copie ses attaques à 40 %
+	e = BattleEngine.new(["nyssa", "noor_el"], ["moussa"], 4)
+	var ny := unit_of(e, "nyssa")
+	mou = unit_of(e, "moussa")
+	for i in 4:
+		e._start_turn(ny)
+	check(ny.status_stacks("clone") == 3, "Clones temporels : 3 au maximum")
+	var ny_hp := ny.hp
+	var mou_hp := mou.hp
+	e._deal_damage(mou, ny, 2000.0, {})
+	check(ny.hp == ny_hp and ny.status_stacks("clone") == 2 and mou.hp < mou_hp, "Clone : coup absorbé, 30 % ATK renvoyés")
+	evs.clear()
+	e.battle_event.connect(func(ev: Dictionary) -> void: evs.append(ev))
+	e.execute(ny, ny.skill(0), mou, 0)
+	check(count.call("clone_copy") == 2, "Clones : chaque clone copie l'attaque")
+	e.last_skill = {"unit": unit_of(e, "noor_el"), "index": 1}
+	evs.clear()
+	e.execute(ny, ny.skill(2), null, 2)
+	check(count.call("copy") == 1 and ny.status_stacks("clone") == 0, "Copie de technique : S2 de Noor-El rejouée, clones consommés")
+	# Selene : Inertie à chaque coup reçu, retirée à son tour ; à 6, bouclier sur sa compétence suivante
+	e = BattleEngine.new(["selene"], ["mohamed", "issa"], 4)
+	var sel := unit_of(e, "selene")
+	var moh := unit_of(e, "mohamed")
+	for i in 6:
+		e._deal_damage(moh, sel, 100.0, {})
+	check(sel.flags.has("shield_next_skill"), "Inertie x6 : bouclier promis")
+	e._start_turn(sel)
+	check(not sel.has_effect("inertie"), "Inertie : retirée au début de son tour")
+	e.execute(sel, sel.skill(0), moh, 0)
+	check(sel.shield_value() > 0.0, "Inertie : bouclier de 20 % PV sur la compétence suivante")
 	# Selene : posture, accumulation puis renvoi à tous les ennemis
 	e = BattleEngine.new(["selene"], ["mohamed", "issa"], 4)
 	sel = unit_of(e, "selene")
@@ -241,50 +259,195 @@ func test_kits_v2() -> void:
 		e.current = sel
 		e._end_turn(sel)
 	check(not sel.has_effect("bastion") and unit_of(e, "issa").hp < issa_hp, "Fin de la posture : dégâts renvoyés aux ennemis")
-	# Don Selah : immunisé aux débuffs, 50 % de PA au départ, garde des alliés
-	e = BattleEngine.new(["don_selah", "flint"], ["ezra"], 4)
-	var ds := unit_of(e, "don_selah")
-	check(is_equal_approx(ds.ap, 0.5), "Éveil : commence à 50 % PA")
-	e._try_apply(unit_of(e, "ezra"), ds, {"id": "stun", "turns": 1, "no_roll": true, "ignore_immunity": true})
-	check(not ds.has_effect("stun"), "Éveil : immunisé même contre « passe l'Immunité »")
-	var fl := unit_of(e, "flint")
-	e._try_apply(ds, fl, {"id": "guarded", "value": 30, "turns": 2})
-	var ds_hp := ds.hp
-	e._apply_damage(fl, 1000.0, unit_of(e, "ezra"), {})
-	approx(fl.max_hp() - fl.hp, 700.0, "Garde du Titan : l'allié subit 70 %")
-	approx(ds_hp - ds.hp, 300.0, "Garde du Titan : Don Selah absorbe 30 %")
-	# Tarkhan survit une fois ; Adrian renvoie 10 %
-	e = BattleEngine.new(["tarkhan"], ["adrian"], 4)
+	# Adrian : Garde de fer (-12 % par cumul) ; à 4, contre-attaque à 120 % ; renvoi de 10 %
+	e = BattleEngine.new(["adrian"], ["tarkhan"], 4)
+	var adr := unit_of(e, "adrian")
 	var tar := unit_of(e, "tarkhan")
-	adr = unit_of(e, "adrian")
-	e._apply_damage(tar, 99999.0, adr, {})
-	check(tar.hp == 1.0 and tar.stack("rage") == 1, "Immunité à la douleur : survit à 1 PV, +1 Rage")
-	e._apply_damage(tar, 99999.0, adr, {})
-	check(not tar.is_alive(), "Immunité à la douleur : une seule fois")
-	var t_hp := 0.0
-	e = BattleEngine.new(["tarkhan"], ["adrian"], 4)
-	tar = unit_of(e, "tarkhan")
-	adr = unit_of(e, "adrian")
-	t_hp = tar.hp
-	e._apply_damage(adr, 1000.0, tar, {})
-	approx(t_hp - tar.hp, 100.0, "Corps de feu : renvoie 10 % des dégâts")
-	# Nyssa : clones à chaque tour, copie de la dernière S2/S3
-	e = BattleEngine.new(["nyssa", "noor_el"], ["moussa"], 4)
-	var ny := unit_of(e, "nyssa")
-	for i in 4:
-		e._start_turn(ny)
-	check(ny.stack("clone") == 3, "Clones temporels : 3 au maximum")
-	e.last_skill = {"unit": unit_of(e, "noor_el"), "index": 1}
+	e._try_apply(adr, adr, {"id": "garde_de_fer", "stacks": 2})
+	approx(e._taken_mult(adr), 0.76, "Garde de fer x2 : -12 % de dégâts par cumul (-24 %)")
 	evs.clear()
 	e.battle_event.connect(func(ev: Dictionary) -> void: evs.append(ev))
-	e.execute(ny, ny.skill(2), null, 2)
-	check(count.call("copy") == 1 and ny.stack("clone") == 0, "Copie de technique : S2 de Noor-El rejouée, clones consommés")
-	# Ghost : sol gelé sur les ennemis, levé à sa mort
-	e = BattleEngine.new(["ghost"], ["moussa"], 4)
+	e._try_apply(adr, adr, {"id": "garde_de_fer", "stacks": 2}, tar)
+	check(count.call("counter") == 1 and not adr.has_effect("garde_de_fer"), "Garde de fer x4 : contre-attaque, cumuls consommés")
+	var t_hp := tar.hp
+	adr.effects.clear()
+	e._apply_damage(adr, 1000.0, tar, {})
+	approx(t_hp - tar.hp, 100.0, "Corps de feu : renvoie 10 % des dégâts")
+	# Mello : Visage sur lui (+6 DC, +4 % ATK) ; à 6, ignore 30 % DEF et retombe à 2
+	e = BattleEngine.new(["mello"], ["selene"], 4)
+	mel = unit_of(e, "mello")
+	sel = unit_of(e, "selene")
+	e.execute(mel, mel.skill(0), sel, 0)
+	check(mel.status_stacks("visage") == 2, "Flamme bleue : 2 Visages sur Mello")
+	approx(mel.stat("cd"), 75.0 + 12.0, "Visage x2 : +12 DC")
+	for i in 2:
+		e.execute(mel, mel.skill(0), sel, 0)
+	check(mel.status_stacks("visage") == 2 and mel.flags.has("ignore_def_next"), "Visage x6 : retombe à 2, ignore 30 % DEF ensuite")
+	var max_before := mel.max_hp()
+	e.execute(mel, mel.skill(2), sel, 2)
+	check(mel.max_hp() < max_before and not mel.flags.has("ignore_def_next"), "Seimei : PV max perdus, bonus consommé")
+	# Tarkhan : Rage (+5 % ATK, -3 % DEF) ; à 8, explosion de zone ; survit une fois
+	e = BattleEngine.new(["tarkhan"], ["adrian", "flint"], 4)
+	tar = unit_of(e, "tarkhan")
+	e._try_apply(tar, tar, {"id": "rage", "stacks": 4})
+	approx(tar.stat("atk"), 1155.0 * 1.2, "Rage x4 : +20 % ATK")
+	var fl_hp := unit_of(e, "flint").hp
+	e._try_apply(tar, tar, {"id": "rage", "stacks": 4})
+	check(unit_of(e, "flint").hp < fl_hp and not tar.has_effect("rage"), "Rage x8 : explosion de zone")
+	e._apply_damage(tar, 99999.0, unit_of(e, "adrian"), {})
+	check(tar.hp == 1.0, "Immunité à la douleur : survit à 1 PV")
+	e._apply_damage(tar, 99999.0, unit_of(e, "adrian"), {})
+	check(not tar.is_alive(), "Immunité à la douleur : une seule fois")
+	# Yass : Dette (2 % PV max par cumul en fin de tour), Malédiction certaine à 2 Dettes, Banqueroute
+	e = BattleEngine.new(["yass"], ["adrian"], 4)
+	var yas := unit_of(e, "yass")
+	adr = unit_of(e, "adrian")
+	e.execute(yas, yas.skill(0), adr, 0)
+	check(adr.status_stacks("dette") == 2, "Chaînes : 2 Dettes")
+	adr.base["res"] = 500
+	e.execute(yas, yas.skill(1), adr, 1)
+	check(adr.has_effect("curse"), "Dette d'Amour : Malédiction certaine malgré 500 RÉS")
+	var a_hp := adr.hp
+	adr.effects.erase(adr.get_effect("curse"))
+	e.current = adr
+	e._end_turn(adr)
+	approx(a_hp - adr.hp, roundf(adr.max_hp() * 0.04), "Dette x2 : 4 % des PV max en fin de tour", 1.0)
+	e._try_apply(adr, adr, {"id": "immunity", "turns": 2})
+	e._try_apply(yas, adr, {"id": "dette", "no_roll": true})
+	yas.cooldowns = [0, 0, 0]
+	e.current = yas
+	e.use_skill(yas, 2, adr)
+	check(adr.marks("dette") == 0 and adr.has_effect("curse"), "Banqueroute : Dette explosée, Malédiction malgré l'Immunité")
+	check(yas.cooldowns[1] >= 1, "Banqueroute : pas de S2 au tour suivant")
+	# Saraya : Bénédiction (+10 % de soins reçus par cumul) ; sous 30 % PV, soin de 25 %
+	e = BattleEngine.new(["saraya", "ghost"], ["mohamed"], 4)
+	gho = unit_of(e, "ghost")
+	e.execute(unit_of(e, "saraya"), unit_of(e, "saraya").skill(1), gho, 1)
+	check(gho.status_stacks("benediction") == 2, "Guérison végétale : 2 Bénédictions")
+	gho.effects.erase(gho.get_effect("shield"))
+	gho.hp = gho.max_hp() * 0.35
+	e._apply_damage(gho, gho.max_hp() * 0.1, unit_of(e, "mohamed"), {})
+	check(gho.hp_ratio() > 0.45 and not gho.has_effect("benediction"), "Bénédiction : soin de 25 % sous 30 % PV")
+	# Noor-El : Espéra par dégât de zone ; à 5, sa zone suivante frappe deux fois
+	e = BattleEngine.new(["noor_el"], ["don_diego", "moussa"], 4)
+	noor_check(e)
+	# Jo : Gravité (bloque les bonus de VIT ; cible sans jauge entravée)
+	e = BattleEngine.new(["jo_prince"], ["ghost"], 4)
+	gho = unit_of(e, "ghost")
+	gho.ap = 0.0
+	e._try_apply(unit_of(e, "jo_prince"), gho, {"id": "gravite", "no_roll": true})
+	check(gho.has_effect("entrave"), "Gravité : cible sans jauge entravée")
+	check(not e._try_apply(gho, gho, {"id": "spd_up", "value": 30, "turns": 2}), "Gravité : bonus de VIT refusé")
+	# Ezra : Vide (plus de buffs ni de soins, non purgeable) ; suppression des buffs avec bonus ; vol de buff
+	e = BattleEngine.new(["ezra"], ["noor_el", "flint"], 4)
+	var ez := unit_of(e, "ezra")
+	var noor := unit_of(e, "noor_el")
+	for b in ["atk_up", "def_up", "cr_up"]:
+		e._try_apply(noor, noor, {"id": b, "value": 20, "turns": 3})
+	e.execute(ez, ez.skill(1), noor, 1)
+	check(not noor.has_buff() and noor.has_effect("vide"), "Null Void ciblé : buffs supprimés, Vide posé")
+	var n_hp := noor.hp
+	e._heal(noor, 500.0, unit_of(e, "flint"))
+	e._apply_action(unit_of(e, "flint"), noor, {"id": "cleanse"}, {})
+	check(noor.hp == n_hp and noor.has_effect("vide"), "Vide : pas de soin, non purgeable")
+	var fl := unit_of(e, "flint")
+	e._try_apply(fl, fl, {"id": "atk_up", "value": 20, "turns": 3})
+	for i in 8:
+		if ez.has_effect("atk_up"):
+			break
+		e.execute(ez, ez.skill(0), fl, 0)
+	check(ez.has_effect("atk_up") and not fl.has_effect("atk_up"), "Muay Thai : buff volé")
+	# Flint : Révélé (retire l'Immunité, +10 % de dégâts par cumul, +5 % de jauge aux alliés qui frappent)
+	e = BattleEngine.new(["flint", "ghost"], ["moussa"], 4)
 	mou = unit_of(e, "moussa")
-	approx(mou.stat("spd"), 94.0 * 0.9, "Givre glissant : ennemis -10 % VIT")
-	e._apply_damage(unit_of(e, "ghost"), 99999.0, mou, {})
-	approx(mou.stat("spd"), 94.0, "Givre glissant : levé à la mort de Ghost")
+	e._try_apply(mou, mou, {"id": "immunity", "turns": 2})
+	e._try_apply(unit_of(e, "flint"), mou, {"id": "revele", "stacks": 2, "no_roll": true})
+	check(not mou.has_effect("immunity") and not e._try_apply(mou, mou, {"id": "immunity", "turns": 2}), "Révélé : Immunité retirée et refusée")
+	approx(e._taken_mult(mou), 1.2, "Révélé x2 : +20 % de dégâts subis")
+	gho = unit_of(e, "ghost")
+	gho.ap = 0.0
+	e._on_targeted(gho, [mou])
+	approx(gho.ap, 0.05, "Révélé : l'allié qui frappe gagne 5 % de jauge")
+	# Don Selah : immunisé, 50 % de PA, Lien (partage 30 %, bouclier à sa mort), Scellement (contrecoup)
+	e = BattleEngine.new(["don_selah", "flint"], ["ezra", "moussa"], 4)
+	var ds := unit_of(e, "don_selah")
+	check(is_equal_approx(ds.ap, 0.5), "Éveil : commence à 50 % PA")
+	e._try_apply(unit_of(e, "ezra"), ds, {"id": "stun", "turns": 1, "no_roll": true, "ignores_immunity": true})
+	check(not ds.has_effect("stun"), "Éveil : immunisé même contre « ignore l'immunité »")
+	fl = unit_of(e, "flint")
+	e._try_apply(ds, fl, {"id": "lien"})
+	var ds_hp := ds.hp
+	e._apply_damage(fl, 1000.0, unit_of(e, "ezra"), {})
+	approx(fl.max_hp() - fl.hp, 700.0, "Lien : l'allié subit 70 %")
+	approx(ds_hp - ds.hp, 300.0, "Lien : Don Selah absorbe 30 %")
+	e._try_apply(ds, ds, {"id": "scellement"})
+	var m_hp := unit_of(e, "moussa").hp
+	e.current = ds
+	e._end_turn(ds)
+	approx(m_hp - unit_of(e, "moussa").hp, roundf(unit_of(e, "moussa").max_hp() * 0.15), "Scellement : contrecoup de 15 % à l'expiration", 1.0)
+	e._apply_damage(ds, 99999.0, unit_of(e, "ezra"), {})
+	check(not fl.has_effect("lien") and fl.shield_value() > 0.0, "Lien : Don tombe, bouclier de 20 % pour l'allié")
+
+
+func noor_check(e: BattleEngine) -> void:
+	var noor := unit_of(e, "noor_el")
+	var dd := unit_of(e, "don_diego")
+	e.execute(noor, noor.skill(1), null, 1)
+	check(dd.status_stacks("espera") == 1, "Souffle glacial : Espéra sur chaque ennemi touché")
+	approx(e._taken_mult(dd), 1.05, "Espéra x1 : +5 % de dégâts subis")
+	for i in 4:
+		e._try_apply(noor, dd, {"id": "espera", "no_roll": true})
+	check(noor.flags.has("double_aoe"), "Espéra x5 : la zone suivante frappera deux fois")
+
+
+## Effets génériques (fiche, parties 4 et 5) : Invincibilité, Bloc, Anti-soin, Régénération, Sommeil,
+## raté du triangle, « ne peut pas être résisté », égalité de vitesse.
+func test_generic_effects() -> void:
+	print("Effets génériques (Dislyte, Etheria)")
+	var e := BattleEngine.new(["mohamed"], ["issa", "moussa"], 6)
+	var moh := unit_of(e, "mohamed")
+	var issa := unit_of(e, "issa")
+	e._try_apply(issa, issa, {"id": "invincible", "turns": 1})
+	var hp := issa.hp
+	e._deal_damage(moh, issa, 5000.0, {})
+	check(issa.hp == hp, "Invincibilité : aucun dégât")
+	issa.effects.clear()
+	e._try_apply(moh, issa, {"id": "block", "turns": 2, "no_roll": true})
+	check(not e._try_apply(issa, issa, {"id": "atk_up", "value": 20, "turns": 2}), "Bloc : buffs refusés")
+	e._try_apply(moh, issa, {"id": "no_heal", "turns": 2, "no_roll": true})
+	issa.hp = 1000.0
+	e._heal(issa, 500.0, issa)
+	check(issa.hp == 1000.0, "Anti-soin : pas de soin")
+	moh.hp = 1000.0
+	e._try_apply(moh, moh, {"id": "regen", "turns": 2})
+	e._start_turn(moh)
+	approx(moh.hp, 1000.0 + roundf(moh.max_hp() * 0.15), "Régénération : 15 % des PV max au début du tour")
+	# Sommeil : le premier coup frappe 25 % plus fort
+	var e2 := BattleEngine.new(["mohamed"], ["moussa"], 6)
+	var mou := unit_of(e2, "moussa")
+	var normal := e2.compute_damage(unit_of(e2, "mohamed"), mou, 1000.0, {}, false, 1.0)
+	e2._try_apply(unit_of(e2, "mohamed"), mou, {"id": "sleep", "turns": 2, "no_roll": true})
+	var before := mou.hp
+	e2.rng.seed = 1
+	e2._deal_damage(unit_of(e2, "mohamed"), mou, 1000.0, {"missed": false})
+	check(before - mou.hp >= normal * 0.95 * 1.25 - 1.0 or before - mou.hp >= normal * 0.95 * 1.25 * 1.69 - 1.0, "Sommeil : +25 % sur le premier coup")
+	# « Ne peut pas être résisté »
+	mou.base["res"] = 900
+	check(e2._try_apply(unit_of(e2, "mohamed"), mou, {"id": "def_break", "turns": 1, "cannot_resist": true}), "cannot_resist : passe malgré 900 RÉS")
+	# Raté du triangle : le dominé rate, 25 % des dégâts, pas d'effet
+	var tri: Dictionary = GameData.rules()["triangle"]
+	var saved: float = tri["dominated_miss_chance"]
+	tri["dominated_miss_chance"] = 100.0
+	var e3 := BattleEngine.new(["eirikr"], ["mohamed"], 6)  # Orion contre Sirius : Orion est dominé
+	var evs: Array[Dictionary] = []
+	e3.battle_event.connect(func(ev: Dictionary) -> void: evs.append(ev))
+	e3.execute(unit_of(e3, "eirikr"), unit_of(e3, "eirikr").skill(0), unit_of(e3, "mohamed"), 0)
+	check(evs.any(func(ev: Dictionary) -> bool: return ev["type"] == "miss"), "Raté : le dominé rate")
+	tri["dominated_miss_chance"] = saved
+	# Égalité de vitesse : la position dans l'équipe départage
+	var e4 := BattleEngine.new(["issa", "issa"], ["mohamed"], 6)
+	var first := e4.next_turn()
+	check(first.slot == 0 and first.team == 0, "Égalité de VIT : la première position joue d'abord")
 
 
 func test_gacha() -> void:

@@ -1,0 +1,83 @@
+{
+  "_comment": "Statuts signature (fiche, partie 6). Fusionnés avec les effets de rules.json au chargement. Champs : name, kind (buff, debuff, mark), max_stacks, duration (tours de la cible ; 9999 = permanent), dispellable (purgeable), resistable, stack_mods (par cumul : stat + pct ou flat), dmg_taken_per_stack (%), heal_received_per_stack (%), blocks (effets refusés pendant le statut), hooks (déclencheurs). Vocabulaire des déclencheurs : docs/KITS.md.",
+  "room": {
+    "name": "Room", "kind": "mark", "max_stacks": 1, "duration": 2, "dispellable": false,
+    "stack_mods": [{"stat": "spd", "pct": -25}], "pursuit_taken_pct": 15,
+    "hooks": {"on_turn_start": [{"do": "ap_steal", "value": 10}]}
+  },
+  "vieillissement": {
+    "name": "Vieillissement", "kind": "debuff", "max_stacks": 5, "duration": 3,
+    "stack_mods": [{"stat": "atk", "pct": -8}, {"stat": "def", "pct": -8}],
+    "hooks": {"on_max": [{"do": "apply", "id": "stun", "turns": 1}, {"do": "clear"}]}
+  },
+  "givre": {
+    "name": "Givre", "kind": "mark", "max_stacks": 3, "duration": 2,
+    "stack_mods": [{"stat": "spd", "pct": -10}], "freeze_chance_per_stack": 15,
+    "hooks": {"on_max": [{"do": "apply", "id": "freeze", "turns": 1}, {"do": "clear"}]}
+  },
+  "clone": {
+    "name": "Clone", "kind": "buff", "max_stacks": 3, "duration": 3, "dispellable": false,
+    "clone": {"absorb_reflect_pct_atk": 30, "copy_pct": 40}
+  },
+  "inertie": {
+    "name": "Inertie", "kind": "buff", "max_stacks": 6, "duration": 9999, "dispellable": false,
+    "stack_mods": [{"stat": "def", "pct": 4}, {"stat": "res", "flat": 2}],
+    "hooks": {"on_turn_start": [{"do": "clear"}], "on_max": [{"do": "flag_holder", "flag": "shield_next_skill", "value": 20}]}
+  },
+  "garde_de_fer": {
+    "name": "Garde de fer", "kind": "buff", "max_stacks": 4, "duration": 3,
+    "dmg_taken_per_stack": -12,
+    "hooks": {"on_max": [{"do": "counter", "pct_atk": 120}, {"do": "clear"}]}
+  },
+  "visage": {
+    "name": "Visage", "kind": "buff", "max_stacks": 6, "duration": 9999, "dispellable": false,
+    "stack_mods": [{"stat": "cd", "flat": 6}, {"stat": "atk", "pct": 4}],
+    "hooks": {"on_max": [{"do": "flag_holder", "flag": "ignore_def_next", "value": 0.3}, {"do": "set_stacks", "value": 2}]}
+  },
+  "rage": {
+    "name": "Rage", "kind": "buff", "max_stacks": 8, "duration": 3, "dispellable": false,
+    "stack_mods": [{"stat": "atk", "pct": 5}, {"stat": "def", "pct": -3}],
+    "hooks": {"on_max": [{"do": "aoe", "pct_atk": 150}, {"do": "self_cost", "hp_pct": 10}, {"do": "clear"}]}
+  },
+  "dette": {
+    "name": "Dette", "kind": "mark", "max_stacks": 5, "duration": 3,
+    "hooks": {"on_turn_end": [
+      {"do": "true_damage", "pct_max_hp": 2, "per_stack": true},
+      {"do": "true_damage", "pct_source_atk": 15, "per_stack": true, "if_holder_has": "curse"}]}
+  },
+  "benediction": {
+    "name": "Bénédiction", "kind": "buff", "max_stacks": 3, "duration": 2,
+    "stack_mods": [{"stat": "res", "flat": 8}], "heal_received_per_stack": 10,
+    "hooks": {"below_hp": {"pct": 30, "do": [{"do": "heal", "pct_max_hp": 25}, {"do": "remove"}]}}
+  },
+  "espera": {
+    "name": "Espéra", "kind": "mark", "max_stacks": 5, "duration": 2,
+    "dmg_taken_per_stack": 5,
+    "hooks": {"on_max": [{"do": "flag_source", "flag": "double_aoe", "value": 1}, {"do": "clear"}]}
+  },
+  "gravite": {
+    "name": "Gravité", "kind": "debuff", "max_stacks": 2, "duration": 2,
+    "stack_mods": [{"stat": "spd", "pct": -15}], "blocks": ["spd_up", "aura_spd"],
+    "hooks": {"on_apply": [{"do": "apply_if_no_ap", "id": "entrave", "turns": 1}]}
+  },
+  "vide": {
+    "name": "Vide", "kind": "debuff", "max_stacks": 1, "duration": 2, "dispellable": false,
+    "blocks_buffs": true, "blocks_heal": true,
+    "hooks": {"on_apply": [{"do": "extend_if_cc", "value": 1}]}
+  },
+  "revele": {
+    "name": "Révélé", "kind": "mark", "max_stacks": 3, "duration": 2, "dispellable": false, "ignores_immunity": true,
+    "dmg_taken_per_stack": 10, "blocks": ["immunity"],
+    "hooks": {"on_apply": [{"do": "remove_effect", "id": "immunity"}], "on_attacked": [{"do": "ap_up_attacker", "value": 5}]}
+  },
+  "lien": {
+    "name": "Lien", "kind": "buff", "max_stacks": 1, "duration": 3, "dispellable": false,
+    "stack_mods": [{"stat": "atk", "pct": 10}], "share_with_source_pct": 30,
+    "hooks": {"on_source_death": [{"do": "shield", "pct_max_hp": 20}, {"do": "remove"}]}
+  },
+  "scellement": {
+    "name": "Scellement", "kind": "buff", "max_stacks": 1, "duration": 1, "dispellable": false,
+    "debuff_immune": true, "dmg_taken_pct": -30,
+    "hooks": {"on_expire": [{"do": "backlash", "pct_max_hp": 15}]}
+  }
+}

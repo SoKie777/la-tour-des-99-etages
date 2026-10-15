@@ -142,7 +142,24 @@ func is_skipping() -> bool:
 
 
 func is_slowed() -> bool:
-	return has_effect("slow") or has_effect("spd_down")
+	return has_effect("slow") or has_effect("spd_down") or has_effect("room") or has_effect("gravite")
+
+
+## Cumuls d'une marque, qu'elle soit un simple compteur ou un statut signature.
+func marks(name: String) -> int:
+	return maxi(stack(name), status_stacks(name))
+
+
+func status_stacks(effect_id: String) -> int:
+	return int(get_effect(effect_id).get("stacks", 0))
+
+
+## Vrai si un effet actif porte ce drapeau dans sa définition (blocks_heal, blocks_buffs, debuff_immune…).
+func effect_flag(flag: String) -> bool:
+	for e in effects:
+		if GameData.rules()["effects"][e["id"]].get(flag, false):
+			return true
+	return false
 
 
 func shield_value() -> float:
@@ -158,6 +175,11 @@ func stat(stat_name: String) -> float:
 	var flat := 0.0
 	for e in effects:
 		var d: Dictionary = defs[e["id"]]
+		for sm: Dictionary in d.get("stack_mods", []):  # statuts signature : valeur x cumuls
+			if sm["stat"] == stat_name:
+				var n := int(e.get("stacks", 1))
+				pct += float(sm.get("pct", 0.0)) * n
+				flat += float(sm.get("flat", 0.0)) * n
 		if d.get("stat", "") != stat_name:
 			continue
 		if d.has("pct"):
