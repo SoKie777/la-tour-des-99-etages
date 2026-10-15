@@ -45,9 +45,18 @@ jobs:
           godot --headless --path "$PROJECT_DIR" --script res://tests/run_tests.gd -- --sims=50
 
       - name: Configurer la signature et le SDK Android
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
         run: |
-          keytool -genkeypair -v -keystore "$HOME/debug.keystore" -storepass android -alias androiddebugkey \
-            -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          # Clé de signature FIXE (secret ANDROID_KEYSTORE_B64) : Android n'accepte une mise à jour que si
+          # l'APK est signé avec la même clé. Sans elle, il faudrait désinstaller et la sauvegarde serait perdue.
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$HOME/debug.keystore"
+          else
+            echo "::warning::Secret ANDROID_KEYSTORE_B64 absent : clé temporaire, mise à jour impossible sans désinstaller."
+            keytool -genkeypair -v -keystore "$HOME/debug.keystore" -storepass android -alias androiddebugkey \
+              -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
           mkdir -p "$HOME/.config/godot"
           minor=$(echo "$GODOT_VERSION" | cut -d. -f1,2)
           for v in 4 "$minor"; do
