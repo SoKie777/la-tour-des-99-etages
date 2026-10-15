@@ -80,6 +80,13 @@ func reset_profile() -> void:
 	save()
 
 
+## Change de bannière (les compteurs de garantie sont partagés entre bannières).
+func set_banner(id: String) -> void:
+	var st := gacha.get_state()
+	gacha = Gacha.new(id)
+	gacha.set_state(st)
+
+
 ## Invoque n fois si le joueur a assez d'Éclats de Vœu. Renvoie [] sinon.
 func pull(n: int) -> Array[Dictionary]:
 	var cost := n * int(GameData.progression()["pull_cost"])

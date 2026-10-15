@@ -2,6 +2,7 @@
 
 Usage : python tools/ui_icons.py
   → assets/icons/<id>.svg         glyphe ivoire sur fond transparent (ressources, stats, classes, boutons…)
+  → assets/icons/fx_<effet>.svg   glyphe ivoire de chaque effet (symboles des compétences)
   → assets/status_icons/<id>.svg  effet de combat : carré à symbole ivoire (Bible D.A., §3.1)
        bleu minéral = bonus non dissipable (aura, posture…), or ancien = bonus dissipable,
        rouge sceau = malus. Les effets viennent de data/rules.json et data/statuses.json.
@@ -338,6 +339,10 @@ def shield_sword(c):
     return g(shield(c), "translate(4 8) scale(0.78)") + g(sword(c), "translate(22 -2) scale(0.6)")
 
 
+def bars(c):
+    return poly([(6, 56), (58, 56), (58, 61), (6, 61)], c) + poly([(9, 36), (21, 36), (21, 52), (9, 52)], c) +         poly([(26, 14), (38, 14), (38, 52), (26, 52)], c) + poly([(43, 26), (55, 26), (55, 52), (43, 52)], c)
+
+
 def summon(c):
     return ring(32, 32, 26, c, 4) + poly(star_pts(6, 20, 9), c)
 
@@ -377,7 +382,7 @@ UI = {
     "stack_clone": two_squares, "stack_inertia": rings,
     # boutons
     "info": info, "journal": scroll, "auto": loop, "quit": door, "back": back, "close": close, "lock": lock,
-    "summon": summon, "speed": chevrons,
+    "summon": summon, "speed": chevrons, "stats": bars, "dmg_taken": cracked,
 }
 
 STATUS_GLYPHS = {
@@ -422,6 +427,8 @@ def main():
     os.makedirs(STATUS, exist_ok=True)
     for name, fn in UI.items():
         open(os.path.join(ICONS, name + ".svg"), "w", encoding="utf-8").write(svg(fn(IVORY)))
+    for name, fn in STATUS_GLYPHS.items():  # symboles des compétences (UiKit.skill_icon_id)
+        open(os.path.join(ICONS, "fx_" + name + ".svg"), "w", encoding="utf-8").write(svg(fn(IVORY)))
     n = 0
     for eid, d in effects().items():
         fn = STATUS_GLYPHS.get(eid, star5)

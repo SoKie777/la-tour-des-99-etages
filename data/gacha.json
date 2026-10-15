@@ -28,6 +28,7 @@
         "montana"
       ],
       "art": "res://assets/ui/banner_legendaires.png",
+      "splash": "res://assets/ui/splash_montana.png",
       "featured_multiplier": 2.0
     }
   }

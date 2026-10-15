@@ -72,6 +72,32 @@ static func relic_subs(r: Dictionary) -> String:
 	return "   ".join(parts)
 
 
+## Symbole d'une compétence (règle UI : pas de nom écrit en combat). Clé « icon » des données si
+## présente, sinon déduit de ce que fait la compétence : effet posé, soin, zone ou frappe simple.
+static func skill_icon_id(sk: Dictionary) -> String:
+	if sk.has("icon"):
+		return str(sk["icon"])
+	if sk.has("passive"):
+		return "passive"
+	var ids: Array[String] = []
+	for key in ["effects", "self_effects", "pre_effects", "while_cooldown"]:
+		for ef: Dictionary in sk.get(key, []):
+			ids.append(str(ef["id"]))
+	for h: Dictionary in sk.get("hits", []):
+		for ef: Dictionary in h.get("on_hit", []):
+			ids.append(str(ef["id"]))
+	for id in ids:
+		if not id in BattleEngine.ACTIONS and ResourceLoader.exists(ICON_DIR + "fx_" + id + ".svg"):
+			return "fx_" + id
+	if "heal" in ids or "cleanse" in ids or sk.has("revive") or sk.has("heal_lowest_ally_pct_dmg") or sk.get("target", "") == "all_allies":
+		return "support"
+	if "ap_down" in ids:
+		return "fx_spd_down"
+	if "ap_up" in ids:
+		return "fx_spd_up"
+	return "dps_aoe" if sk.get("target", "") == "all_enemies" else "atk"
+
+
 ## Description courte d'une compétence, tirée de ses données (BBCode : stats et effets en icônes).
 static func skill_text(sk: Dictionary) -> String:
 	if sk.has("passive"):

@@ -950,6 +950,7 @@ func _unit_info(u: BattleUnit) -> Control:
 
 
 func _clear_actions() -> void:
+	_hide_skill_tip()
 	for c in action_box.get_children():
 		c.queue_free()
 
@@ -986,21 +987,83 @@ func _corner(b: Control, c: Control) -> void:
 	b.add_child(c)
 
 
+## Compétences en symboles (règle UI). Toucher = lancer ; appui long = bulle avec le nom et l'effet.
 func _show_actions(actor: BattleUnit) -> void:
 	waiting_input = true
 	_clear_actions()
 	for i in 3:
 		var sk := actor.skill(i)
-		if actor.is_passive(i):
-			var pb := _skill_button(sk["name"], Color(UI_ACCENT, 0.4), func() -> void: pass, true)
-			_corner(pb, UiKit.icon("passive", 16, UiKit.DIM))
-			action_box.add_child(pb)
-		else:
-			var cd := actor.cooldowns[i]
-			var b := _skill_button(sk["name"], UI_ACCENT, _on_skill_chosen.bind(actor, i), not i in engine.usable_skills(actor), i == 2)
-			if cd > 0:
-				_corner(b, UiKit.amount("cooldown", str(cd), 12))
-			action_box.add_child(b)
+		var passive := actor.is_passive(i)
+		var usable := not passive and i in engine.usable_skills(actor)
+		var b := _skill_button("", UI_ACCENT if not passive else Color(UI_ACCENT, 0.4), func() -> void: pass, false, i == 2)
+		b.custom_minimum_size = Vector2(92, 92)
+		b.pivot_offset = b.custom_minimum_size / 2.0
+		if not usable:  # aspect grisé, mais l'appui long reste possible pour lire la compétence
+			b.add_theme_stylebox_override("normal", UiKit.panel_style(Color(UI_BG, 0.7), Color(UI_ACCENT, 0.25), 1, 6))
+		var ic := UiKit.icon(UiKit.skill_icon_id(sk), 50, UiKit.PAPER if usable else Color(UiKit.PAPER, 0.35))
+		ic.set_anchors_preset(Control.PRESET_CENTER)
+		ic.offset_left = -25
+		ic.offset_top = -25
+		ic.offset_right = 25
+		ic.offset_bottom = 25
+		b.add_child(ic)
+		if passive:
+			_corner(b, UiKit.icon("passive", 16, UiKit.DIM))
+		elif actor.cooldowns[i] > 0:
+			_corner(b, UiKit.amount("cooldown", str(actor.cooldowns[i]), 12))
+		var held := [false]
+		var timer := Timer.new()
+		timer.one_shot = true
+		timer.wait_time = 0.4
+		b.add_child(timer)
+		b.button_down.connect(func() -> void:
+			held[0] = false
+			timer.start())
+		timer.timeout.connect(func() -> void:
+			held[0] = true
+			_show_skill_tip(actor, i))
+		b.button_up.connect(func() -> void:
+			timer.stop()
+			_hide_skill_tip())
+		b.pressed.connect(func() -> void:
+			if usable and not held[0]:
+				_on_skill_chosen(actor, i))
+		action_box.add_child(b)
+
+
+var skill_tip: PanelContainer
+
+
+## Bulle d'une compétence (appui long) : symbole, nom, recharge et description.
+func _show_skill_tip(actor: BattleUnit, i: int) -> void:
+	_hide_skill_tip()
+	var sk := actor.skill(i)
+	skill_tip = PanelContainer.new()
+	skill_tip.add_theme_stylebox_override("panel", UiKit.panel_style(Color(UI_BG, 0.96),
+		UiKit.VERMILION.lightened(0.2) if i == 2 else UI_ACCENT, 2, 6))
+	skill_tip.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	skill_tip.offset_left = -280
+	skill_tip.offset_right = 280
+	skill_tip.offset_bottom = -116
+	skill_tip.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	skill_tip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 4)
+	skill_tip.add_child(v)
+	var cd := ""
+	if actor.is_passive(i):
+		cd = UiKit.bb("passive", 18)
+	elif sk.has("cd"):
+		cd = "%s %d" % [UiKit.bb("cooldown", 18), int(sk["cd"])]
+	v.add_child(UiKit.rich("%s  [b]%s[/b]   %s" % [UiKit.bb(UiKit.skill_icon_id(sk), 22, UI_ACCENT), sk["name"], cd], 18, UI_ACCENT))
+	v.add_child(UiKit.rich(UiKit.skill_text(sk), 14, UiKit.PAPER, true))
+	ui_root.add_child(skill_tip)
+
+
+func _hide_skill_tip() -> void:
+	if skill_tip != null:
+		skill_tip.queue_free()
+		skill_tip = null
 
 
 func _on_skill_chosen(actor: BattleUnit, idx: int) -> void:
@@ -1088,6 +1151,7 @@ func _show_result() -> void:
 		var rb := UiKit.icon_button("auto", func() -> void: Session.start_tower_floor(floor_n), 52)
 		rb.disabled = Session.profile.energy < Session.profile.floor_cost(floor_n)
 		row.add_child(rb)
+	row.add_child(UiKit.icon_button("stats", _toggle_battle_stats, 52))  # bilan du combat
 	row.add_child(UiKit.icon_button("back", _back_to_menu, 52))
 	result_panel.add_child(v)
 	result_panel.visible = true
@@ -1100,6 +1164,9 @@ func _show_result() -> void:
 	if engine.winner == 0:  # la caméra se rapproche des vainqueurs
 		_cam_to(Vector3(0, 2.5, 7.2), Vector3(0, 1.2, 1.6), 1.2)
 	finished.emit(engine.winner)
+	if "--recap" in OS.get_cmdline_user_args():  # captures : ouvre le bilan au lieu de quitter
+		_toggle_battle_stats()
+		return
 	if Session.smoke_test:
 		print("Test de fumée OK : combat terminé (vainqueur %d, %d actions)" % [engine.winner, engine.total_actions])
 		get_tree().quit(0)
@@ -1116,6 +1183,79 @@ func _reward_lines(v: VBoxContainer, lines: Array) -> void:
 		var tw := l.create_tween()
 		tw.tween_interval(0.35 + 0.22 * k)
 		tw.tween_property(l, "modulate:a", 1.0, 0.2)
+
+
+var stats_panel: PanelContainer
+
+
+## Bilan du combat : part des dégâts infligés dans l'équipe (%), dégâts subis, protection donnée
+## (boucliers posés) et soins. Une grille par équipe, en icônes et nombres.
+func _toggle_battle_stats() -> void:
+	if stats_panel != null:
+		stats_panel.queue_free()
+		stats_panel = null
+		return
+	stats_panel = PanelContainer.new()
+	stats_panel.add_theme_stylebox_override("panel", UiKit.panel_style(Color(UI_BG, 0.97), UI_ACCENT, 2, 8))
+	stats_panel.set_anchors_preset(Control.PRESET_CENTER)
+	stats_panel.offset_left = -400
+	stats_panel.offset_right = 400
+	stats_panel.offset_top = -200
+	stats_panel.offset_bottom = 200
+	ui_root.add_child(stats_panel)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 10)
+	stats_panel.add_child(v)
+	var head := HBoxContainer.new()
+	v.add_child(head)
+	head.add_child(UiKit.icon("stats", 26, UI_ACCENT))
+	var t := UiKit.label("Bilan", 22, UI_ACCENT)
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(t)
+	head.add_child(UiKit.icon_button("close", _toggle_battle_stats, 40))
+	for team in 2:
+		var members := engine.units.filter(func(x: BattleUnit) -> bool: return x.team == team)
+		var total := 0.0
+		for u: BattleUnit in members:
+			total += float(engine.stats[u]["dealt"])
+		var line := ColorRect.new()
+		line.color = Color(UiKit.PAPER if team == 0 else UiKit.VERMILION, 0.6)
+		line.custom_minimum_size.y = 2
+		v.add_child(line)
+		var grid := GridContainer.new()
+		grid.columns = 6
+		grid.add_theme_constant_override("h_separation", 14)
+		grid.add_theme_constant_override("v_separation", 6)
+		v.add_child(grid)
+		for id in ["", "", "atk", "dmg_taken", "shield", "support"]:  # en-têtes en icônes
+			grid.add_child(Control.new() if id == "" else UiKit.icon(id, 20, UiKit.DIM))
+		for u: BattleUnit in members:
+			var st: Dictionary = engine.stats[u]
+			grid.add_child(UiKit.portrait(u.id, 34) if UiKit.portrait_texture(u.id) != null else Control.new())
+			var name_l := UiKit.label(u.display_name, 14, _col(u).lightened(0.35))
+			name_l.custom_minimum_size.x = 170
+			name_l.clip_text = true
+			grid.add_child(name_l)
+			var pct := 100.0 * float(st["dealt"]) / total if total > 0.0 else 0.0
+			var dealt := HBoxContainer.new()
+			dealt.add_theme_constant_override("separation", 6)
+			var bar := ProgressBar.new()
+			bar.max_value = 100.0
+			bar.show_percentage = false
+			bar.custom_minimum_size = Vector2(130, 10)
+			bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			var fill := StyleBoxFlat.new()
+			fill.bg_color = _col(u).lightened(0.2)
+			bar.add_theme_stylebox_override("fill", fill)
+			var empty := StyleBoxFlat.new()
+			empty.bg_color = Color(0, 0, 0, 0.4)
+			bar.add_theme_stylebox_override("background", empty)
+			dealt.add_child(bar)
+			dealt.add_child(UiKit.label("%d %%" % roundi(pct), 14))
+			grid.add_child(dealt)
+			bar.create_tween().tween_property(bar, "value", pct, 0.6).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			for k in ["taken", "shielded", "healed"]:
+				grid.add_child(UiKit.label(UiKit.thousands(roundi(float(st[k]))), 14))
 
 
 func _back_to_menu() -> void:

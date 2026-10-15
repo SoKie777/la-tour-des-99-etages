@@ -22,6 +22,7 @@ func _init() -> void:
 	test_gacha()
 	test_relics()
 	test_profile()
+	test_battle_stats()
 	simulate_balance(sims)
 	simulate_rarity(maxi(40, sims / 2))
 	simulate_tower(maxi(20, sims / 4))
@@ -690,6 +691,32 @@ func test_profile() -> void:
 
 
 ## Une équipe de Légendaires doit battre largement une équipe de Rares (et les Épiques aussi).
+func test_battle_stats() -> void:
+	print("Bilan de combat")
+	var e := BattleEngine.new(GameData.nation_team("A"), GameData.nation_team("C"), 5)
+	var guard := 0
+	while e.winner == BattleEngine.ONGOING and guard < 400:
+		var u := e.next_turn()
+		guard += 1
+		if u == null or not u.is_alive():
+			continue
+		if not e.can_act(u):
+			e.skip_turn(u)
+			continue
+		var c := e.ai_choose(u)
+		e.use_skill(u, c["skill"], c["target"])
+	for team in 2:
+		var dealt := 0.0
+		var taken := 0.0
+		for u in e.units:
+			if u.team == team:
+				dealt += float(e.stats[u]["dealt"])
+			else:
+				taken += float(e.stats[u]["taken"])
+		approx(dealt, taken, "Équipe %d : dégâts infligés = dégâts subis en face" % team, 1.0)
+	check(e.units.any(func(u: BattleUnit) -> bool: return float(e.stats[u]["dealt"]) > 0.0), "Bilan : des dégâts comptés")
+
+
 func simulate_rarity(n: int) -> void:
 	var by := {3: [], 4: [], 5: []}
 	for id: String in GameData.characters():

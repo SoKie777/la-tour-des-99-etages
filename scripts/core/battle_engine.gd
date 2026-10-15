@@ -29,6 +29,8 @@ var keep_log := false
 ## Dernière S2/S3 active utilisée (copiable par Nyssa) : {"unit", "index"}
 var last_skill: Dictionary = {}
 var _in_reaction := false  # contre-attaques et frappes de clones : pas de réaction en chaîne
+## Bilan du combat par unité : {"dealt", "taken", "shielded" (boucliers donnés), "healed"}
+var stats := {}
 
 
 ## team_a / team_b : listes d'ids de personnages, ou de BattleUnit déjà construits (reliques).
@@ -46,6 +48,8 @@ func _init(team_a: Array, team_b: Array, seed_value: int = 0) -> void:
 			u.team = t[1]
 			u.slot = i
 			units.append(u)
+	for u in units:
+		stats[u] = {"dealt": 0.0, "taken": 0.0, "shielded": 0.0, "healed": 0.0}
 	for u in units:
 		if u.set_specials.has("start_immunity_1"):
 			u.effects.append(_make_effect("immunity", 1, 0.0, u, true))
@@ -710,6 +714,8 @@ func _apply_damage(tgt: BattleUnit, dmg: float, source: BattleUnit, info: Dictio
 			tgt.flags["self_revived"] = true  # Laboratoire infini : le réseau de Clefs le relève
 			tgt.hp = roundf(tgt.max_hp() * float(tgt.get_trait("revive_self_once")) / 100.0)
 			_emit({"type": "boss_revive", "target": tgt})
+	_count(source, "dealt", dmg)
+	_count(tgt, "taken", dmg)
 	var ev := {"type": "damage", "target": tgt, "source": source, "amount": dmg}
 	ev.merge(info)
 	_emit(ev)
@@ -801,6 +807,11 @@ func _zero_loss_saver(tgt: BattleUnit) -> BattleUnit:
 	return null
 
 
+func _count(u: BattleUnit, key: String, amount: float) -> void:
+	if u != null and stats.has(u):
+		stats[u][key] += amount
+
+
 func _heal(tgt: BattleUnit, amount: float, source: BattleUnit) -> void:
 	if tgt == null or not tgt.is_alive():
 		return
@@ -814,6 +825,7 @@ func _heal(tgt: BattleUnit, amount: float, source: BattleUnit) -> void:
 	var healed := minf(roundf(amount), tgt.max_hp() - tgt.hp)
 	tgt.hp += healed
 	if healed > 0.0:
+		_count(source if source != null else tgt, "healed", healed)
 		_emit({"type": "heal", "target": tgt, "source": source, "amount": healed})
 
 
@@ -997,6 +1009,8 @@ func _try_apply(caster: BattleUnit, tgt: BattleUnit, ef: Dictionary, attacker: B
 	var max_stacks := int(d.get("max_stacks", 1))
 	var add := int(ef.get("stacks", 1))
 	var existing := tgt.get_effect(eid)
+	if eid == "shield":  # bilan : protection donnée = valeur de bouclier ajoutée
+		_count(caster, "shielded", maxf(0.0, value - (float(existing["value"]) if not existing.is_empty() else 0.0)))
 	var e: Dictionary
 	var before := 0
 	if not existing.is_empty():

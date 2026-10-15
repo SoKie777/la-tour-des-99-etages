@@ -4,7 +4,7 @@ shader_type spatial;
 render_mode unshaded, cull_disabled, depth_draw_never, blend_mix, fog_disabled;
 
 uniform vec4 color : source_color = vec4(0.82, 0.68, 0.38, 1.0);
-uniform float strength = 0.55;
+uniform float strength = 0.42;
 uniform float spin = 0.15;  // vitesse de rotation (radians par seconde)
 
 void fragment() {
@@ -22,7 +22,7 @@ void fragment() {
 	vec2 q = mat2(vec2(0.7071, 0.7071), vec2(-0.7071, 0.7071)) * p;
 	vec2 cell = floor((q + 0.27) / 0.135);
 	float inside = step(abs(q.x), 0.27) * step(abs(q.y), 0.27);
-	float chk = mod(cell.x + cell.y, 2.0) * inside * 0.45;
+	float chk = mod(cell.x + cell.y, 2.0) * inside * 0.22;
 	vec2 e = abs(q);
 	float frame = inside * (1.0 - step(max(e.x, e.y), 0.255));
 	float m = max(max(outer, inner), max(ticks, max(chk, frame)));
