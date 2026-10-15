@@ -21,7 +21,8 @@
   "sleep_first_hit_bonus": 25,
   "skill2_cd_default": 3,
   "skill3_cd_default": 5,
-  "skill3_initial_cd": 2,
+  "skill3_initial_cd": 0,
+  "_skill3_initial_cd": "Recharge de l'ultime au début du combat : 0 = toutes les compétences sont prêtes dès le premier tour (choix du créateur).",
   "ai_avoid_sleeping": true,
   "max_actions": 300,
   "effects": {

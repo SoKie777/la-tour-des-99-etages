@@ -85,16 +85,7 @@ func test_cooldowns() -> void:
 	print("Recharges")
 	var e := BattleEngine.new(["general_metal"], ["moussa"], 7)
 	var g := unit_of(e, "general_metal")
-	check(e.usable_skills(g) == [0, 1], "Tour 1 : compétences 1 et 2, pas l'ultime")
-	g.cooldowns = [0, 0, 2]
-	var turns_until_ult := 0
-	for t in 5:
-		if 2 in e.usable_skills(g):
-			break
-		turns_until_ult += 1
-		e.current = g
-		e._end_turn(g)
-	check(turns_until_ult == 2, "L'ultime est prête au 3e tour (attendu 2 tours d'attente, obtenu %d)" % turns_until_ult)
+	check(e.usable_skills(g) == [0, 1, 2], "Tour 1 : toutes les compétences sont prêtes (recharges à zéro)")
 	g.cooldowns[2] = g.skill_cd(2)
 	var wait := 0
 	while not 2 in e.usable_skills(g):

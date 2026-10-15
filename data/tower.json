@@ -5,16 +5,16 @@
       "id": "cite_acier", "name": "Cité d'Acier", "first_floor": 1,
       "floors": [
         {"enemies": ["espion_lumiere", "issa"], "power": 1.0},
-        {"enemies": ["nidhogg", "espion_lumiere", "issa"], "power": 0.85},
+        {"enemies": ["nidhogg", "espion_lumiere", "issa"], "power": 0.9},
         {"enemies": ["general_metal", "issa"], "power": 1.1},
-        {"enemies": ["ymir", "nidhogg", "espion_lumiere"], "power": 1.0},
-        {"enemies": ["moussa", "issa", "mohamed"], "power": 0.8},
+        {"enemies": ["ymir", "nidhogg", "espion_lumiere"], "power": 0.95},
+        {"enemies": ["moussa", "issa", "mohamed"], "power": 0.85},
         {"enemies": ["don_diego", "general_metal"], "power": 1.1, "elite": true},
-        {"enemies": ["eirikr", "ymir", "nidhogg"], "power": 1.05},
+        {"enemies": ["eirikr", "ymir", "nidhogg"], "power": 0.85},
         {"enemies": ["general_metal", "espion_lumiere", "don_diego"], "power": 0.95},
         {"enemies": ["mohamed", "issa", "moussa"], "power": 1.05},
         {"enemies": ["eirikr", "don_diego", "issa"], "power": 0.95},
-        {"enemies": ["general_metal", "mohamed", "nidhogg"], "power": 1.25},
+        {"enemies": ["general_metal", "mohamed", "nidhogg"], "power": 1.0},
         {"enemies": [], "boss_unit": "promethee", "power": 1.0, "boss": "Prométhée"}
       ]
     }

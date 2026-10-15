@@ -40,6 +40,8 @@ var cam_look := CAM_LOOK
 var trauma := 0.0
 var active_ring: MeshInstance3D
 var hitstop_used := false
+var stars := {}       # BattleUnit -> étoiles qui tournent au-dessus de la tête (Étourdissement)
+var zz_timer := {}    # BattleUnit -> temps avant le prochain « Z » (Sommeil)
 
 
 func _ready() -> void:
@@ -63,6 +65,13 @@ func _process(delta: float) -> void:
 		b["fill"].scale.x = lerpf(b["fill"].scale.x, clampf(u.hp_ratio(), 0.0, 1.0), minf(1.0, delta * 8.0))
 		b["shield"].scale.x = clampf(u.shield_value() / u.max_hp(), 0.0, 1.0)
 		b["root"].visible = u.is_alive()
+	for u: BattleUnit in stars:
+		stars[u].rotation.y += delta * 4.0
+	for u: BattleUnit in zz_timer.keys():
+		zz_timer[u] -= delta
+		if zz_timer[u] <= 0.0:
+			zz_timer[u] = 0.75
+			_spawn_z(u)
 	if active_ring != null:
 		var k := 1.0 + 0.06 * sin(Time.get_ticks_msec() / 160.0)
 		active_ring.scale = Vector3(k, 0.05, k)
@@ -219,6 +228,8 @@ func _hitstop(duration: float) -> void:
 
 
 func _on_battle_event(ev: Dictionary) -> void:
+	if ev["type"] in ["effect", "effect_end", "death", "revive"] and ev.has("target"):
+		_status_look.call_deferred(ev["target"])
 	var line := BattleLog.describe(ev)
 	if line != "" and log_label != null:
 		var color := "#c9a24a" if ev["type"] in ["turn_start", "battle_end"] else "#d8d4e8"
@@ -360,6 +371,71 @@ func _make_pawn(u: BattleUnit) -> Node3D:
 	label.modulate = _col(u).lightened(0.45)
 	root.add_child(label)
 	return root
+
+
+## Contrôles visibles : Gel = statue blanc-bleu figée, Étourdissement = étoiles, Sommeil = « Z » et
+## gestes ralentis ; Poison et Malédiction teintent légèrement.
+func _status_look(u: BattleUnit) -> void:
+	var m: CharacterModel = models.get(u)
+	var alive := u.is_alive()
+	if m != null:
+		var tint := Color(0, 0, 0, 0)
+		var speed := 1.0
+		if alive and u.has_effect("freeze"):
+			tint = Color(0.55, 0.8, 1.0, 0.65)
+			speed = 0.0
+		elif alive and u.has_effect("poison"):
+			tint = Color(0.25, 0.95, 0.35, 0.18)
+		elif alive and u.has_effect("curse"):
+			tint = Color(0.65, 0.2, 0.9, 0.22)
+		if alive and u.has_effect("sleep"):
+			speed = 0.3
+		m.set_status_look(tint, speed)
+	var head := float(u.data.get("height_m", 1.75)) + (0.15 if u.team == 0 else 0.6)
+	if alive and u.has_effect("stun") and not stars.has(u) and pawns.has(u):
+		var ring := Node3D.new()
+		ring.position.y = head
+		for i in 4:
+			var st := Label3D.new()
+			st.text = "★"
+			st.font_size = 40 if u.team == 0 else 64
+			st.outline_size = 6
+			st.modulate = Color("ffe066")
+			st.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+			var a := i * TAU / 4.0
+			st.position = Vector3(cos(a) * 0.32, 0.05 * sin(a * 2.0), sin(a) * 0.32)
+			ring.add_child(st)
+		pawns[u].add_child(ring)
+		stars[u] = ring
+	elif (not alive or not u.has_effect("stun")) and stars.has(u):
+		stars[u].queue_free()
+		stars.erase(u)
+	if alive and u.has_effect("sleep"):
+		if not zz_timer.has(u):
+			zz_timer[u] = 0.0
+	else:
+		zz_timer.erase(u)
+
+
+func _spawn_z(u: BattleUnit) -> void:
+	if not pawns.has(u):
+		return
+	var z := Label3D.new()
+	z.text = "Z"
+	z.font = GAME_FONT
+	z.font_size = 34 if u.team == 0 else 64  # plus grand au fond de l'arène
+	z.outline_size = 6
+	z.modulate = Color("bfe3ff")
+	z.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	var head := float(u.data.get("height_m", 1.75)) + (0.0 if u.team == 0 else 0.4)
+	z.position = pawns[u].position + Vector3(0.25, head, 0)
+	z.scale = Vector3.ONE * 0.5
+	add_child(z)
+	var tw := create_tween().set_parallel()
+	tw.tween_property(z, "position", z.position + Vector3(0.45, 0.7, 0), 1.4).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(z, "scale", Vector3.ONE * 1.1, 1.4)
+	tw.tween_property(z, "modulate:a", 0.0, 0.6).set_delay(0.8)
+	tw.chain().tween_callback(z.queue_free)
 
 
 func _move_ring(actor: BattleUnit) -> void:

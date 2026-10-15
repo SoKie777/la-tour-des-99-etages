@@ -128,9 +128,36 @@ func play(action: String) -> void:
 	var anim: String = anims.get(action, action)
 	if dead or _lib == null or not _lib.has_animation(anim):
 		return
+	if frozen and not anim in HOLD_AT_END:
+		return
 	if anim in HOLD_AT_END:
 		dead = true
+		frozen = false
+		ap.speed_scale = 1.0
 	ap.play("fx/" + anim)
+
+
+var status_mat: StandardMaterial3D = null  # teinte durable d'un état (Gel, Poison…)
+var frozen := false  # statue de glace : seules la mort et la sortie du Gel changent la pose
+
+
+## État visible : teinte durable (alpha 0 = aucune) et vitesse d'animation
+## (0 = figé comme une statue de glace, < 1 = ralenti par le Sommeil).
+func set_status_look(tint: Color, anim_speed: float) -> void:
+	frozen = anim_speed == 0.0
+	if ap != null:
+		ap.speed_scale = anim_speed
+	if tint.a <= 0.0:
+		status_mat = null
+	else:
+		if status_mat == null:
+			status_mat = StandardMaterial3D.new()
+			status_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			status_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+			status_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		status_mat.albedo_color = tint
+	for mi in meshes:
+		mi.material_overlay = status_mat
 
 
 ## Éclat de couleur sur tout le personnage (coup reçu, soin) : un voile additif qui s'efface.
@@ -149,7 +176,7 @@ func flash(color: Color, duration := 0.22) -> void:
 	tw.tween_callback(func() -> void:
 		for mi in meshes:
 			if mi.material_overlay == m:
-				mi.material_overlay = null)
+				mi.material_overlay = status_mat)  # retour à la teinte d'état (ou rien)
 
 
 func _on_finished(anim_name: StringName) -> void:

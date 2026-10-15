@@ -1240,7 +1240,6 @@
     {
      "name": "Scellement de la sphère",
      "cd": 4,
-     "initial_cd": 1,
      "target": "all_enemies",
      "hits": [
       {

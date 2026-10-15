@@ -5,9 +5,9 @@ extends SceneTree
 
 func _init() -> void:
 	var teams := {"depart": ["nidhogg", "espion_lumiere", "issa"], "mixte": ["eirikr", "issa", "don_diego"]}
-	var powers := [0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.3]
+	var powers := [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2]
 	var n := 30
-	for f in range(1, Tower.floor_count() + 1):
+	for f in range(1, Tower.floor_count()):
 		var info := Tower.floor_info(f)
 		var line := "Étage %2d %-45s" % [f, str(info["enemies"])]
 		for t: String in teams:
