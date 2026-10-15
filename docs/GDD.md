@@ -122,6 +122,15 @@ Espion de Lumière, Moussa, Issa, Mohamed). Ils sont nettement plus faibles que 
 - Plus tard (fiche, parties 4 et 5) : sets type Ocean, Astralis, Calamity, Aegis ; Poursuite, Bain de sang,
   Effort, Tissage du temps ; qualité des reliques (6 niveaux), recyclage intégral, pitié de relique.
 
+## 8 bis. Cinématique d'invocation (fiche, partie 3) — codée
+
+Plateau d'échecs en marbre, trois couloirs éclairés (Orion bleu glacé, Grande Ourse rouge sang, Sirius
+or pâle). Chaque tirage : un pion blanc sur l'avant-dernière case du couloir de sa constellation, qui
+avance vers la promotion et devient cavalier ou fou (Rare), tour (Épique) ou dame (Légendaire, qui tourne
+et s'illumine). En invocation simple, le personnage sort ensuite de la pièce ; en x10, les dix pions
+avancent ensemble et les résultats s'affichent. Bouton « Passer ». Pion noir et roi réservés.
+`scripts/ui/summon_cinematic.gd`.
+
 ## 9. Invocation et économie (v0.2, réglable dans `data/progression.json` et `data/tower.json`)
 
 - Monnaie premium : **Éclats de Vœu** (1 invocation = 1 éclat). Gagnés à la **première victoire** de chaque

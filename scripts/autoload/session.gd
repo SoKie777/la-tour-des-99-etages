@@ -11,6 +11,8 @@ var battle_speed := 1.0
 ## Combat à lancer : {"mode": "tower", "floor": n} ou {"mode": "test", "player": [ids], "enemy": [ids]}
 var battle: Dictionary = {}
 var rng := RandomNumberGenerator.new()
+## Résultats de la dernière invocation (cinématique puis écran d'invocation).
+var last_pulls: Array[Dictionary] = []
 ## Test de fumée : godot --headless --path . res://scenes/battle.tscn -- --smoke
 var smoke_test := false
 
@@ -78,6 +80,7 @@ func pull(n: int) -> Array[Dictionary]:
 	for r in results:
 		r.merge(profile.add_pull(r))
 	save()
+	last_pulls = results
 	return results
 
 

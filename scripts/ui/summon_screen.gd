@@ -1,7 +1,6 @@
 extends Control
 ## Invocation : bannière vedette, coût en Éclats de Vœu, garanties, résultats.
 
-var last: Array[Dictionary] = []
 
 
 func _ready() -> void:
@@ -39,13 +38,13 @@ func _build() -> void:
 	grid.add_theme_constant_override("h_separation", 10)
 	grid.add_theme_constant_override("v_separation", 10)
 	content.add_child(grid)
-	for r in last:
+	for r in Session.last_pulls:
 		grid.add_child(_result_card(r))
 
 
 func _pull(n: int) -> void:
-	last = Session.pull(n)
-	_build()
+	if not Session.pull(n).is_empty():
+		get_tree().change_scene_to_file("res://scenes/summon_cinematic.tscn")
 
 
 func _result_card(r: Dictionary) -> Control:
