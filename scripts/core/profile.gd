@@ -18,7 +18,8 @@ var energy := 0
 var energy_time := 0                # instant (secondes Unix) du dernier point d'énergie compté
 var formations: Array = []          # {"team": [ids], "relics": {id: {"1".."6": uid}}} ou {} si vide
 var loot: Dictionary = {}           # boss de butin : id -> {unlocked, wins, pity, pity_set}
-var grants_received: Array[String] = []  # cadeaux déjà versés (data/progression.json, « grants »)
+var grants_received: Array[String] = []
+var unseen: Array[String] = []      # personnages obtenus mais pas encore vus dans la collection  # cadeaux déjà versés (data/progression.json, « grants »)
 
 
 static func new_game(now: int = 0) -> Profile:
@@ -133,6 +134,8 @@ func add_pull(result: Dictionary) -> Dictionary:
 		add("fragments_etage", frag)
 		return {"new": false, "fragments": frag}
 	owned[id] = 1
+	if not id in unseen:
+		unseen.append(id)
 	return {"new": true, "fragments": 0}
 
 
@@ -361,7 +364,7 @@ func to_dict() -> Dictionary:
 		"next_relic_uid": next_relic_uid, "equipped": equipped, "team": team,
 		"tower_cleared": tower_cleared, "gacha_state": gacha_state,
 		"energy": energy, "energy_time": energy_time, "formations": formations, "loot": loot,
-		"grants_received": grants_received,
+		"grants_received": grants_received, "unseen": unseen,
 	}
 
 
@@ -390,6 +393,7 @@ static func from_dict(d: Dictionary) -> Profile:
 		p.loot[id] = {"unlocked": int(ls.get("unlocked", 0)), "wins": int(ls.get("wins", 0)), "pity": int(ls.get("pity", 0)),
 			"pity_set": str(ls.get("pity_set", ""))}
 	p.grants_received.assign(d.get("grants_received", []))
+	p.unseen.assign(d.get("unseen", []))
 	p.energy = int(d.get("energy", GameData.progression()["energy"]["max"]))
 	p.energy_time = int(d.get("energy_time", Time.get_unix_time_from_system()))
 	for f: Variant in d.get("formations", []):

@@ -5,7 +5,8 @@ const SHOWN_STATS := ["hp", "atk", "def", "spd", "cr", "cd", "acc", "res"]
 
 var selected := ""
 var slot_selected := 1
-var recycle_armed := -1  # relique en attente de confirmation de recyclage
+var recycle_armed := -1
+var fresh: Array[String] = []  # personnages vus pour la première fois à cette visite  # relique en attente de confirmation de recyclage
 var view_box: VBoxContainer
 var stats_box: VBoxContainer
 var relic_box: VBoxContainer
@@ -21,10 +22,17 @@ func _ready() -> void:
 	cols.add_theme_constant_override("separation", 16)
 	content.add_child(cols)
 
+	fresh = Session.profile.unseen.duplicate()
+	Session.profile.unseen.clear()
+	Session.save()
+	var left_col := VBoxContainer.new()
+	left_col.custom_minimum_size.x = 360
+	cols.add_child(left_col)
+	left_col.add_child(UiKit.progress("Collection", Session.profile.owned_ids().size(), GameData.characters().size(), UiKit.ACCENT, 350))
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size.x = 360
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	cols.add_child(scroll)
+	left_col.add_child(scroll)
 	roster_grid = GridContainer.new()
 	roster_grid.columns = 2
 	roster_grid.add_theme_constant_override("h_separation", 8)
@@ -80,6 +88,8 @@ func _build_roster() -> void:
 		card.custom_minimum_size = Vector2(170, 78)
 		card.disabled = not owns
 		roster_grid.add_child(card)
+		if id in fresh:
+			UiKit.badge(card, "NOUVEAU")
 
 
 func _build_stats() -> void:

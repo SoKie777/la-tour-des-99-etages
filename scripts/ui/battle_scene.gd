@@ -875,10 +875,7 @@ func _show_result() -> void:
 			ls.append("Relique garantie : set " + UiKit.SET_NAMES.get(lrw["pity_used"], lrw["pity_used"]))
 		if lrw.has("unlocked"):
 			ls.append("Palier débloqué : " + LootBoss.difficulty(int(lrw["unlocked"]))["name"])
-		var lab := Label.new()
-		lab.text = "\n".join(ls)
-		lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		v.add_child(lab)
+		_reward_lines(v, ls)
 	if in_tower and engine.winner != 0 and not Session.smoke_test and GameData.progression()["energy"]["refund_on_defeat"]:
 		Session.profile.refund_energy(int(Session.battle.get("energy", 0)))
 		Session.save()
@@ -896,16 +893,15 @@ func _show_result() -> void:
 			lines.append("+%d Éclats de Vœu (première victoire)" % rw["currencies"]["eclat_de_voeu"])
 		for r: Dictionary in rw["relics"]:
 			lines.append("Relique : " + UiKit.relic_title(r))
-		var l := Label.new()
-		l.text = "\n".join(lines)
-		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		v.add_child(l)
+		_reward_lines(v, lines)
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 10)
 	v.add_child(row)
 	if in_tower and engine.winner == 0 and Session.profile.can_enter_floor(floor_n + 1) and floor_n < Tower.floor_count():
-		var nb := UiKit.button("Étage suivant", func() -> void: Session.start_tower_floor(floor_n + 1))
+		var nb := UiKit.button("Étage suivant  ›", func() -> void: Session.start_tower_floor(floor_n + 1), Vector2(190, 52))
+		nb.add_theme_stylebox_override("normal", UiKit.panel_style(Color("4a3a12"), UI_ACCENT, 2, 10))  # action principale
+		nb.add_theme_color_override("font_color", Color("fff1c4"))
 		nb.disabled = Session.profile.energy < Session.profile.floor_cost(floor_n + 1)
 		row.add_child(nb)
 	if in_loot:
@@ -931,6 +927,19 @@ func _show_result() -> void:
 	if Session.smoke_test:
 		print("Test de fumée OK : combat terminé (vainqueur %d, %d actions)" % [engine.winner, engine.total_actions])
 		get_tree().quit(0)
+
+
+## Récompenses révélées une à une (retour gratifiant) ; les plus importantes en doré.
+func _reward_lines(v: VBoxContainer, lines: Array[String]) -> void:
+	for k in lines.size():
+		var key := lines[k].contains("Éclats") or lines[k].contains("franchi") or lines[k].contains("débloqué") or lines[k].contains("garantie")
+		var l := UiKit.label(lines[k], 18 if key else 15, UI_ACCENT if key else Color("e8e2ff"))
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.modulate.a = 0.0
+		v.add_child(l)
+		var tw := l.create_tween()
+		tw.tween_interval(0.35 + 0.22 * k)
+		tw.tween_property(l, "modulate:a", 1.0, 0.2)
 
 
 func _back_to_menu() -> void:

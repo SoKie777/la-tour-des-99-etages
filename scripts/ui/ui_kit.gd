@@ -149,6 +149,51 @@ static func juice(b: Control) -> void:
 			tw.tween_property(b, "scale", Vector2.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT))
 
 
+## Barre de progression légendée (auto-suivi : le joueur voit où il en est).
+static func progress(text: String, value: float, maxv: float, col := ACCENT, width := 0.0) -> VBoxContainer:
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 2)
+	v.add_child(label("%s  %d / %d" % [text, int(value), int(maxv)], 13, Color("cfc8e8")))
+	var bar := ProgressBar.new()
+	bar.max_value = maxv
+	bar.value = 0.0
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(width, 10)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = col
+	fill.set_corner_radius_all(4)
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color(0.08, 0.06, 0.12)
+	bg.set_corner_radius_all(4)
+	bar.add_theme_stylebox_override("fill", fill)
+	bar.add_theme_stylebox_override("background", bg)
+	v.add_child(bar)
+	bar.create_tween().tween_property(bar, "value", value, 0.6).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	return v
+
+
+## Pastille discrète en haut à droite d'un bouton (suggestion au bon moment).
+static func badge(target: Control, text := "!") -> void:
+	var b := PanelContainer.new()
+	var st := panel_style(Color("e0463c"), Color.TRANSPARENT, 0, 10)
+	st.set_content_margin_all(3)
+	st.content_margin_left = 7
+	st.content_margin_right = 7
+	b.add_theme_stylebox_override("panel", st)
+	b.add_child(label(text, 12, Color.WHITE))
+	b.anchor_left = 1.0
+	b.anchor_right = 1.0
+	b.offset_right = -6.0  # collée au coin, à l'intérieur du bouton
+	b.offset_top = -9.0
+	b.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	target.add_child(b)
+	b.pivot_offset = Vector2(12, 10)
+	var tw := b.create_tween().set_loops()
+	tw.tween_property(b, "scale", Vector2(1.12, 1.12), 0.6).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(b, "scale", Vector2.ONE, 0.6).set_trans(Tween.TRANS_SINE)
+
+
 static func currency_bar() -> HBoxContainer:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 18)

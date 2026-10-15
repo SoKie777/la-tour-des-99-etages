@@ -21,9 +21,12 @@ func _build() -> void:
 	for id: String in g.banner["featured"]:
 		featured.append(UiKit.char_name(id))
 	info.add_child(UiKit.label("Vedette : %s (chances doublées parmi les 5★)" % ", ".join(featured), 15))
-	info.add_child(UiKit.label("Légendaire garanti dans %d · Épique garanti dans %d" % [
-		int(g.banner["hard_pity_5"]) - g.pity_5, int(g.banner["guarantee_4_every"]) - g.pity_4], 15, UiKit.DIM))
-	info.add_child(UiKit.label("3★ et doublons → Fragments d'étage (promotion, bientôt).", 13, UiKit.DIM))
+	# transparence : taux et garanties visibles (docs/CAPTOLOGIE.md)
+	var rates: Dictionary = g.banner["rates"]
+	info.add_child(UiKit.label("Taux : Rare %s %% · Épique %s %% · Légendaire %s %%" % [str(rates["3"]).trim_suffix(".0"), str(rates["4"]).trim_suffix(".0"), str(rates["5"]).trim_suffix(".0")], 14, UiKit.DIM))
+	info.add_child(UiKit.progress("Légendaire garanti (compteur)", g.pity_5, int(g.banner["hard_pity_5"]), UiKit.RARITY_COLORS[5], 380))
+	info.add_child(UiKit.progress("Épique ou mieux garanti (compteur)", g.pity_4, int(g.banner["guarantee_4_every"]), UiKit.RARITY_COLORS[4], 380))
+	info.add_child(UiKit.label("Doublons → Fragments d'étage (promotion, bientôt).", 13, UiKit.DIM))
 	var cost := int(GameData.progression()["pull_cost"])
 	for n in [1, 10]:
 		var b := UiKit.button("Invoquer x%d\n%d Éclats" % [n, n * cost], _pull.bind(n), Vector2(170, 72))

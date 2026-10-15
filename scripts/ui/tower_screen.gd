@@ -87,7 +87,10 @@ func _floor_row(f: Dictionary) -> Control:
 	if f.has("boss_unit"):
 		var b := GameData.boss(f["boss_unit"])
 		txt = "%s · %s\n%s" % [b["name"], b.get("voie", ""), b["skills"][1]["desc"]]
-	var info := UiKit.label(txt, 14, UiKit.DIM)
+	if open and not cleared:  # anticipation : la récompense de première victoire est annoncée
+		var rk := "eclat_de_voeu_boss" if f.has("boss") else ("eclat_de_voeu_elite" if f.get("elite", false) else "eclat_de_voeu")
+		txt += "\nPremière victoire : +%d Éclats de Vœu" % int(GameData.tower()["rewards"]["first"][rk])
+	var info := UiKit.label(txt, 14, UiKit.ACCENT if open and not cleared else UiKit.DIM)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD
 	h.add_child(info)
