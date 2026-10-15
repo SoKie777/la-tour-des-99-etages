@@ -113,6 +113,11 @@ func _build_stats() -> void:
 	if not unit.set_specials.is_empty():
 		var sp := UiKit.rich("%s  %s" % [UiKit.bb("relique", 16, UiKit.ACCENT), ", ".join(unit.set_specials)], 13, UiKit.DIM, true)
 		stats_box.add_child(sp)
+	if d.has("boss_bane"):  # arme du kit contre un boss
+		var bane: Dictionary = d["boss_bane"]
+		stats_box.add_child(UiKit.rich("[color=#%s]★[/color] %s  [b]%s[/b]" % [UiKit.ACCENT.to_html(false),
+			UiKit.bb("boss", 18, UiKit.VERMILION.lightened(0.3)), bane["name"]], 15, UiKit.ACCENT))
+		stats_box.add_child(UiKit.rich(str(bane["desc"]), 13, UiKit.DIM, true))
 	stats_box.add_child(HSeparator.new())
 	stats_box.add_child(UiKit.label("Compétences", 16, UiKit.ACCENT))
 	for i in 3:

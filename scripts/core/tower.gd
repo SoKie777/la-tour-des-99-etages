@@ -43,6 +43,16 @@ static func floor_weaknesses(number: int) -> Array[String]:
 	return out
 
 
+## Personnages dont le kit contient une arme contre ce boss (clé « boss_bane »), le 5★ d'abord.
+static func boss_banes(boss_id: String) -> Array[String]:
+	var out: Array[String] = []
+	for c: Dictionary in GameData.characters().values():
+		if c.has("boss_bane") and c["boss_bane"]["boss"] == boss_id:
+			out.append(c["id"])
+	out.sort_custom(func(a: String, b: String) -> bool: return int(GameData.character(a)["rarity"]) > int(GameData.character(b)["rarity"]))
+	return out
+
+
 ## Rang des ennemis pour la Ténacité du mode tactique (un boss a la sienne).
 static func tactics_rank(number: int) -> String:
 	return "elite" if floor_info(number).get("elite", false) else "normal"

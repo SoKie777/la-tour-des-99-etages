@@ -85,6 +85,16 @@ static func describe(ev: Dictionary) -> String:
 			return "%s copie %s (%s) !" % [ev["actor"].display_name, ev["skill"], ev["from"].display_name]
 		"bonus_action":
 			return "%s enchaîne !" % ev["actor"].display_name
+		"pursuit":
+			return "%s poursuit %s (%d)." % [ev["actor"].display_name, ev["target"].display_name, int(ev["n"])]
+		"break":
+			return "Rupture : %s brise la Ténacité de %s !" % [ev["actor"].display_name, ev["target"].display_name]
+		"charge":
+			return "%s charge une Oblitération !" % ev["actor"].display_name
+		"obliterate":
+			return "%s déclenche l'Oblitération !" % ev["actor"].display_name
+		"ult_cut":
+			return "%s coupe la ligne de temps (ultime)." % ev["actor"].display_name
 		"battle_end":
 			return {0: "VICTOIRE", 1: "DÉFAITE", 2: "ÉGALITÉ"}.get(ev["winner"], "")
 	return ""

@@ -156,23 +156,33 @@ func test_kits_v2() -> void:
 	e.battle_event.connect(func(ev: Dictionary) -> void: evs.append(ev))
 	e.execute(unit_of(e, "ghost"), unit_of(e, "ghost").skill(0), unit_of(e, "moussa"), 0)
 	check(count.call("damage") == 2, "Pics de glace : 2 coups")
-	# Poursuite de Montana : 2 frappes, 3 sur une cible sous contrôle ; Selah + Gel réussi -> S1 gratuit
+	# Montana : chaîne de poursuites (100 / 50 / 30 / 10 %) sur chaque S1 et sur toute cible gelée
 	e = BattleEngine.new(["montana"], ["moussa"], 4)
 	var mon := unit_of(e, "montana")
 	var mou := unit_of(e, "moussa")
-	evs.clear()
 	e.battle_event.connect(func(ev: Dictionary) -> void: evs.append(ev))
-	e.execute(mon, mon.skill(0), mou, 0)
-	check(count.call("damage") == 2, "Contact accéléré : 2 frappes")
+	mou.base["hp"] = 1e9
+	mou.hp = 1e9
+	var dist := [0, 0, 0, 0, 0]
+	for k in 400:
+		evs.clear()
+		e.execute(mon, mon.skill(0), mou, 0)
+		dist[count.call("pursuit")] += 1
+	check(dist[0] == 0 and dist[1] > 150 and dist[3] + dist[4] > 0, "Contact accéléré : 1 poursuite certaine, jusqu'à 4 par chance")
+	approx((dist[1] + 2 * dist[2] + 3 * dist[3] + 4 * dist[4]) / 400.0, 1.665, "Poursuites : 1,67 en moyenne", 0.15)
 	evs.clear()
+	e.execute(mon, mon.skill(1), mou, 1)
+	var free_pursuits: int = count.call("pursuit")
+	mou.effects.clear()
 	e._try_apply(mon, mou, {"id": "freeze", "turns": 1, "no_roll": true})
-	e.execute(mon, mon.skill(0), mou, 0)
-	check(count.call("damage") == 3, "Contact accéléré : 3 frappes sur une cible gelée")
+	evs.clear()
+	e.execute(mon, mon.skill(1), mou, 1)
+	check(free_pursuits == 0 and count.call("pursuit") >= 1, "Room sur une cible gelée : chaîne de poursuites")
 	mou.effects.clear()
 	mou.base["res"] = -200  # Gel certain
 	evs.clear()
 	e.execute(mon, mon.skill(2), mou, 2)
-	check(count.call("bonus_action") == 1 and count.call("skill") == 2, "Selah : Gel réussi -> S1 gratuit")
+	check(count.call("pursuit") >= 1 and count.call("bonus_action") == 0, "Selah : Gel réussi -> chaîne de poursuites")
 	check(mon.hp < mon.max_hp(), "Selah : prix de 10 % des PV")
 	# Room : -25 % VIT, Montana vole 10 % de jauge au début du tour de la cible
 	mou.effects.clear()
@@ -771,6 +781,14 @@ func test_tactics() -> void:
 		if u.team == 0:
 			hp1 += u.hp
 	check(hp1 < hp0 and boss.charging == 0, "Charge non brisée : Oblitération sur l'équipe")
+	var fb := BattleEngine.new(["montana", "nyssa"], Tower.enemy_units(12), 4)
+	var plain := BattleEngine.new(["montana"], ["ghost"], 4)
+	fb.enable_tactics()
+	var fav := unit_of(fb, "montana")
+	check(fav.stat("atk") > unit_of(plain, "montana").stat("atk") and fb.ult_ready(fav), "Kit de Montana : arme contre Prométhée (ATK, ultime prêt)")
+	check(Tower.boss_banes("promethee") == ["montana", "nyssa"] and Tower.boss_banes("geode") == ["mello", "yass"],
+		"Armes anti-boss : un 5★ et un Épique de la même nation")
+	check(unit_of(fb, "nyssa").energy < float(tt["energy_max"]), "Nyssa : version épique, moins forte")
 	var w := BattleEngine.new(["montana", "adrian", "noor_el"], ["ghost"], 3)
 	w.enable_tactics()
 	check(w.sp_max == int(tt["sp_max"]) + int(tt["resonance"]["triad_sp_max"]), "Triade : un Sceau max de plus")

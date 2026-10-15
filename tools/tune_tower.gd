@@ -8,6 +8,11 @@ const TEAMS := {
 	"mixte": ["eirikr", "issa", "don_diego"],
 	"triade5": ["montana", "adrian", "noor_el"],
 	"epiques": ["ghost", "tarkhan", "jo_prince"],
+	# armes anti-boss (boss_bane) : le 5★, l'Épique de la même nation, puis sans arme
+	"montana+": ["montana", "ghost", "jo_prince"],
+	"nyssa+": ["nyssa", "ghost", "jo_prince"],
+	"mello+": ["mello", "ghost", "jo_prince"],
+	"yass+": ["yass", "ghost", "jo_prince"],
 }
 
 

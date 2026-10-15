@@ -55,6 +55,10 @@ func _init(team_a: Array, team_b: Array, seed_value: int = 0) -> void:
 			units.append(u)
 	for u in units:
 		stats[u] = {"dealt": 0.0, "taken": 0.0, "shielded": 0.0, "healed": 0.0}
+		var bane: Dictionary = u.data.get("boss_bane", {})
+		if not bane.is_empty() and units.any(func(x: BattleUnit) -> bool: return x.team != u.team and x.id == bane["boss"]):
+			u.flags["bane"] = bane  # kit : arme contre ce boss (ATK ; Ténacité et énergie en mode tactique)
+			u.base["atk"] = float(u.base["atk"]) * (1.0 + float(bane.get("atk_pct", 0)) / 100.0)
 	for u in units:
 		if u.set_specials.has("start_immunity_1"):
 			u.effects.append(_make_effect("immunity", 1, 0.0, u, true))
@@ -94,6 +98,9 @@ func enable_tactics(enemy_rank := "normal") -> void:
 		sp_max += int(res["triad_sp_max"])
 		_emit({"type": "resonance", "constellation": "triade"})
 	sp = mini(int(tactics["sp_start"]), sp_max)
+	for u in units:
+		if u.flags.has("bane"):  # arme contre le boss : énergie de départ
+			u.energy = maxf(u.energy, float(u.flags["bane"].get("energy_start", 0)))
 
 
 ## Faiblesses d'un ennemi : celles de ses données (boss), sinon la constellation qui domine la sienne.
@@ -141,6 +148,8 @@ func _hit_toughness(u: BattleUnit, t: BattleUnit, idx: int, aoe: bool) -> void:
 	if t.max_toughness <= 0.0 or t.broken or not t.is_alive() or not u.constellation in t.weakness:
 		return
 	var dmg := float(tactics["toughness_dmg"][clampi(idx, 0, 2)]) * (float(tactics["aoe_toughness_mult"]) if aoe else 1.0)
+	if u.flags.has("bane"):  # arme contre ce boss
+		dmg *= float(u.flags["bane"].get("toughness_mult", 1.0))
 	t.toughness = maxf(0.0, t.toughness - dmg)
 	_emit({"type": "toughness", "actor": u, "target": t})
 	if t.toughness <= 0.0:
@@ -457,6 +466,34 @@ func execute(u: BattleUnit, sk: Dictionary, target: BattleUnit, idx: int, power 
 		_clone_copies(u, sk, targets)
 	if not targets.is_empty() and u.team != targets[0].team and not _in_reaction:
 		_on_targeted(u, targets)
+	var chain: Variant = u.get_trait("pursuit_chain")
+	if chain != null and not _in_reaction and sk.has("hits"):
+		for t in targets:  # Montana : chaque S1, et toute compétence qui touche un ennemi gelé
+			if t.team != u.team and t.is_alive() and (idx == int(chain["skill"]) or t.has_effect("freeze")):
+				_pursuit_chain(u, t, chain)
+
+
+## Poursuites en chaîne : la 1re selon chances[0], puis chaque suivante seulement si la précédente a eu lieu.
+## Chaque poursuite reprend la frappe principale de la compétence « skill » à puissance réduite.
+func _pursuit_chain(u: BattleUnit, t: BattleUnit, chain: Dictionary) -> void:
+	var h0: Dictionary = u.skill(int(chain["skill"]))["hits"][0]
+	var was := _in_reaction
+	_in_reaction = true
+	var chances: Array = chain["chances"]
+	for k in chances.size():
+		if not t.is_alive() or not u.is_alive() or rng.randf() * 100.0 >= float(chances[k]):
+			break
+		_emit({"type": "pursuit", "actor": u, "target": t, "n": k + 1})
+		var raw := _raw(u, h0) * float(chain["power"][k])
+		if t.has_effect("room"):
+			raw *= 1.0 + float(rules["effects"]["room"]["pursuit_taken_pct"]) / 100.0
+		_deal_damage(u, t, raw, {})
+		for ef: Dictionary in h0.get("on_hit", []):
+			if t.is_alive():
+				_apply_action(u, t, ef, {"removed": 0, "dealt": 0.0, "success": [], "power": 1.0, "missed": []})
+		if not tactics.is_empty() and u.team == 0 and t.team == 1:
+			_hit_toughness(u, t, int(chain["skill"]), false)
+	_in_reaction = was
 
 
 ## Raté (Dislyte) : seul le dominé peut rater, une fois par cible et par compétence.

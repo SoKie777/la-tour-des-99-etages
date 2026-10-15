@@ -75,8 +75,12 @@ func _floor_row(f: Dictionary) -> Control:
 	var weak: Array[String] = []  # faiblesses : constellations qui brisent la Ténacité
 	for c in Tower.floor_weaknesses(n):
 		weak.append(UiKit.bb(c, 24, UiKit.CONST_COLORS[c].lightened(0.3)))
-	var t := UiKit.rich("%s
-%s   %s" % [title, "".join(srow), " ".join(weak)], 18, UiKit.ACCENT if f.has("boss") else UiKit.PAPER)
+	if f.has("boss_unit"):  # personnages armés contre ce boss : portraits marqués d'une étoile
+		for id in Tower.boss_banes(str(f["boss_unit"])):
+			if UiKit.portrait_texture(id) != null:
+				weak.append("  [color=#%s]★[/color][img width=24 height=24]%s[/img]" % [UiKit.RARITY_COLORS[int(GameData.character(id)["rarity"])].to_html(false),
+					UiKit.portrait_texture(id).resource_path])
+	var t := UiKit.rich("%s\n%s   %s" % [title, "".join(srow), " ".join(weak)], 18, UiKit.ACCENT if f.has("boss") else UiKit.PAPER)
 	t.custom_minimum_size.x = 170
 	h.add_child(t)
 	var names: Array[String] = []

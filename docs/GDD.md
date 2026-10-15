@@ -224,8 +224,25 @@ Ennemis du roster v2 (puissance 0,9 à 1,1), Élites aux étages 18 et 24, boss 
 Cœur de quartz sous 50 % PV). Modèle provisoire (celui de Saraya) en attendant son modèle MPFB.
 Réglage mesuré en mode tactique, sans reliques : une équipe 5★ (Montana, Adrian, Noor-El) passe presque
 tous les étages et bat la Géode environ 1 fois sur 5 ; une équipe d'Épiques bloque dès l'étage 18.
-Le boss demande donc des reliques. Don Selah rend un étage quasi imbattable : il a été retiré de la Tour
-en attendant de revoir son kit.
+Le boss demande donc des reliques. Don Selah n'est pas un adversaire de la Tour tant que son kit n'est
+pas revu (S3 déjà réduite : 130 % ATK + 45 % DEF par coup au lieu de 150 % + 50 %).
+
+### Armes anti-boss (kits, v0.7.1)
+
+Clé `boss_bane` d'un personnage : contre ce boss, quel que soit le mode, +ATK % ; en mode tactique, il
+entame sa Ténacité plus vite et commence avec de l'énergie. Un 5★ avantagé (tiré au sort) l'a en entier, un
+Épique de la même nation en version réduite. Les portraits apparaissent dans la Tour, sur l'étage du boss.
+
+| Boss | 5★ | Épique | Mesure (avec Ghost et Jo Prince, sans reliques) |
+|---|---|---|---|
+| Prométhée | Montana : +20 % ATK, Ténacité ×2, ultime prêt | Nyssa : +5 %, ×1,25, 50 % d'énergie | 100 % / 100 % (80 % sans arme) |
+| Impératrice Géode | Mello : +20 % ATK, Ténacité ×2, ultime prêt | Yass : +5 %, ×1,25, 50 % d'énergie | 93 % / 80 % (30 % sans arme) |
+
+### Montana, poursuites en chaîne (v0.7.1)
+
+S1 : frappe puis poursuites (1re certaine, puis 50 %, 30 %, 10 %), à 50 / 45 / 40 / 35 % de l'ATK, +15 %
+sous Room. Toute compétence de Montana qui touche un ennemi gelé déclenche la même chaîne ; Selah (S3)
+qui gèle la déclenche donc aussitôt. En moyenne 1,67 poursuite par S1.
 
 ## 10. Résultats de simulation (IA simple des deux côtés, 400 combats par duel)
 

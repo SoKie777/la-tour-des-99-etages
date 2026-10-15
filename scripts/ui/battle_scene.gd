@@ -60,6 +60,9 @@ func _ready() -> void:
 	engine.battle_event.connect(_on_battle_event)
 	if Session.battle.get("mode", "") == "tower":  # mode tactique : seulement dans l'Ascension
 		engine.enable_tactics(Tower.tactics_rank(int(Session.battle["floor"])))
+		for u in engine.units:
+			if u.flags.has("bane"):  # arme du kit contre ce boss
+				_float_text.call_deferred(u, "★ " + str(u.flags["bane"]["name"]), UI_ACCENT, 0.9)
 	_build_world()
 	_build_ui()
 	_refresh()
@@ -380,6 +383,13 @@ func _on_battle_event(ev: Dictionary) -> void:
 				BattleFx.shockwave(self, pawns[bt].position, UiKit.PAPER, 2.5, 0.4 / Session.battle_speed)
 			_shake(0.6)
 			_hitstop(0.09)
+		"pursuit":  # Montana : poursuite en chaîne
+			var pa: BattleUnit = ev["actor"]
+			var pt: BattleUnit = ev["target"]
+			_float_text(pa, "»%d" % int(ev["n"]), UI_ACCENT, 1.0 + 0.15 * int(ev["n"]))
+			_play_anim(pa, "attack")
+			if pawns.has(pt):
+				BattleFx.ink_slash(self, pawns[pt].position + Vector3(0, 1.1, 0.45), _col(pa).lightened(0.3), false, 0.22 / Session.battle_speed)
 		"follow_up":  # assaut coordonné après une Rupture
 			_play_anim(ev["actor"], "attack")
 		"charge":  # boss : charge télégraphiée (Oblitération à son prochain tour)
