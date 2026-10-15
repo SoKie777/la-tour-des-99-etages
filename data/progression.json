@@ -1,5 +1,5 @@
 {
-  "_comment": "Nouveau joueur, conversion des doublons, coût des reliques. Monnaies : eclat_de_voeu (invocation), pieces (montée des reliques), fragments_etage (promotion, v0.4).",
+  "_comment": "Nouveau joueur, conversion des doublons, coût et recyclage des reliques, énergie (fiche, partie 5 : généreuse, se recharge pendant l'absence ; étages 1 à free_floors gratuits ; une défaite rend l'énergie). Monnaies : eclat_de_voeu, pieces, fragments_etage.",
   "starter_characters": [
     "nidhogg",
     "espion_lumiere",
@@ -30,5 +30,14 @@
     "gel",
     "vie",
     "precision"
-  ]
+  ],
+  "energy": {
+    "max": 120,
+    "regen_seconds": 300,
+    "floor_cost": 6,
+    "free_floors": 4,
+    "refund_on_defeat": true
+  },
+  "relic_recycle_base": 50,
+  "formation_slots": 3
 }

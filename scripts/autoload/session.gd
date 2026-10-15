@@ -84,9 +84,19 @@ func pull(n: int) -> Array[Dictionary]:
 	return results
 
 
-func start_tower_floor(number: int) -> void:
-	battle = {"mode": "tower", "floor": number}
+func now() -> int:
+	return int(Time.get_unix_time_from_system())
+
+
+## Lance un étage si l'énergie suffit (elle est rendue en cas de défaite). Renvoie false sinon.
+func start_tower_floor(number: int) -> bool:
+	var cost := profile.floor_cost(number)
+	if not profile.spend_energy(cost, now()):
+		return false
+	save()
+	battle = {"mode": "tower", "floor": number, "energy": cost}
 	get_tree().change_scene_to_file("res://scenes/battle.tscn")
+	return true
 
 
 ## Equipes du combat en cours : [joueur, ennemis] (listes de BattleUnit).

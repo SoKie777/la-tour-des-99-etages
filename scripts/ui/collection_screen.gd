@@ -5,6 +5,7 @@ const SHOWN_STATS := ["hp", "atk", "def", "spd", "cr", "cd", "acc", "res"]
 
 var selected := ""
 var slot_selected := 1
+var recycle_armed := -1  # relique en attente de confirmation de recyclage
 var view_box: VBoxContainer
 var stats_box: VBoxContainer
 var relic_box: VBoxContainer
@@ -179,6 +180,17 @@ func _relic_row(r: Dictionary) -> Control:
 		_changed(), Vector2(84, 44))
 	up.disabled = maxed or p.amount("pieces") < cost
 	h.add_child(up)
+	# recyclage intégral (fiche, partie 5) : deux appuis, car la relique disparaît
+	var gain := int(GameData.progression()["relic_recycle_base"]) + p.relic_invested(r)
+	var rec := UiKit.button("Recycler\n+%d P." % gain if recycle_armed != uid else "Sûr ?\n+%d P." % gain, func() -> void:
+		if recycle_armed != uid:
+			recycle_armed = uid
+			_build_relics()
+			return
+		recycle_armed = -1
+		p.recycle_relic(uid)
+		_changed(), Vector2(92, 44))
+	h.add_child(rec)
 	return panel
 
 

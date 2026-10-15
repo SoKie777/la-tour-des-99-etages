@@ -1,8 +1,14 @@
 extends Control
-## Ascension de la Tour : liste des étages, adversaires, récompenses, accès au combat.
+## Ascension de la Tour : liste des étages, adversaires, récompenses, combat, balayage des étages gagnés.
+
+var sweep_msg := ""
 
 
 func _ready() -> void:
+	_build()
+
+
+func _build() -> void:
 	var p := Session.profile
 	var content := UiKit.screen(self, "Ascension de la Tour")
 	var cols := HBoxContainer.new()
@@ -39,7 +45,16 @@ func _ready() -> void:
 	var view := UiKit.model_view(p.team, Vector2i(380, 330))
 	side.add_child(view)
 	side.add_child(UiKit.button("Modifier l'équipe", func() -> void: get_tree().change_scene_to_file("res://scenes/team.tscn"), Vector2(380, 52)))
-	side.add_child(UiKit.label("Chaque victoire : Pièces + 1 relique.\nPremière victoire : Éclats de Vœu.", 14, UiKit.DIM))
+	var en: Dictionary = GameData.progression()["energy"]
+	var help := UiKit.label("Chaque victoire : Pièces + 1 relique. Première victoire : Éclats de Vœu.\n" +
+		"Étages 1 à %d gratuits, puis %d d'énergie ; une défaite rend l'énergie.\n" % [int(en["free_floors"]), int(en["floor_cost"])] +
+		"Balayer : rejoue un étage gagné sans combat.", 14, UiKit.DIM)
+	help.autowrap_mode = TextServer.AUTOWRAP_WORD
+	side.add_child(help)
+	if sweep_msg != "":
+		var m := UiKit.label(sweep_msg, 14, UiKit.ACCENT)
+		m.autowrap_mode = TextServer.AUTOWRAP_WORD
+		side.add_child(m)
 
 
 func _scroll_to(scroll: ScrollContainer, target: Control) -> void:
@@ -77,9 +92,31 @@ func _floor_row(f: Dictionary) -> Control:
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD
 	h.add_child(info)
 	if open:
-		h.add_child(UiKit.button("Rejouer" if cleared else "Combattre", Session.start_tower_floor.bind(n), Vector2(130, 48)))
+		var cost := p.floor_cost(n)
+		var fight := UiKit.button(("Rejouer" if cleared else "Combattre") + ("\n%d énergie" % cost if cost > 0 else "\ngratuit"),
+			func() -> void: Session.start_tower_floor(n), Vector2(118, 50))
+		fight.disabled = p.energy < cost
+		h.add_child(fight)
+		if cleared:
+			for times in [1, 5]:
+				var sw := UiKit.button("Balayer\nx%d" % times, _sweep.bind(n, times), Vector2(76, 50))
+				sw.disabled = cost > 0 and p.energy < cost
+				h.add_child(sw)
 	else:
 		h.add_child(UiKit.label("Verrouillé", 14, UiKit.DIM))
 	if not open:
 		panel.modulate = Color(1, 1, 1, 0.55)
 	return panel
+
+
+func _sweep(n: int, times: int) -> void:
+	var rw := Session.profile.sweep_floor(n, times, Session.rng, Session.now())
+	Session.save()
+	if int(rw["times"]) == 0:
+		sweep_msg = "Pas assez d'énergie."
+	else:
+		var sets: Array[String] = []
+		for r: Dictionary in rw["relics"]:
+			sets.append(UiKit.relic_title(r))
+		sweep_msg = "Balayage de l'étage %d x%d : +%d Pièces\n%s" % [n, int(rw["times"]), int(rw["currencies"].get("pieces", 0)), "\n".join(sets)]
+	_build()

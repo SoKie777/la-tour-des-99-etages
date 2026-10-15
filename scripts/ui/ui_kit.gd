@@ -140,9 +140,16 @@ static func currency_bar() -> HBoxContainer:
 	for k in ["eclat_de_voeu", "pieces", "fragments_etage"]:
 		labels[k] = label("", 15, ACCENT if k == "eclat_de_voeu" else Color.WHITE)
 		h.add_child(labels[k])
+	var en := label("", 15, Color("8fd8a0"))
+	h.add_child(en)
 	var refresh := func() -> void:
 		for k: String in labels:
 			labels[k].text = "%s : %d" % [CURRENCY_NAMES[k], Session.profile.amount(k)]
+		var p: Profile = Session.profile
+		p.refresh_energy(Session.now())
+		var nxt := p.energy_next_in(Session.now())
+		en.text = "Énergie : %d/%d%s" % [p.energy, int(GameData.progression()["energy"]["max"]),
+			"  (+1 dans %d:%02d)" % [nxt / 60, nxt % 60] if nxt > 0 else ""]
 	refresh.call()
 	var timer := Timer.new()  # suit les dépenses faites sur l'écran
 	timer.wait_time = 0.25

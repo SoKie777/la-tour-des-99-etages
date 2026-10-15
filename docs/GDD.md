@@ -145,6 +145,12 @@ avancent ensemble et les résultats s'affichent. Bouton « Passer ». Pion noir 
 - Taux de la fiche : Rare 70 %, Épique 25 %, Légendaire 5 % (indicatifs, à régler avec l'économie).
 - Doublons → **Fragments d'étage** (1 par Rare, 10 par Épique, 40 par Légendaire), pour la promotion (v0.4).
 - Revenu gratuit à cibler : environ 1 Légendaire par mois pour un joueur actif (à chiffrer).
+- **Énergie** (fiche, partie 5 : généreuse) : 120 au maximum, +1 toutes les 5 minutes, y compris pendant
+  l'absence. Étages 1 à 4 gratuits, puis 6 par combat ; une défaite rend l'énergie.
+- **Balayage** : un étage déjà gagné se rejoue sans combat (x1 ou x5), au même coût en énergie.
+- **Recyclage intégral** : démonter une relique rend toutes les Pièces investies, plus 50.
+- **Formations** : 3 emplacements qui mémorisent l'équipe et ses reliques ; les appliquer déplace les
+  reliques au besoin.
 
 ### Ascension de la Tour (univers 01, Cité d'Acier)
 

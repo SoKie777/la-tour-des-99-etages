@@ -418,6 +418,14 @@ func _show_result() -> void:
 	v.add_child(title)
 	var floor_n := int(Session.battle.get("floor", 0))
 	var in_tower: bool = Session.battle.get("mode", "") == "tower"
+	if in_tower and engine.winner != 0 and not Session.smoke_test and GameData.progression()["energy"]["refund_on_defeat"]:
+		Session.profile.refund_energy(int(Session.battle.get("energy", 0)))
+		Session.save()
+		if int(Session.battle.get("energy", 0)) > 0:
+			var lr := Label.new()
+			lr.text = "Énergie rendue (+%d)" % int(Session.battle["energy"])
+			lr.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			v.add_child(lr)
 	if in_tower and engine.winner == 0 and not Session.smoke_test:
 		var rw := Session.profile.win_floor(floor_n, Session.rng)
 		Session.save()
@@ -436,9 +444,13 @@ func _show_result() -> void:
 	row.add_theme_constant_override("separation", 10)
 	v.add_child(row)
 	if in_tower and engine.winner == 0 and Session.profile.can_enter_floor(floor_n + 1) and floor_n < Tower.floor_count():
-		row.add_child(UiKit.button("Étage suivant", Session.start_tower_floor.bind(floor_n + 1)))
+		var nb := UiKit.button("Étage suivant", func() -> void: Session.start_tower_floor(floor_n + 1))
+		nb.disabled = Session.profile.energy < Session.profile.floor_cost(floor_n + 1)
+		row.add_child(nb)
 	if in_tower:
-		row.add_child(UiKit.button("Rejouer", Session.start_tower_floor.bind(floor_n)))
+		var rb := UiKit.button("Rejouer", func() -> void: Session.start_tower_floor(floor_n))
+		rb.disabled = Session.profile.energy < Session.profile.floor_cost(floor_n)
+		row.add_child(rb)
 	row.add_child(UiKit.button("Retour", _back_to_menu))
 	result_panel.add_child(v)
 	result_panel.visible = true

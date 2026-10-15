@@ -589,6 +589,42 @@ func test_profile() -> void:
 	var back := Profile.from_dict(JSON.parse_string(JSON.stringify(p.to_dict())))
 	check(back.owner_of(uid) == "issa" and back.tower_cleared == 2 - 1 and back.amount("fragments_etage") == 41, "Sauvegarde relue à l'identique")
 	check(back.team == p.team and int(back.relic(uid)["level"]) == 1, "Équipe et niveau de relique conservés")
+	# Énergie : se recharge pendant l'absence, étages gratuits au début, balayage
+	var t0 := 1_000_000
+	var q := Profile.new_game(t0)
+	check(q.energy == 120 and q.floor_cost(4) == 0 and q.floor_cost(5) == 6, "Énergie : 120 au départ, étages 1-4 gratuits")
+	check(q.spend_energy(30, t0) and q.energy == 90, "Énergie : dépense")
+	q.refresh_energy(t0 + 300 * 10 + 20)
+	check(q.energy == 100 and q.energy_next_in(t0 + 300 * 10 + 20) == 280, "Énergie : +1 toutes les 5 min, même absent")
+	q.refresh_energy(t0 + 300 * 999)
+	check(q.energy == 120, "Énergie : plafonnée à 120")
+	q.tower_cleared = 6
+	var sw := q.sweep_floor(6, 5, rng, t0 + 300 * 999)
+	check(int(sw["times"]) == 5 and q.energy == 90 and sw["relics"].size() == 5, "Balayage x5 : 30 d'énergie, 5 reliques")
+	check(int(q.sweep_floor(7, 1, rng, t0)["times"]) == 0, "Balayage : seulement les étages gagnés")
+	# Recyclage intégral : toutes les Pièces investies reviennent
+	var r2: Dictionary = q.relics[0]
+	var u2 := int(r2["uid"])
+	q.add("pieces", 100000)
+	q.owned["ghost"] = 1
+	q.equip("ghost", u2)
+	for i in 5:
+		q.level_relic(u2, rng)
+	var before := q.amount("pieces")
+	var gain := q.recycle_relic(u2)
+	check(gain == 50 + 100 + 200 + 300 + 400 + 500 and q.amount("pieces") == before + gain, "Recyclage : Pièces investies rendues (+50)")
+	check(q.relic(u2).is_empty() and q.equipped_relics("ghost").is_empty(), "Recyclage : relique retirée et déséquipée")
+	# Formations : équipe et reliques réappliquées, reliques déplacées si besoin
+	q.owned["mello"] = 1
+	var ra := int(q.relics[0]["uid"])
+	q.set_team(["ghost", "issa"])
+	q.equip("ghost", ra)
+	q.save_formation(0)
+	q.set_team(["mello"])
+	q.equip("mello", ra)
+	check(q.apply_formation(0) and q.team == ["ghost", "issa"] and q.owner_of(ra) == "ghost", "Formation : équipe et relique réappliquées")
+	var q2 := Profile.from_dict(JSON.parse_string(JSON.stringify(q.to_dict())))
+	check(q2.energy == q.energy and q2.formations.size() == q.formations.size() and q2.apply_formation(0), "Énergie et formations sauvegardées")
 
 
 ## Une équipe de Légendaires doit battre largement une équipe de Rares (et les Épiques aussi).
