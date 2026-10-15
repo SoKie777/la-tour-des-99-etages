@@ -60,9 +60,6 @@ func pull_many(n: int) -> Array[Dictionary]:
 
 
 func _pick(rarity: int) -> String:
-	if rarity == 3:
-		var pool: Array = GameData.gacha()["three_star_pool"]
-		return pool[rng.randi() % pool.size()]
 	var ids: Array[String] = []
 	var weights: Array[float] = []
 	var featured: Array = banner["featured"]

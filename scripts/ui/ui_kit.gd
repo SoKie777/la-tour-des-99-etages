@@ -11,7 +11,7 @@ const CONST_NAMES := {"orion": "Orion", "grande_ourse": "Grande Ourse", "sirius"
 const RARITY_COLORS := {3: Color("8fa3c0"), 4: Color("b07de0"), 5: Color("e8b84a")}
 const CLASS_NAMES := {
 	"dps_single": "DPS mono-cible", "dps_aoe": "DPS zone", "tank_def": "Tank défensif",
-	"tank_off": "Tank offensif", "neutralizer": "Neutralisateur", "support": "Support",
+	"tank_off": "Tank offensif", "neutralizer": "Neutralisateur", "support": "Support", "titan": "Titan",
 }
 const STAT_NAMES := {
 	"hp": "PV", "atk": "ATK", "def": "DEF", "spd": "VIT", "cr": "TC", "cd": "DC", "acc": "PRÉ", "res": "RÉS",
@@ -68,21 +68,33 @@ static func skill_text(sk: Dictionary) -> String:
 	var parts: Array[String] = []
 	var hits: Array = sk.get("hits", [])
 	if not hits.is_empty():
-		var mult := 0.0
+		var strikes: Array[String] = []
 		for h: Dictionary in hits:
-			mult += float(h.get("mult", 0.0))
-		parts.append("Frappe %s (%d %% %s)" % [TARGET_NAMES.get(sk.get("target", ""), "la cible"), int(mult * 100.0),
-			STAT_NAMES.get(str(hits[0].get("scale", "atk")), "ATK")])
+			var sc: Variant = h.get("scale", "atk")
+			var terms: Array[String] = []
+			if sc is Dictionary:
+				for s: String in sc:
+					terms.append("%d %% %s" % [roundi(float(sc[s]) * 100.0), "PV max" if s == "hp" else STAT_NAMES.get(s, s)])
+			else:
+				terms.append("%d %% %s" % [roundi(float(h.get("mult", 1.0)) * 100.0), "PV max" if sc == "hp" else STAT_NAMES.get(sc, sc)])
+			var txt := " + ".join(terms)
+			if int(h.get("repeat", 1)) > 1:
+				txt = "%d x (%s)" % [int(h["repeat"]), txt]
+			strikes.append(txt)
+		parts.append("Frappe %s : %s" % [TARGET_NAMES.get(sk.get("target", ""), "la cible"), ", puis ".join(strikes)])
 	elif sk.has("target"):
 		parts.append("Cible : " + TARGET_NAMES.get(sk["target"], sk["target"]))
-	for ef: Dictionary in sk.get("effects", []):
-		var chance := int(ef.get("chance", 100))
-		parts.append("%s %d tour(s)%s" % [BattleLog.effect_name(ef["id"]), int(ef.get("turns", 1)),
-			" (%d %%)" % chance if chance < 100 else ""])
+	if not sk.has("desc"):  # la description de la fiche détaille déjà les effets
+		for ef: Dictionary in sk.get("effects", []):
+			if ef["id"] in BattleEngine.ACTIONS:
+				continue
+			var chance := int(ef.get("chance", 100))
+			parts.append("%s %d tour(s)%s" % [BattleLog.effect_name(ef["id"]), int(ef.get("turns", 1)),
+				" (%d %%)" % chance if chance < 100 else ""])
 	if sk.has("cd"):
 		parts.append("recharge %d" % int(sk["cd"]))
 	if sk.has("desc"):
-		parts.append(str(sk["desc"]))
+		parts.append(str(sk["desc"]).trim_suffix("."))
 	return ". ".join(parts) + "."
 
 

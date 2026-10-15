@@ -17,7 +17,7 @@ func _init() -> void:
 		["+ Couronne de Nidhogg : bouclier 15 % PV", func() -> void:
 			nid["effects"].append({"id": "shield", "value": 15, "of": "caster_max_hp", "turns": 2})],
 	]
-	var teams := {"A": GameData.character_ids_by_nation("A"), "B": GameData.character_ids_by_nation("B"), "C": GameData.character_ids_by_nation("C")}
+	var teams := {"A": GameData.nation_team("A"), "B": GameData.nation_team("B"), "C": GameData.nation_team("C")}
 	var n := 200
 	for v in variants:
 		v[1].call()  # les variantes se cumulent

@@ -1,5 +1,5 @@
 {
-  "_comment": "Constantes de combat. Toutes réglables en playtest sans toucher au code.",
+  "_comment": "Constantes de combat. Toutes réglables en playtest sans toucher au code. Genres d'effets : buff, debuff, cc (contrôle), aura (liée à son lanceur, ni volée ni purgée), stance (posture).",
   "ap_constant": 1000,
   "_tick_mode": "continuous = temps exact jusqu'au prochain 100 % (recommandé). discrete = +VIT/1000 par tic, mais VIT 100 a 111 jouent alors au même rythme.",
   "tick_mode": "continuous",
@@ -39,6 +39,18 @@
     "spd_up":    {"kind": "buff", "stat": "spd", "pct_from_value": 1},
     "cr_up":     {"kind": "buff", "stat": "cr", "flat_from_value": 1},
     "cd_up":     {"kind": "buff", "stat": "cd", "flat_from_value": 1},
-    "shield":    {"kind": "buff"}
+    "shield":    {"kind": "buff"},
+    "spd_down":  {"kind": "debuff", "stat": "spd", "pct_from_value": -1},
+    "def_down":  {"kind": "debuff", "stat": "def", "pct_from_value": -1},
+    "res_down":  {"kind": "debuff", "stat": "res", "flat_from_value": -1},
+    "acc_up":    {"kind": "buff", "stat": "acc", "flat_from_value": 1},
+    "vulnerable": {"kind": "debuff", "dmg_taken_from_value": 1},
+    "aging":     {"kind": "debuff", "dot_on": "turn_start", "dot_pct_target_max_hp_from_value": 1},
+    "dmg_reduce": {"kind": "buff", "dmg_taken_from_value": -1},
+    "aura_spd":  {"kind": "aura", "stat": "spd", "pct_from_value": 1},
+    "aura_dmg_reduce": {"kind": "aura", "dmg_taken_from_value": -1},
+    "aura_chill": {"kind": "aura", "stat": "spd", "pct_from_value": -1},
+    "guarded":   {"kind": "aura"},
+    "bastion":   {"kind": "stance", "skip_turn": true, "dmg_taken_from_value": -1, "release_pct": 150}
   }
 }

@@ -15,10 +15,12 @@ func _init() -> void:
 	test_cooldowns()
 	test_effects()
 	test_passives()
+	test_kits_v2()
 	test_gacha()
 	test_relics()
 	test_profile()
 	simulate_balance(sims)
+	simulate_rarity(maxi(40, sims / 2))
 	simulate_tower(maxi(20, sims / 4))
 	print("\n%d vérifications, %d échec(s)." % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -148,6 +150,143 @@ func test_passives() -> void:
 	check(not issa.is_alive(), "Zéro perte : une seule fois par combat")
 
 
+## Moteur v2 : chaque mécanique des kits de la fiche « Personnages jouables et boss ».
+func test_kits_v2() -> void:
+	print("Kits v2")
+	var evs: Array[Dictionary] = []
+	var count := func(type: String) -> int: return evs.filter(func(ev: Dictionary) -> bool: return ev["type"] == type).size()
+	# Coups multiples
+	var e := BattleEngine.new(["ghost"], ["moussa"], 4)
+	e.battle_event.connect(func(ev: Dictionary) -> void: evs.append(ev))
+	e.execute(unit_of(e, "ghost"), unit_of(e, "ghost").skill(0), unit_of(e, "moussa"), 0)
+	check(count.call("damage") == 2, "Pics de glace : 2 coups")
+	# Poursuite de Montana : 2 frappes, 3 sur une cible sous contrôle ; Selah + Gel réussi -> S1 gratuit
+	e = BattleEngine.new(["montana"], ["moussa"], 4)
+	var mon := unit_of(e, "montana")
+	var mou := unit_of(e, "moussa")
+	evs.clear()
+	e.battle_event.connect(func(ev: Dictionary) -> void: evs.append(ev))
+	e.execute(mon, mon.skill(0), mou, 0)
+	check(count.call("damage") == 2, "Contact accéléré : 2 frappes")
+	evs.clear()
+	e._try_apply(mon, mou, {"id": "freeze", "turns": 1, "no_roll": true})
+	e.execute(mon, mon.skill(0), mou, 0)
+	check(count.call("damage") == 3, "Contact accéléré : 3 frappes sur une cible gelée")
+	mou.effects.clear()
+	mou.base["res"] = -200  # Gel certain
+	evs.clear()
+	e.execute(mon, mon.skill(2), mou, 2)
+	check(count.call("bonus_action") == 1 and count.call("skill") == 2, "Selah : Gel réussi -> S1 gratuit")
+	check(mon.hp < mon.max_hp(), "Selah : prix de 10 % des PV")
+	# Visages de Mello : cumulés puis consommés, PV max perdus
+	e = BattleEngine.new(["mello"], ["selene"], 4)
+	var mel := unit_of(e, "mello")
+	var sel := unit_of(e, "selene")
+	e.execute(mel, mel.skill(0), sel, 0)
+	check(sel.stack("visage") == 2, "Flamme bleue : 2 Visages")
+	var max_before := mel.max_hp()
+	e.execute(mel, mel.skill(2), sel, 2)
+	check(sel.stack("visage") == 0 and mel.max_hp() < max_before, "Seimei : Visages consommés, PV max perdus")
+	# Dette de Yass : Malédiction certaine à 2 Dettes, explosion, S2 bloquée
+	e = BattleEngine.new(["yass"], ["adrian"], 4)
+	var yas := unit_of(e, "yass")
+	var adr := unit_of(e, "adrian")
+	adr.base["res"] = 500
+	e.execute(yas, yas.skill(0), adr, 0)
+	check(adr.stack("dette") == 2, "Chaînes : 2 Dettes")
+	e.execute(yas, yas.skill(1), adr, 1)
+	check(adr.has_effect("curse"), "Dette d'Amour : Malédiction certaine malgré 500 RÉS")
+	e._try_apply(adr, adr, {"id": "immunity", "turns": 2})
+	yas.cooldowns = [0, 0, 0]
+	e.current = yas
+	e.use_skill(yas, 2, adr)
+	check(adr.stack("dette") == 0 and adr.has_effect("curse"), "Banqueroute : Dette explosée, Malédiction malgré l'Immunité")
+	check(yas.cooldowns[1] >= 1, "Banqueroute : pas de S2 au tour suivant")
+	# Ezra : suppression des buffs avec bonus, vol de buff
+	e = BattleEngine.new(["ezra"], ["noor_el", "flint"], 4)
+	var ez := unit_of(e, "ezra")
+	var noor := unit_of(e, "noor_el")
+	for b in ["atk_up", "def_up", "cr_up"]:
+		e._try_apply(noor, noor, {"id": b, "value": 20, "turns": 3})
+	e.execute(ez, ez.skill(1), noor, 1)
+	check(not noor.has_buff(), "Null Void ciblé : buffs supprimés")
+	e._try_apply(noor, noor, {"id": "atk_up", "value": 20, "turns": 3})
+	for i in 6:
+		if ez.has_effect("atk_up"):
+			break
+		e.execute(ez, ez.skill(0), noor, 0)
+	check(ez.has_effect("atk_up") and not noor.has_effect("atk_up"), "Muay Thai : buff volé")
+	# Mikhaïla : résurrection une fois, purge, Vieillissement
+	e = BattleEngine.new(["mikhaila", "ghost"], ["moussa"], 4)
+	var mik := unit_of(e, "mikhaila")
+	var gho := unit_of(e, "ghost")
+	e._apply_damage(gho, 99999.0, unit_of(e, "moussa"), {})
+	e._try_apply(unit_of(e, "moussa"), mik, {"id": "def_break", "turns": 2, "no_roll": true})
+	e.execute(mik, mik.skill(2), null, 2)
+	check(gho.is_alive() and is_equal_approx(gho.ap, 1.0), "Le temps ressenti : allié ressuscité à 100 % PA")
+	check(not mik.has_effect("def_break") and mik.has_effect("immunity"), "Le temps ressenti : purge et Immunité")
+	check(unit_of(e, "moussa").has_effect("aging"), "Le temps ressenti : Vieillissement sur l'ennemi")
+	e._apply_damage(gho, 99999.0, unit_of(e, "moussa"), {})
+	e.execute(mik, mik.skill(2), null, 2)
+	check(not gho.is_alive(), "Résurrection : une seule fois par combat")
+	# Selene : posture, accumulation puis renvoi à tous les ennemis
+	e = BattleEngine.new(["selene"], ["mohamed", "issa"], 4)
+	sel = unit_of(e, "selene")
+	e.current = sel
+	e.execute(sel, sel.skill(2), null, 2)
+	check(not e.can_act(sel), "Contre-attaque minimale : Selene immobile")
+	e._deal_damage(unit_of(e, "mohamed"), sel, 3000.0, {})
+	var issa_hp := unit_of(e, "issa").hp
+	for i in 3:
+		e.current = sel
+		e._end_turn(sel)
+	check(not sel.has_effect("bastion") and unit_of(e, "issa").hp < issa_hp, "Fin de la posture : dégâts renvoyés aux ennemis")
+	# Don Selah : immunisé aux débuffs, 50 % de PA au départ, garde des alliés
+	e = BattleEngine.new(["don_selah", "flint"], ["ezra"], 4)
+	var ds := unit_of(e, "don_selah")
+	check(is_equal_approx(ds.ap, 0.5), "Éveil : commence à 50 % PA")
+	e._try_apply(unit_of(e, "ezra"), ds, {"id": "stun", "turns": 1, "no_roll": true, "ignore_immunity": true})
+	check(not ds.has_effect("stun"), "Éveil : immunisé même contre « passe l'Immunité »")
+	var fl := unit_of(e, "flint")
+	e._try_apply(ds, fl, {"id": "guarded", "value": 30, "turns": 2})
+	var ds_hp := ds.hp
+	e._apply_damage(fl, 1000.0, unit_of(e, "ezra"), {})
+	approx(fl.max_hp() - fl.hp, 700.0, "Garde du Titan : l'allié subit 70 %")
+	approx(ds_hp - ds.hp, 300.0, "Garde du Titan : Don Selah absorbe 30 %")
+	# Tarkhan survit une fois ; Adrian renvoie 10 %
+	e = BattleEngine.new(["tarkhan"], ["adrian"], 4)
+	var tar := unit_of(e, "tarkhan")
+	adr = unit_of(e, "adrian")
+	e._apply_damage(tar, 99999.0, adr, {})
+	check(tar.hp == 1.0 and tar.stack("rage") == 1, "Immunité à la douleur : survit à 1 PV, +1 Rage")
+	e._apply_damage(tar, 99999.0, adr, {})
+	check(not tar.is_alive(), "Immunité à la douleur : une seule fois")
+	var t_hp := 0.0
+	e = BattleEngine.new(["tarkhan"], ["adrian"], 4)
+	tar = unit_of(e, "tarkhan")
+	adr = unit_of(e, "adrian")
+	t_hp = tar.hp
+	e._apply_damage(adr, 1000.0, tar, {})
+	approx(t_hp - tar.hp, 100.0, "Corps de feu : renvoie 10 % des dégâts")
+	# Nyssa : clones à chaque tour, copie de la dernière S2/S3
+	e = BattleEngine.new(["nyssa", "noor_el"], ["moussa"], 4)
+	var ny := unit_of(e, "nyssa")
+	for i in 4:
+		e._start_turn(ny)
+	check(ny.stack("clone") == 3, "Clones temporels : 3 au maximum")
+	e.last_skill = {"unit": unit_of(e, "noor_el"), "index": 1}
+	evs.clear()
+	e.battle_event.connect(func(ev: Dictionary) -> void: evs.append(ev))
+	e.execute(ny, ny.skill(2), null, 2)
+	check(count.call("copy") == 1 and ny.stack("clone") == 0, "Copie de technique : S2 de Noor-El rejouée, clones consommés")
+	# Ghost : sol gelé sur les ennemis, levé à sa mort
+	e = BattleEngine.new(["ghost"], ["moussa"], 4)
+	mou = unit_of(e, "moussa")
+	approx(mou.stat("spd"), 94.0 * 0.9, "Givre glissant : ennemis -10 % VIT")
+	e._apply_damage(unit_of(e, "ghost"), 99999.0, mou, {})
+	approx(mou.stat("spd"), 94.0, "Givre glissant : levé à la mort de Ghost")
+
+
 func test_gacha() -> void:
 	print("Gacha")
 	var g := Gacha.new("standard", 42)
@@ -167,20 +306,23 @@ func test_gacha() -> void:
 		if r["rarity"] >= 4:
 			max_gap4 = maxi(max_gap4, gap4)
 			gap4 = 0
-	check(max_gap <= 120, "Pity : Légendaire garanti en 120 invocations max (pire cas %d)" % max_gap)
-	check(max_gap4 <= 20, "Épique ou mieux toutes les 20 invocations (pire cas %d)" % max_gap4)
+	var hard := int(g.banner["hard_pity_5"])
+	var every := int(g.banner["guarantee_4_every"])
+	check(max_gap <= hard, "Pity : Légendaire garanti en %d invocations max (pire cas %d)" % [hard, max_gap])
+	check(max_gap4 <= every, "Épique ou mieux toutes les %d invocations (pire cas %d)" % [every, max_gap4])
 	print("  Taux observés sur 100 000 : 3★ %.2f %% | 4★ %.2f %% | 5★ %.2f %%" % [counts[3] / 1000.0, counts[4] / 1000.0, counts[5] / 1000.0])
-	var f := Gacha.new("featured_eirikr", 9)
+	var f := Gacha.new("featured_montana", 9)
 	var hits := 0
 	var fives := 0
 	for i in 50000:
 		var r := f.pull()
 		if r["rarity"] == 5:
 			fives += 1
-			if r["id"] == "eirikr":
+			if r["id"] == "montana":
 				hits += 1
-	print("  Bannière vedette : Eiríkr = %.1f %% des 5★" % (100.0 * hits / fives))
-	check(hits > fives / 5, "Vedette pondérée x2")
+	var n5 := GameData.characters().values().filter(func(c: Dictionary) -> bool: return int(c["rarity"]) == 5).size()
+	print("  Bannière vedette : Montana = %.1f %% des 5★ (%d Légendaires)" % [100.0 * hits / fives, n5])
+	approx(float(hits) / fives, 2.0 / (n5 + 1), "Vedette pondérée x2", 0.03)
 
 
 func test_relics() -> void:
@@ -235,6 +377,36 @@ func test_profile() -> void:
 	check(back.team == p.team and int(back.relic(uid)["level"]) == 1, "Équipe et niveau de relique conservés")
 
 
+## Une équipe de Légendaires doit battre largement une équipe de Rares (et les Épiques aussi).
+func simulate_rarity(n: int) -> void:
+	var by := {3: [], 4: [], 5: []}
+	for id: String in GameData.characters():
+		if id != "don_selah":
+			by[int(GameData.character(id)["rarity"])].append(id)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 77
+	print("
+Raretés (équipes tirées au hasard, %d combats) :" % n)
+	for pair in [[5, 3], [4, 3], [5, 4]]:
+		var wins := 0
+		for k in n:
+			var a: Array = []
+			var b: Array = []
+			var pa: Array = by[pair[0]].duplicate()
+			var pb: Array = by[pair[1]].duplicate()
+			for i in 3:
+				a.append(pa.pop_at(rng.randi() % pa.size()))
+				b.append(pb.pop_at(rng.randi() % pb.size()))
+			var swap := k % 2 == 1
+			var e := BattleEngine.new(b if swap else a, a if swap else b, 3000 + k)
+			var w := e.run_auto()
+			if w != BattleEngine.DRAW and ((w == 0) != swap):
+				wins += 1
+		var pct := 100.0 * wins / n
+		print("  %d★ contre %d★ : %.0f %% de victoires" % [pair[0], pair[1], pct])
+		check(pct >= (85.0 if pair == [5, 3] else 60.0), "%d★ nettement plus fort que %d★" % [pair[0], pair[1]])
+
+
 ## Taux de victoire étage par étage (IA des deux côtés), sans reliques.
 func simulate_tower(n: int) -> void:
 	var teams := {"Départ (Nidhogg, Espion, Issa)": ["nidhogg", "espion_lumiere", "issa"],
@@ -256,13 +428,14 @@ func simulate_tower(n: int) -> void:
 
 
 func simulate_balance(n: int) -> void:
-	var teams := {
-		"A (Orion)": GameData.character_ids_by_nation("A"),
-		"B (Grande Ourse)": GameData.character_ids_by_nation("B"),
-		"C (Sirius)": GameData.character_ids_by_nation("C"),
-	}
-	print("\nSimulation d'équilibrage (%d combats par duel, IA des deux côtés)" % n)
+	var rares := {"A (Orion)": GameData.nation_team("A", 3), "B (Grande Ourse)": GameData.nation_team("B", 3), "C (Sirius)": GameData.nation_team("C", 3)}
+	var teams := {"A (Orion)": GameData.nation_team("A"), "B (Grande Ourse)": GameData.nation_team("B"), "C (Sirius)": GameData.nation_team("C")}
+	print("\nSimulation d'équilibrage, roster v2 (%d combats par duel, IA des deux côtés)" % n)
+	for k: String in teams:
+		print("  %s : %s" % [k, ", ".join(teams[k].map(func(id: String) -> String: return GameData.character(id)["name"]))])
 	duel_table(teams, n)
+	print("Rares (personnages du MVP) :")
+	duel_table(rares, n)
 	# Même duels sans le triangle : sépare l'effet du triangle de celui de la composition.
 	var tri: Dictionary = GameData.rules()["triangle"]
 	var saved := [tri["dominant_crit_bonus"], tri["dominated_damage_mult"]]
@@ -276,11 +449,11 @@ func simulate_balance(n: int) -> void:
 	var mixed := ["eirikr", "issa", "don_diego"]
 	var w2 := [0, 0]
 	for k in n:
-		var e := BattleEngine.new(mixed, teams["B (Grande Ourse)"], 5000 + k)
+		var e := BattleEngine.new(mixed, rares["B (Grande Ourse)"], 5000 + k)
 		var w := e.run_auto()
 		if w in [0, 1]:
 			w2[w] += 1
-	print("  Mixte (Eiríkr, Issa, Don Diego) vs B : %.1f %% de victoires" % (100.0 * w2[0] / n))
+	print("  Mixte (Eiríkr, Issa, Don Diego) vs B (Rares) : %.1f %% de victoires" % (100.0 * w2[0] / n))
 
 
 func duel_table(teams: Dictionary, n: int) -> void:

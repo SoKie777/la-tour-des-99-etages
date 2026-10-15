@@ -7,6 +7,8 @@ signal finished(winner: int)
 const COLORS := {"orion": Color("4d8fd6"), "grande_ourse": Color("c8553d"), "sirius": Color("9b6bd6")}
 const UI_BG := Color("14121f")
 const UI_ACCENT := Color("c9a24a")
+const STACK_NAMES := {"spark": "Étincelle", "fury": "Fureur", "rage": "Rage", "visage": "Visage", "dette": "Dette",
+	"clone": "Clones", "inertia": "Inertie"}
 
 var engine: BattleEngine
 var pawns := {}        # BattleUnit -> Node3D
@@ -324,10 +326,9 @@ func _refresh() -> void:
 			parts.append("Bouclier %d" % int(u.shield_value()))
 		for e in u.effects:
 			parts.append("%s(%d)" % [BattleLog.effect_name(e["id"]), e["turns"]])
-		if u.stacks["fury"] > 0:
-			parts.append("Fureur %d" % u.stacks["fury"])
-		if u.stacks["spark"] > 0:
-			parts.append("Étincelle %d" % u.stacks["spark"])
+		for s: String in u.stacks:
+			if u.stack(s) > 0:
+				parts.append("%s %d" % [STACK_NAMES.get(s, s.capitalize()), u.stack(s)])
 		c["info"].text = "  ".join(parts) if u.is_alive() else "Hors combat"
 		c["hp"].modulate = Color(1, 1, 1, 1.0 if u.is_alive() else 0.3)
 	if engine.current != null:

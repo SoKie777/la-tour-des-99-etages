@@ -1,24 +1,33 @@
 {
-  "_comment": "Taux calqués sur Dislyte (90/9/1, pity Légendaire à 120, Épique garanti toutes les 20 invocations, vedette x2). A ajuster.",
+  "_comment": "Taux de la fiche (pièces d'échecs) : Rare 70 % (cavalier/fou), Épique 25 % (tour), Légendaire 5 % (dame). Indicatifs, à régler avec l'économie. Garanties : Légendaire au plus tard à 80, Épique ou mieux toutes les 10.",
   "banners": {
     "standard": {
       "name": "Appel de la Tour",
       "cost_currency": "eclat_de_voeu",
-      "rates": {"3": 90.0, "4": 9.0, "5": 1.0},
-      "hard_pity_5": 120,
-      "guarantee_4_every": 20,
+      "rates": {
+        "3": 70.0,
+        "4": 25.0,
+        "5": 5.0
+      },
+      "hard_pity_5": 80,
+      "guarantee_4_every": 10,
       "featured": [],
       "featured_multiplier": 1.0
     },
-    "featured_eirikr": {
-      "name": "L'Étincelle d'Orion",
+    "featured_montana": {
+      "name": "La Room de Montana",
       "cost_currency": "eclat_de_voeu",
-      "rates": {"3": 90.0, "4": 9.0, "5": 1.0},
-      "hard_pity_5": 120,
-      "guarantee_4_every": 20,
-      "featured": ["eirikr"],
+      "rates": {
+        "3": 70.0,
+        "4": 25.0,
+        "5": 5.0
+      },
+      "hard_pity_5": 80,
+      "guarantee_4_every": 10,
+      "featured": [
+        "montana"
+      ],
       "featured_multiplier": 2.0
     }
-  },
-  "three_star_pool": ["recrue_orion", "recrue_ourse", "recrue_sirius"]
+  }
 }

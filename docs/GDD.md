@@ -30,7 +30,7 @@ Piliers :
 | Rôles : DPS, tank, contrôle, soutien | DPS mono/zone, Tank off/déf, Neutralisateur, Support | **Codé** |
 | Éléments en triangle | Constellations (étiquette de porte, pas un élément) | **Codé** |
 | Reliques : 6 emplacements, 4 « Una » (set de 4) + 2 « Mui » (set de 2), stat principale par emplacement, secondaires à +3/6/9/12/15 | 6 emplacements, un set de 4 + un set de 2 **ou** trois sets de 2 (choix du doc MVP) | **Codé** (génération, montée, sets) |
-| Invocation 90 / 9 / 1 %, Légendaire garanti en 120, Épique au moins toutes les 20, vedette x2 | Identique au départ | **Codé** |
+| Invocation 90 / 9 / 1 %, Légendaire garanti en 120, Épique au moins toutes les 20, vedette x2 | Rare / Épique / Légendaire 70 / 25 / 5 % (fiche, pièces d'échecs), garanties 80 et 10, vedette x2 | **Codé** |
 | Capitaine : bonus passif du chef d'équipe | « Chef d'escouade » : 1 bonus d'équipe par personnage | À concevoir |
 | Niveau plafonné par les étoiles (30/40/50/60), promotion par sacrifice | Paliers 30/40/50/60, promotion par « Fragments d'étage » | À concevoir |
 | Ascension 1 à 6 par matériau élémentaire, stats + amélioration de compétence | Ascension par « Éclats de constellation » (Orion, Grande Ourse ou Sirius) | À concevoir |
@@ -92,22 +92,20 @@ Source : doc MVP (le plus récent). Les écarts avec la Bible sont tranchés en 
 - Leviers non actifs : −10 PRÉ ou −20 RÉS pour le dominé.
 - PvE : gardiens d'univers neutres ; seuls les 3 boss de butin portent une constellation.
 
-## 7. Roster MVP (9 personnages)
+## 7. Roster (24 personnages)
 
-| Perso | Nation | Classe | Voie | Rareté proposée |
-|---|---|---|---|---|
-| Eiríkr | A · Orion | DPS mono-cible | Puer Aeternus | 5★ (vedette) |
-| Ymir | A · Orion | Neutralisateur (Sommeil) | Sage | 5★ |
-| Nidhogg | A · Orion | Support | Souverain | 4★ |
-| Don Diego Lopez | B · Grande Ourse | Tank défensif | Souverain | 5★ |
-| Général de Métal | B · Grande Ourse | DPS zone | Guerrier | 5★ |
-| Espion de Lumière | B · Grande Ourse | Neutralisateur (Poison) | Chercheur | 4★ |
-| Moussa | C · Sirius | Tank offensif | Protecteur | 5★ |
-| Issa | C · Sirius | Support | Chercheur | 4★ |
-| Mohamed | C · Sirius | DPS mono-cible | Magicien | 5★ |
+**Fiche v2** (« Personnages jouables et boss », kits façon Dislyte : Tyr, Raven, Cecilia, Sieg) : 15
+personnages, noms d'AWAKE conservés pour l'instant. Kits, interprétations et barème de stats : `docs/KITS.md`.
 
-Kits et stats : `data/characters.json` (repris tels quels du doc MVP). Les 3★ du gacha sont pour
-l'instant des « recrues » génériques, une par nation, à créer.
+| Constellation | Légendaires (5★) | Épiques (4★) |
+|---|---|---|
+| Orion | Montana Legend (Neutralisateur, Gel), Mikhaïla Osborne (Support) | Ghost (DPS mono), Nyssa Morghulis (DPS zone), Selene Lace (Tank défensif) |
+| Grande Ourse | Adrian Ross (Tank offensif), Mello Legend (DPS mono) | Tarkhan Blaze (DPS zone), Yass Ming (Neutralisateur, Malédiction), Saraya Belrose (Support) |
+| Sirius | Noor-El (DPS zone), Ezra Lux (Neutralisateur, Étourdissement), Don Selah (Titan) | Jo Prince (DPS mono), Flint Davidson (Support) |
+
+**Rares (3★)** : les 9 personnages du MVP (Eiríkr, Ymir, Nidhogg, Don Diego Lopez, Général de Métal,
+Espion de Lumière, Moussa, Issa, Mohamed). Ils sont nettement plus faibles que les Épiques et Légendaires
+(voir `docs/KITS.md`).
 
 ## 8. Reliques
 
@@ -134,12 +132,9 @@ l'instant des « recrues » génériques, une par nation, à créer.
 - **Nouveau joueur** : Nidhogg, Espion de Lumière et Issa (les trois 4★, un par nation), 20 Éclats
   (deux invocations x10), 2 000 Pièces.
 - Bannières : standard + vedette (taux de la vedette x2 parmi les 5★). Garanties : Légendaire à
-  120, Épique au moins toutes les 20. Les compteurs sont communs à toutes les bannières et sauvegardés.
-- Mesuré sur 100 000 invocations simulées : 3★ 88,4 % · 4★ 10,2 % · 5★ 1,42 % (le 1 % affiché
-  monte à environ 1,4 % réel grâce à la garantie).
-- Doublons et 3★ → **Fragments d'étage** (1 par 3★, 10 par doublon 4★, 40 par doublon 5★), pour la
-  promotion (v0.4). Les 3★ sont pour l'instant des « recrues » sans kit : 90 % des invocations ne donnent
-  donc que des Fragments. **À traiter** : créer de vraies recrues 3★ jouables (voir §12).
+  80, Épique au moins toutes les 10. Les compteurs sont communs à toutes les bannières et sauvegardés.
+- Taux de la fiche : Rare 70 %, Épique 25 %, Légendaire 5 % (indicatifs, à régler avec l'économie).
+- Doublons → **Fragments d'étage** (1 par Rare, 10 par Épique, 40 par Légendaire), pour la promotion (v0.4).
 - Revenu gratuit à cibler : environ 1 Légendaire par mois pour un joueur actif (à chiffrer).
 
 ### Ascension de la Tour (univers 01, Cité d'Acier)
@@ -200,10 +195,7 @@ Ymir. Ces chiffres sont des tendances ; il faut les refaire après chaque régla
 3. Zéro perte (Moussa) : trop fort ? À mesurer en simulation (avec et sans le passif).
 4. Capitaine, promotion, ascension : à valider avant de les coder.
 5. Rééquilibrage de la nation A (tank Tormund en 2e vague ?).
-6. **Recrues 3★** : leur donner un kit simple et un modèle (une par nation), ou les remplacer par des
-   objets utiles (Pièces, reliques). Aujourd'hui elles ne rapportent qu'1 Fragment, ce qui rend 90 % des
-   invocations décevantes.
-7. Style visuel : MakeHuman donne un rendu réaliste et des vêtements de ville. C'est proche de
+6. Style visuel : MakeHuman donne un rendu réaliste et des vêtements de ville. C'est proche de
    Dislyte (urbain moderne), mais les tenues de la Tour (armures, tenues d'univers) demanderont des
    vêtements sur mesure.
 
@@ -214,7 +206,8 @@ Ymir. Ces chiffres sont des tendances ; il faut les refaire après chaque régla
 2. **v0.2 (fait)** : modèles 3D des 9 personnages (MPFB) et animations selon le rôle (Mixamo), profil
    sauvegardé, écrans Tour, Équipe, Collection (fiche, reliques) et Invocation, univers 01 de la Tour
    (12 étages) avec récompenses.
-3. **v0.3** : 3 boss de butin (sets de reliques ciblés), énergie, recrues 3★, rééquilibrage (triangle,
-   nation A), effets visuels des compétences.
+3. **v0.3** : roster v2 (15 Épiques et Légendaires, moteur de kits étendu : fait), modèles et animations
+   des 15, équilibrage v2 (durée des combats, triangle), boss Prométhée (étage 12), cinématique
+   d'invocation sur l'échiquier, 3 boss de butin, énergie.
 4. **v0.4** : progression (niveau, promotion, ascension), capitaine, premier tutoriel.
 5. **v0.5** : guerre de territoire (PvP asynchrone), serveur.

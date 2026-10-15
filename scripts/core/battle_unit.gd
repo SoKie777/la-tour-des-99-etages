@@ -16,11 +16,18 @@ var ap: float = 0.0
 var cooldowns: Array[int] = [0, 0, 0]
 ## Effets actifs : {id, turns, value, source (weakref, évite les cycles), caster_atk, skip_tick}
 var effects: Array[Dictionary] = []
+## Cumuls et marques (Étincelle, Fureur, Rage, Visage, Dette, clones…) : nom -> nombre
 var stacks: Dictionary = {"spark": 0, "fury": 0}
 var zero_loss_used := false
 var actions_taken := 0
 ## Effets spéciaux de sets de reliques (ex: "lifesteal_20").
 var set_specials: Array[String] = []
+## Paramètres des passifs (« params » des compétences passives + « traits » du personnage).
+var traits: Dictionary = {}
+## PV max perdus définitivement pendant le combat (prix « non soignable »).
+var max_hp_loss := 0.0
+## Drapeaux du combat : une fois par combat, contre-attaque déjà faite ce tour, coup critique reçu…
+var flags: Dictionary = {}
 
 
 func _init(char_data: Dictionary, team_idx: int, slot_idx: int, stats_override: Dictionary = {}) -> void:
@@ -29,10 +36,18 @@ func _init(char_data: Dictionary, team_idx: int, slot_idx: int, stats_override: 
 	display_name = char_data["name"]
 	team = team_idx
 	slot = slot_idx
-	constellation = GameData.constellation_of(char_data["nation"])
+	constellation = GameData.constellation_of(char_data["nation"]) if char_data.has("nation") else str(char_data.get("constellation", "neutre"))
 	base = (stats_override if not stats_override.is_empty() else char_data["stats"]).duplicate()
 	hp = max_hp()
-	cooldowns[2] = int(GameData.rules()["skill3_initial_cd"])
+	traits = char_data.get("traits", {}).duplicate()
+	for s: Dictionary in char_data["skills"]:
+		traits.merge(s.get("params", {}))
+	for i in 3:
+		var sk: Dictionary = char_data["skills"][i]
+		if sk.has("initial_cd"):
+			cooldowns[i] = int(sk["initial_cd"])
+		elif i == 2:
+			cooldowns[i] = int(GameData.rules()["skill3_initial_cd"])
 
 
 func is_alive() -> bool:
@@ -40,7 +55,7 @@ func is_alive() -> bool:
 
 
 func max_hp() -> float:
-	return float(base["hp"])
+	return maxf(1.0, float(base["hp"]) - max_hp_loss)
 
 
 func hp_ratio() -> float:
@@ -72,6 +87,18 @@ func has_passive(passive_id: String) -> bool:
 	return data.get("passive_always", "") == passive_id
 
 
+func get_trait(key: String, default: Variant = null) -> Variant:
+	return traits.get(key, default)
+
+
+func stack(name: String) -> int:
+	return int(stacks.get(name, 0))
+
+
+func add_stack(name: String, n: int, max_n: int) -> void:
+	stacks[name] = clampi(stack(name) + n, 0, max_n)
+
+
 func has_effect(effect_id: String) -> bool:
 	return not get_effect(effect_id).is_empty()
 
@@ -88,10 +115,15 @@ func effect_kind(effect_id: String) -> String:
 
 
 func has_buff() -> bool:
+	return count_kind("buff") > 0
+
+
+func count_kind(kind: String) -> int:
+	var n := 0
 	for e in effects:
-		if effect_kind(e["id"]) == "buff":
-			return true
-	return false
+		if effect_kind(e["id"]) == kind:
+			n += 1
+	return n
 
 
 func is_hard_cc() -> bool:
@@ -99,6 +131,18 @@ func is_hard_cc() -> bool:
 		if GameData.rules()["effects"][e["id"]].get("hard_cc", false):
 			return true
 	return false
+
+
+## Passe son tour (contrôle, ou posture comme la Contre-attaque minimale de Selene).
+func is_skipping() -> bool:
+	for e in effects:
+		if GameData.rules()["effects"][e["id"]].get("skip_turn", false):
+			return true
+	return false
+
+
+func is_slowed() -> bool:
+	return has_effect("slow") or has_effect("spd_down")
 
 
 func shield_value() -> float:
@@ -122,8 +166,11 @@ func stat(stat_name: String) -> float:
 			pct += float(d["pct_from_value"]) * float(e["value"])
 		elif d.has("flat_from_value"):
 			flat += float(d["flat_from_value"]) * float(e["value"])
+	for sps: Dictionary in get_trait("stat_per_stack", []):
+		if sps["stat"] == stat_name:
+			pct += float(sps["pct"]) * stack(sps["stack"])
 	if stat_name == "cr":
-		flat += 5.0 * stacks["spark"]
+		flat += 5.0 * stack("spark")
 	elif stat_name == "cd":
-		flat += 10.0 * stacks["spark"]
+		flat += 10.0 * stack("spark")
 	return maxf(0.0, value * (1.0 + pct / 100.0) + flat)

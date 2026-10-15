@@ -58,5 +58,16 @@ static func character_ids_by_nation(nation: String) -> Array[String]:
 	return out
 
 
+## Equipe de 3 d'une nation (combats de test et simulations) : d'une rareté donnée,
+## ou les meilleures raretés si rarity = 0 (hors Titan).
+static func nation_team(nation: String, rarity: int = 0) -> Array[String]:
+	var ids := character_ids_by_nation(nation).filter(func(id: String) -> bool:
+		return characters()[id]["class"] != "titan" and (rarity == 0 or int(characters()[id]["rarity"]) == rarity))
+	ids.sort_custom(func(a: String, b: String) -> bool: return int(characters()[a]["rarity"]) > int(characters()[b]["rarity"]))
+	var out: Array[String] = []
+	out.assign(ids.slice(0, 3))
+	return out
+
+
 static func constellation_of(nation: String) -> String:
 	return rules()["triangle"]["nation_constellation"][nation]

@@ -8,6 +8,10 @@ const EFFECT_NAMES := {
 	"silence": "Silence", "sleep": "Sommeil", "stun": "Étourdissement", "freeze": "Gel",
 	"taunt": "Provocation", "immunity": "Immunité", "atk_up": "ATK +", "def_up": "DEF +",
 	"spd_up": "VIT +", "cr_up": "TC +", "cd_up": "DC +", "shield": "Bouclier",
+	"spd_down": "VIT −", "def_down": "DEF −", "res_down": "Révélé", "acc_up": "PRÉ +",
+	"vulnerable": "Expulsé", "aging": "Vieillissement", "dmg_reduce": "Protection",
+	"aura_spd": "Élan", "aura_dmg_reduce": "Garde", "aura_chill": "Sol gelé", "guarded": "Sous la garde du Titan",
+	"bastion": "Contre-poids",
 }
 
 
@@ -44,6 +48,22 @@ static func describe(ev: Dictionary) -> String:
 			return "Zéro perte ! %s reste à 1 PV." % ev["target"].display_name
 		"death":
 			return "%s est hors combat." % ev["target"].display_name
+		"ap":
+			return "%s : %+d %% de PA." % [ev["target"].display_name, int(ev["amount"])]
+		"steal":
+			return "%s vole %s à %s." % [ev["actor"].display_name, effect_name(ev["effect"]), ev["target"].display_name]
+		"cost":
+			return "%s paie le prix : -%d PV." % [ev["target"].display_name, int(ev["amount"])]
+		"revive":
+			return "%s ramène %s au combat !" % [ev["actor"].display_name, ev["target"].display_name]
+		"survive":
+			return "%s refuse de tomber (1 PV) !" % ev["target"].display_name
+		"release":
+			return "%s renvoie %d dégâts à tous les ennemis !" % [ev["actor"].display_name, int(ev["amount"])]
+		"copy":
+			return "%s copie %s (%s) !" % [ev["actor"].display_name, ev["skill"], ev["from"].display_name]
+		"bonus_action":
+			return "%s enchaîne !" % ev["actor"].display_name
 		"battle_end":
 			return {0: "VICTOIRE", 1: "DÉFAITE", 2: "ÉGALITÉ"}.get(ev["winner"], "")
 	return ""

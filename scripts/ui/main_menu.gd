@@ -62,5 +62,5 @@ func _go(screen: String) -> void:
 
 
 func _test_battle(a: String, b: String) -> void:
-	Session.battle = {"mode": "test", "player": GameData.character_ids_by_nation(a), "enemy": GameData.character_ids_by_nation(b)}
+	Session.battle = {"mode": "test", "player": GameData.nation_team(a), "enemy": GameData.nation_team(b)}
 	get_tree().change_scene_to_file("res://scenes/battle.tscn")

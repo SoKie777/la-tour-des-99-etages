@@ -26,12 +26,14 @@ func _ready() -> void:
 		battle_speed = 3.0
 		profile = Profile.new_game()  # le test ne touche pas à la sauvegarde
 		battle = {"mode": "tower", "floor": 1}
+		if "--v2" in OS.get_cmdline_user_args():  # combat du roster v2 : -- --smoke --v2
+			battle = {"mode": "test", "player": GameData.nation_team("A"), "enemy": GameData.nation_team("C")}
 		get_tree().create_timer(120.0).timeout.connect(func() -> void:
 			push_error("Test de fumée : le combat n'a pas fini en 120 s")
 			get_tree().quit(1))
 	else:
 		load_profile()
-	gacha = Gacha.new("featured_eirikr")
+	gacha = Gacha.new("featured_montana")
 	gacha.set_state(profile.gacha_state)
 
 
