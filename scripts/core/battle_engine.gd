@@ -249,6 +249,11 @@ func run_auto() -> int:
 func _ai_target(u: BattleUnit, idx: int) -> BattleUnit:
 	var valid := valid_targets(u, idx)
 	valid.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.hp_ratio() < b.hp_ratio())
+	# Ne pas réveiller un ennemi endormi s'il y a une autre cible (réglage « ai_avoid_sleeping »).
+	if rules.get("ai_avoid_sleeping", false) and u.skill(idx).has("hits"):
+		var awake := valid.filter(func(t: BattleUnit) -> bool: return t.team == u.team or not t.has_effect("sleep"))
+		if not awake.is_empty():
+			valid = awake
 	return valid[0] if not valid.is_empty() else null
 
 
