@@ -291,7 +291,8 @@ func _make_card(u: BattleUnit) -> Control:
 	var v := VBoxContainer.new()
 	panel.add_child(v)
 	var name_label := Label.new()
-	name_label.text = "%s  ·  %s" % [u.display_name, u.data["voie"]]
+	var voie: String = u.data.get("voie", "")
+	name_label.text = u.display_name if voie in ["", "À définir"] else "%s  ·  %s" % [u.display_name, voie]
 	v.add_child(name_label)
 	var hp := ProgressBar.new()
 	hp.max_value = u.max_hp()
@@ -325,7 +326,8 @@ func _refresh() -> void:
 		if u.shield_value() > 0.0:
 			parts.append("Bouclier %d" % int(u.shield_value()))
 		for e in u.effects:
-			parts.append("%s(%d)" % [BattleLog.effect_name(e["id"]), e["turns"]])
+			var turns := int(e["turns"])
+			parts.append(BattleLog.effect_name(e["id"]) if turns > 99 else "%s(%d)" % [BattleLog.effect_name(e["id"]), turns])
 		for s: String in u.stacks:
 			if u.stack(s) > 0:
 				parts.append("%s %d" % [STACK_NAMES.get(s, s.capitalize()), u.stack(s)])

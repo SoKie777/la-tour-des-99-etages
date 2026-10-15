@@ -23,6 +23,22 @@ const CHAR_MAP := {
 	"moussa": {"attack": "uppercut", "ultimate": "jump_attack"},
 	"issa": {"idle": "idle_caster", "attack": "cast_attack", "ultimate": "cast_buff"},
 	"mohamed": {"attack": "cast_attack", "ultimate": "flip_kick"},
+	# roster v2
+	"montana": {"idle": "idle_caster", "attack": "hook", "skill": "cast_area", "ultimate": "cast_attack"},
+	"mikhaila": {"idle": "idle_caster", "attack": "cast_attack", "skill": "cast_buff", "ultimate": "heal"},
+	"ghost": {"attack": "punch_combo", "ultimate": "hurricane_kick"},
+	"nyssa": {"attack": "hook", "ultimate": "flip_kick"},
+	"selene": {"attack": "elbow", "ultimate": "block"},
+	"adrian": {"attack": "punch_combo", "ultimate": "jump_attack"},
+	"mello": {"attack": "cross", "ultimate": "flying_kick"},
+	"tarkhan": {"attack": "punch_combo", "ultimate": "spin_back_kick"},
+	"yass": {"idle": "idle_caster", "attack": "cast_attack", "skill": "cast_attack", "ultimate": "cast_area"},
+	"saraya": {"idle": "idle_caster", "attack": "cast_attack", "skill": "heal", "ultimate": "cast_area"},
+	"noor_el": {"idle": "idle_caster", "attack": "cast_attack", "skill": "cast_area", "ultimate": "cast_buff"},
+	"jo_prince": {"attack": "kick_high", "skill": "elbow", "ultimate": "flip_kick"},
+	"ezra": {"attack": "elbow", "skill": "kick_high", "ultimate": "flying_kick"},
+	"flint": {"idle": "idle_caster", "attack": "cast_attack", "skill": "heal", "ultimate": "cast_buff"},
+	"don_selah": {"attack": "punch_combo", "skill": "roar", "ultimate": "jump_attack"},
 }
 const HOLD_AT_END := ["ko"]
 
@@ -151,7 +167,8 @@ func _toonify(mi: MeshInstance3D) -> void:
 		if "brow" in name_l or (has_col and not is_cloth):
 			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
 			m.alpha_scissor_threshold = 0.4
-		if not ("eye" in name_l or "brow" in name_l):
+		# pas de contour sur les yeux, les sourcils et les mèches générées (trop fines : le contour les noircirait)
+		if not ("eye" in name_l or "brow" in name_l or "locs" in name_l):
 			var o := StandardMaterial3D.new()
 			o.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 			o.albedo_color = Color(0.02, 0.015, 0.015)

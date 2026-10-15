@@ -24,7 +24,7 @@ Le même pipeline que **Coup d'État** (dépôt `SoKie777/coup-detat`), déjà v
 ## Déjà en place
 
 - `assets/mixamo/ybot_idle.fbx` : le mannequin Y Bot, utilisé tant qu'un personnage n'a pas son modèle.
-- `assets/models/<id>.fbx` : les 9 personnages du roster (MPFB), avec leurs textures extraites par Godot
+- `assets/models/<id>.fbx` : les 24 personnages du roster (MPFB), avec leurs textures extraites par Godot
   (`<id>_N.png`, limitées à 1024 px et compressées par `set_retarget.py`).
 - `assets/mixamo/anims/` : 24 animations. Celles de Coup d'État (coups de poing et de pied, provocation,
   blocage, coups reçus, KO, victoire) et 7 téléchargées de Mixamo pour ce projet :
@@ -51,6 +51,14 @@ Le même pipeline que **Coup d'État** (dépôt `SoKie777/coup-detat`), déjà v
    blender --background --python tools/mpfb/make_characters.py -- eirikr
    ```
    Sans id, le script fabrique tout le roster. Sortie : `assets/models/eirikr.fbx`.
+   Pour contrôler sans exporter : `-- --preview <dossier> eirikr` (rendus de face, de trois quarts, de dos
+   et en pied).
+
+   **Coiffures générées** (`"strands"` dans la fiche) quand MakeHuman n'a pas l'équivalent : les mèches
+   suivent le crâne puis retombent, et sont attachées à l'os de la tête.
+   - `"style": "twists"` : two-strand twists (Montana) ; `count`, `spacing`, `length`, `radius`, `front_length`.
+   - `"style": "curtain"` : raie au milieu, mèches plates de part et d'autre (Don Selah) ; `count`, `spacing`,
+     `front_length`, `side_length`, `back_length`, `width`, `thickness`, `cap` (calotte sous les mèches).
 3. Lancer `python tools/set_retarget.py`. Ce script active la BoneMap dans les `.import` des nouveaux FBX. Le chemin du squelette d'un modèle est `<id>_body_rig/Skeleton3D`.
 4. Ouvrir Godot pour l'import. La scène de combat prend le modèle automatiquement.
 

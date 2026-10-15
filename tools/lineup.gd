@@ -1,7 +1,10 @@
 extends SceneTree
 ## Photo de groupe du roster (contrôle visuel des modèles MPFB) :
-## godot --path . --script res://tools/lineup.gd -- [sortie.png] [action] [secondes]
+## godot --path . --script res://tools/lineup.gd -- [sortie.png] [action] [secondes] [id1,id2,...]
 ## Sans argument : user://lineup.png, action « idle », photo après 0,7 s.
+
+
+var cam_dist := 6.2
 
 
 func _initialize() -> void:
@@ -23,8 +26,12 @@ func _initialize() -> void:
 	sun.rotation_degrees = Vector3(-40, 30, 0)
 	world.add_child(sun)
 	var ids: Array = []
-	for c in GameData.characters().values():
-		ids.append(c["id"])
+	if args.size() > 3:
+		ids.assign(args[3].split(","))
+	else:
+		for c in GameData.characters().values():
+			ids.append(c["id"])
+	cam_dist = 2.2 + ids.size() * 0.45
 	for i in ids.size():
 		var m := CharacterModel.new()
 		world.add_child(m)
@@ -32,7 +39,7 @@ func _initialize() -> void:
 		m.setup(ids[i], Color.GRAY)
 		m.play(anim)
 	var cam := Camera3D.new()
-	cam.position = Vector3(0, 1.0, 6.2)
+	cam.position = Vector3(0, 1.0, cam_dist)
 	cam.fov = 45
 	world.add_child(cam)
 	cam.look_at(Vector3(0, 0.9, 0))

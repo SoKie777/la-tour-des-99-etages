@@ -1,47 +1,1211 @@
 {
-  "eirikr":         {"macros": {"gender": 1.0, "age": 0.45, "muscle": 0.6, "weight": 0.45, "proportions": 0.6, "height": 0.55},
-                     "race": {"african": 0.0, "asian": 0.0, "caucasian": 1.0}, "skin": "Young caucasian male",
-                     "hair": "Short02", "eyebrows": "Eyebrow001", "clothes": ["Male casualsuit01", "Shoes01"],
-                     "paint": {"top": [0.12, 0.28, 0.55], "inner": [0.85, 0.88, 0.92], "inner_w": 0.07, "bottom": [0.05, 0.06, 0.09],
-                               "shoes": [0.85, 0.85, 0.88], "hair": [0.75, 0.62, 0.38]}},
-  "ymir":           {"macros": {"gender": 0.0, "age": 0.45, "muscle": 0.5, "weight": 0.4, "proportions": 0.65, "height": 0.55},
-                     "race": {"african": 0.0, "asian": 0.0, "caucasian": 1.0}, "skin": "Young caucasian female",
-                     "hair": "Long01", "eyebrows": "Eyebrow002", "clothes": ["Female casualsuit01", "Shoes02"],
-                     "paint": {"top": [0.55, 0.75, 0.88], "collar": [0.92, 0.95, 0.98], "bottom": [0.1, 0.16, 0.28],
-                               "shoes": [0.9, 0.92, 0.95], "hair": [0.88, 0.86, 0.8]}},
-  "nidhogg":        {"macros": {"gender": 1.0, "age": 0.42, "muscle": 0.5, "weight": 0.4, "proportions": 0.65, "height": 0.6},
-                     "race": {"african": 0.0, "asian": 0.0, "caucasian": 1.0}, "skin": "Young caucasian male",
-                     "hair": "Short04", "eyebrows": "Eyebrow003", "clothes": ["Male casualsuit01", "Shoes05"],
-                     "paint": {"top": [0.92, 0.9, 0.84], "cuff": [0.85, 0.68, 0.25], "collar": [0.85, 0.68, 0.25], "bottom": [0.9, 0.88, 0.82],
-                               "shoes": [0.85, 0.68, 0.25], "hair": [0.08, 0.07, 0.06]}},
-  "don_diego":      {"macros": {"gender": 1.0, "age": 0.75, "muscle": 0.7, "weight": 0.7, "proportions": 0.6, "height": 0.65},
-                     "race": {"african": 0.0, "asian": 0.3, "caucasian": 0.7}, "skin": "Young caucasian male",
-                     "hair": "Short01", "eyebrows": "Eyebrow005", "clothes": ["Male casualsuit01", "Shoes03"],
-                     "paint": {"top": [0.5, 0.06, 0.08], "inner": [0.85, 0.68, 0.25], "inner_w": 0.09, "bottom": [0.04, 0.03, 0.03],
-                               "shoes": [0.04, 0.03, 0.03], "hair": [0.6, 0.6, 0.6]}},
-  "general_metal":  {"macros": {"gender": 1.0, "age": 0.55, "muscle": 0.85, "weight": 0.55, "proportions": 0.6, "height": 0.65},
-                     "race": {"african": 0.0, "asian": 0.7, "caucasian": 0.3}, "skin": "Young asian male",
-                     "hair": "Short04", "eyebrows": "Eyebrow004", "clothes": ["Male casualsuit04", "Shoes04"],
-                     "paint": {"top": [0.45, 0.47, 0.5], "sleeve": [0.6, 0.08, 0.08], "bottom": [0.12, 0.12, 0.14],
-                               "shoes": [0.05, 0.05, 0.05], "hair": [0.03, 0.025, 0.02]}},
-  "espion_lumiere": {"macros": {"gender": 0.0, "age": 0.4, "muscle": 0.5, "weight": 0.35, "proportions": 0.65, "height": 0.45},
-                     "race": {"african": 0.0, "asian": 0.5, "caucasian": 0.5}, "skin": "Young asian female",
-                     "hair": "Ponytail01", "eyebrows": "Eyebrow001", "clothes": ["Female casualsuit01", "Shoes02"],
-                     "paint": {"top": [0.06, 0.06, 0.07], "stripes": [0.9, 0.78, 0.35], "bottom": [0.06, 0.06, 0.07],
-                               "shoes": [0.06, 0.06, 0.07], "hair": [0.03, 0.025, 0.02]}},
-  "moussa":         {"macros": {"gender": 1.0, "age": 0.55, "muscle": 0.95, "weight": 0.7, "proportions": 0.6, "height": 0.75},
-                     "race": {"african": 1.0, "asian": 0.0, "caucasian": 0.0}, "skin": "Young african male",
-                     "hair": "", "eyebrows": "Eyebrow005", "clothes": ["Male casualsuit04", "Shoes04"],
-                     "paint": {"top": [0.78, 0.66, 0.42], "sleeve": [0.32, 0.18, 0.45], "bottom": [0.22, 0.14, 0.3],
-                               "shoes": [0.05, 0.05, 0.05]}},
-  "issa":           {"macros": {"gender": 1.0, "age": 0.45, "muscle": 0.5, "weight": 0.4, "proportions": 0.6, "height": 0.55},
-                     "race": {"african": 0.8, "asian": 0.0, "caucasian": 0.2}, "skin": "Young african male",
-                     "hair": "Short02", "eyebrows": "Eyebrow002", "clothes": ["Male casualsuit01", "Shoes01"],
-                     "paint": {"top": [0.9, 0.86, 0.75], "graphic": [0.4, 0.25, 0.6], "bottom": [0.55, 0.45, 0.3],
-                               "shoes": [0.9, 0.86, 0.75], "hair": [0.03, 0.025, 0.02]}},
-  "mohamed":        {"macros": {"gender": 1.0, "age": 0.45, "muscle": 0.65, "weight": 0.35, "proportions": 0.6, "height": 0.6},
-                     "race": {"african": 0.6, "asian": 0.0, "caucasian": 0.4}, "skin": "Young african male",
-                     "hair": "Short01", "eyebrows": "Eyebrow003", "clothes": ["Male casualsuit01", "Shoes06"],
-                     "paint": {"top": [0.05, 0.04, 0.07], "inner": [0.35, 0.12, 0.5], "inner_w": 0.07, "bottom": [0.05, 0.04, 0.07],
-                               "shoes": [0.05, 0.04, 0.07], "hair": [0.03, 0.025, 0.02]}}
+ "eirikr": {
+  "macros": {
+   "gender": 1.0,
+   "age": 0.45,
+   "muscle": 0.6,
+   "weight": 0.45,
+   "proportions": 0.6,
+   "height": 0.55
+  },
+  "race": {
+   "african": 0.0,
+   "asian": 0.0,
+   "caucasian": 1.0
+  },
+  "skin": "Young caucasian male",
+  "hair": "Short02",
+  "eyebrows": "Eyebrow001",
+  "clothes": [
+   "Male casualsuit01",
+   "Shoes01"
+  ],
+  "paint": {
+   "top": [
+    0.12,
+    0.28,
+    0.55
+   ],
+   "inner": [
+    0.85,
+    0.88,
+    0.92
+   ],
+   "inner_w": 0.07,
+   "bottom": [
+    0.05,
+    0.06,
+    0.09
+   ],
+   "shoes": [
+    0.85,
+    0.85,
+    0.88
+   ],
+   "hair": [
+    0.75,
+    0.62,
+    0.38
+   ]
+  }
+ },
+ "ymir": {
+  "macros": {
+   "gender": 0.0,
+   "age": 0.45,
+   "muscle": 0.5,
+   "weight": 0.4,
+   "proportions": 0.65,
+   "height": 0.55
+  },
+  "race": {
+   "african": 0.0,
+   "asian": 0.0,
+   "caucasian": 1.0
+  },
+  "skin": "Young caucasian female",
+  "hair": "Long01",
+  "eyebrows": "Eyebrow002",
+  "clothes": [
+   "Female casualsuit01",
+   "Shoes02"
+  ],
+  "paint": {
+   "top": [
+    0.55,
+    0.75,
+    0.88
+   ],
+   "collar": [
+    0.92,
+    0.95,
+    0.98
+   ],
+   "bottom": [
+    0.1,
+    0.16,
+    0.28
+   ],
+   "shoes": [
+    0.9,
+    0.92,
+    0.95
+   ],
+   "hair": [
+    0.88,
+    0.86,
+    0.8
+   ]
+  }
+ },
+ "nidhogg": {
+  "macros": {
+   "gender": 1.0,
+   "age": 0.42,
+   "muscle": 0.5,
+   "weight": 0.4,
+   "proportions": 0.65,
+   "height": 0.6
+  },
+  "race": {
+   "african": 0.0,
+   "asian": 0.0,
+   "caucasian": 1.0
+  },
+  "skin": "Young caucasian male",
+  "hair": "Short04",
+  "eyebrows": "Eyebrow003",
+  "clothes": [
+   "Male casualsuit01",
+   "Shoes05"
+  ],
+  "paint": {
+   "top": [
+    0.92,
+    0.9,
+    0.84
+   ],
+   "cuff": [
+    0.85,
+    0.68,
+    0.25
+   ],
+   "collar": [
+    0.85,
+    0.68,
+    0.25
+   ],
+   "bottom": [
+    0.9,
+    0.88,
+    0.82
+   ],
+   "shoes": [
+    0.85,
+    0.68,
+    0.25
+   ],
+   "hair": [
+    0.08,
+    0.07,
+    0.06
+   ]
+  }
+ },
+ "don_diego": {
+  "macros": {
+   "gender": 1.0,
+   "age": 0.75,
+   "muscle": 0.7,
+   "weight": 0.7,
+   "proportions": 0.6,
+   "height": 0.65
+  },
+  "race": {
+   "african": 0.0,
+   "asian": 0.3,
+   "caucasian": 0.7
+  },
+  "skin": "Young caucasian male",
+  "hair": "Short01",
+  "eyebrows": "Eyebrow005",
+  "clothes": [
+   "Male casualsuit01",
+   "Shoes03"
+  ],
+  "paint": {
+   "top": [
+    0.5,
+    0.06,
+    0.08
+   ],
+   "inner": [
+    0.85,
+    0.68,
+    0.25
+   ],
+   "inner_w": 0.09,
+   "bottom": [
+    0.04,
+    0.03,
+    0.03
+   ],
+   "shoes": [
+    0.04,
+    0.03,
+    0.03
+   ],
+   "hair": [
+    0.6,
+    0.6,
+    0.6
+   ]
+  }
+ },
+ "general_metal": {
+  "macros": {
+   "gender": 1.0,
+   "age": 0.55,
+   "muscle": 0.85,
+   "weight": 0.55,
+   "proportions": 0.6,
+   "height": 0.65
+  },
+  "race": {
+   "african": 0.0,
+   "asian": 0.7,
+   "caucasian": 0.3
+  },
+  "skin": "Young asian male",
+  "hair": "Short04",
+  "eyebrows": "Eyebrow004",
+  "clothes": [
+   "Male casualsuit04",
+   "Shoes04"
+  ],
+  "paint": {
+   "top": [
+    0.45,
+    0.47,
+    0.5
+   ],
+   "sleeve": [
+    0.6,
+    0.08,
+    0.08
+   ],
+   "bottom": [
+    0.12,
+    0.12,
+    0.14
+   ],
+   "shoes": [
+    0.05,
+    0.05,
+    0.05
+   ],
+   "hair": [
+    0.03,
+    0.025,
+    0.02
+   ]
+  }
+ },
+ "espion_lumiere": {
+  "macros": {
+   "gender": 0.0,
+   "age": 0.4,
+   "muscle": 0.5,
+   "weight": 0.35,
+   "proportions": 0.65,
+   "height": 0.45
+  },
+  "race": {
+   "african": 0.0,
+   "asian": 0.5,
+   "caucasian": 0.5
+  },
+  "skin": "Young asian female",
+  "hair": "Ponytail01",
+  "eyebrows": "Eyebrow001",
+  "clothes": [
+   "Female casualsuit01",
+   "Shoes02"
+  ],
+  "paint": {
+   "top": [
+    0.06,
+    0.06,
+    0.07
+   ],
+   "stripes": [
+    0.9,
+    0.78,
+    0.35
+   ],
+   "bottom": [
+    0.06,
+    0.06,
+    0.07
+   ],
+   "shoes": [
+    0.06,
+    0.06,
+    0.07
+   ],
+   "hair": [
+    0.03,
+    0.025,
+    0.02
+   ]
+  }
+ },
+ "moussa": {
+  "macros": {
+   "gender": 1.0,
+   "age": 0.55,
+   "muscle": 0.95,
+   "weight": 0.7,
+   "proportions": 0.6,
+   "height": 0.75
+  },
+  "race": {
+   "african": 1.0,
+   "asian": 0.0,
+   "caucasian": 0.0
+  },
+  "skin": "Young african male",
+  "hair": "",
+  "eyebrows": "Eyebrow005",
+  "clothes": [
+   "Male casualsuit04",
+   "Shoes04"
+  ],
+  "paint": {
+   "top": [
+    0.78,
+    0.66,
+    0.42
+   ],
+   "sleeve": [
+    0.32,
+    0.18,
+    0.45
+   ],
+   "bottom": [
+    0.22,
+    0.14,
+    0.3
+   ],
+   "shoes": [
+    0.05,
+    0.05,
+    0.05
+   ]
+  }
+ },
+ "issa": {
+  "macros": {
+   "gender": 1.0,
+   "age": 0.45,
+   "muscle": 0.5,
+   "weight": 0.4,
+   "proportions": 0.6,
+   "height": 0.55
+  },
+  "race": {
+   "african": 0.8,
+   "asian": 0.0,
+   "caucasian": 0.2
+  },
+  "skin": "Young african male",
+  "hair": "Short02",
+  "eyebrows": "Eyebrow002",
+  "clothes": [
+   "Male casualsuit01",
+   "Shoes01"
+  ],
+  "paint": {
+   "top": [
+    0.9,
+    0.86,
+    0.75
+   ],
+   "graphic": [
+    0.4,
+    0.25,
+    0.6
+   ],
+   "bottom": [
+    0.55,
+    0.45,
+    0.3
+   ],
+   "shoes": [
+    0.9,
+    0.86,
+    0.75
+   ],
+   "hair": [
+    0.03,
+    0.025,
+    0.02
+   ]
+  }
+ },
+ "mohamed": {
+  "macros": {
+   "gender": 1.0,
+   "age": 0.45,
+   "muscle": 0.65,
+   "weight": 0.35,
+   "proportions": 0.6,
+   "height": 0.6
+  },
+  "race": {
+   "african": 0.6,
+   "asian": 0.0,
+   "caucasian": 0.4
+  },
+  "skin": "Young african male",
+  "hair": "Short01",
+  "eyebrows": "Eyebrow003",
+  "clothes": [
+   "Male casualsuit01",
+   "Shoes06"
+  ],
+  "paint": {
+   "top": [
+    0.05,
+    0.04,
+    0.07
+   ],
+   "inner": [
+    0.35,
+    0.12,
+    0.5
+   ],
+   "inner_w": 0.07,
+   "bottom": [
+    0.05,
+    0.04,
+    0.07
+   ],
+   "shoes": [
+    0.05,
+    0.04,
+    0.07
+   ],
+   "hair": [
+    0.03,
+    0.025,
+    0.02
+   ]
+  }
+ },
+ "montana": {
+  "macros": {
+   "gender": 1.0,
+   "age": 0.5,
+   "muscle": 0.62,
+   "weight": 0.45,
+   "proportions": 0.62,
+   "height": 0.62
+  },
+  "race": {
+   "african": 0.6,
+   "asian": 0,
+   "caucasian": 0.4
+  },
+  "skin": "Young african male",
+  "hair": "",
+  "eyebrows": "Eyebrow003",
+  "clothes": [
+   "Male elegantsuit01",
+   "Shoes06"
+  ],
+  "paint": {
+   "top": [
+    0.45,
+    0.66,
+    0.86
+   ],
+   "inner": [
+    0.92,
+    0.94,
+    0.97
+   ],
+   "inner_w": 0.07,
+   "bottom": [
+    0.08,
+    0.12,
+    0.22
+   ],
+   "shoes": [
+    0.92,
+    0.94,
+    0.97
+   ],
+   "hair": [
+    0.93,
+    0.84,
+    0.62
+   ]
+  },
+  "strands": {
+   "style": "twists",
+   "count": 120,
+   "spacing": 0.0145,
+   "length": [
+    0.13,
+    0.19
+   ],
+   "radius": 0.0045,
+   "front_length": 0.55
+  }
+ },
+ "don_selah": {
+  "macros": {
+   "gender": 1.0,
+   "age": 0.55,
+   "muscle": 0.92,
+   "weight": 0.6,
+   "proportions": 0.62,
+   "height": 0.82
+  },
+  "race": {
+   "african": 0.6,
+   "asian": 0,
+   "caucasian": 0.4
+  },
+  "skin": "Young african male",
+  "hair": "",
+  "eyebrows": "Eyebrow005",
+  "clothes": [
+   "Male elegantsuit01",
+   "Shoes03"
+  ],
+  "paint": {
+   "top": [
+    0.05,
+    0.05,
+    0.06
+   ],
+   "cuff": [
+    0.85,
+    0.66,
+    0.22
+   ],
+   "bottom": [
+    0.04,
+    0.04,
+    0.05
+   ],
+   "shoes": [
+    0.85,
+    0.66,
+    0.22
+   ],
+   "hair": [
+    0.05,
+    0.04,
+    0.035
+   ]
+  },
+  "strands": {
+   "style": "curtain",
+   "count": 320,
+   "spacing": 0.0085,
+   "front_length": 0.1,
+   "side_length": 0.075,
+   "back_length": 0.07,
+   "width": 0.024,
+   "thickness": 0.008,
+   "cap": 0.004
+  }
+ },
+ "mikhaila": {
+  "macros": {
+   "gender": 0.0,
+   "age": 0.55,
+   "muscle": 0.45,
+   "weight": 0.42,
+   "proportions": 0.65,
+   "height": 0.58
+  },
+  "race": {
+   "african": 0,
+   "asian": 0,
+   "caucasian": 1
+  },
+  "skin": "Young caucasian female",
+  "hair": "Long01",
+  "eyebrows": "Eyebrow002",
+  "clothes": [
+   "Female elegantsuit01",
+   "Shoes02"
+  ],
+  "paint": {
+   "top": [
+    0.93,
+    0.9,
+    0.82
+   ],
+   "collar": [
+    0.85,
+    0.68,
+    0.25
+   ],
+   "bottom": [
+    0.93,
+    0.9,
+    0.82
+   ],
+   "shoes": [
+    0.85,
+    0.68,
+    0.25
+   ],
+   "hair": [
+    0.82,
+    0.78,
+    0.7
+   ]
+  }
+ },
+ "ghost": {
+  "macros": {
+   "gender": 1.0,
+   "age": 0.4,
+   "muscle": 0.55,
+   "weight": 0.38,
+   "proportions": 0.62,
+   "height": 0.6
+  },
+  "race": {
+   "african": 0,
+   "asian": 0,
+   "caucasian": 1
+  },
+  "skin": "Young caucasian male",
+  "hair": "Short03",
+  "eyebrows": "Eyebrow001",
+  "clothes": [
+   "Male casualsuit02",
+   "Shoes01"
+  ],
+  "paint": {
+   "top": [
+    0.9,
+    0.94,
+    0.98
+   ],
+   "sleeve": [
+    0.55,
+    0.78,
+    0.95
+   ],
+   "bottom": [
+    0.75,
+    0.84,
+    0.92
+   ],
+   "shoes": [
+    0.92,
+    0.95,
+    0.98
+   ],
+   "hair": [
+    0.93,
+    0.95,
+    0.98
+   ]
+  }
+ },
+ "nyssa": {
+  "macros": {
+   "gender": 0.0,
+   "age": 0.45,
+   "muscle": 0.5,
+   "weight": 0.38,
+   "proportions": 0.68,
+   "height": 0.58
+  },
+  "race": {
+   "african": 0,
+   "asian": 0,
+   "caucasian": 1
+  },
+  "skin": "Young caucasian female",
+  "hair": "Long01",
+  "eyebrows": "Eyebrow004",
+  "clothes": [
+   "Female casualsuit02",
+   "Shoes02"
+  ],
+  "paint": {
+   "top": [
+    0.06,
+    0.05,
+    0.08
+   ],
+   "stripes": [
+    0.45,
+    0.2,
+    0.62
+   ],
+   "bottom": [
+    0.08,
+    0.06,
+    0.12
+   ],
+   "shoes": [
+    0.06,
+    0.05,
+    0.08
+   ],
+   "hair": [
+    0.04,
+    0.03,
+    0.05
+   ]
+  }
+ },
+ "selene": {
+  "macros": {
+   "gender": 0.0,
+   "age": 0.5,
+   "muscle": 0.78,
+   "weight": 0.55,
+   "proportions": 0.6,
+   "height": 0.72
+  },
+  "race": {
+   "african": 0,
+   "asian": 0,
+   "caucasian": 1
+  },
+  "skin": "Young caucasian female",
+  "hair": "Ponytail01",
+  "eyebrows": "Eyebrow005",
+  "clothes": [
+   "Female sportsuit01",
+   "Shoes04"
+  ],
+  "paint": {
+   "top": [
+    0.55,
+    0.56,
+    0.58
+   ],
+   "sleeve": [
+    0.35,
+    0.36,
+    0.38
+   ],
+   "bottom": [
+    0.3,
+    0.31,
+    0.33
+   ],
+   "shoes": [
+    0.15,
+    0.15,
+    0.16
+   ],
+   "hair": [
+    0.4,
+    0.36,
+    0.32
+   ]
+  }
+ },
+ "adrian": {
+  "macros": {
+   "gender": 1.0,
+   "age": 0.55,
+   "muscle": 0.95,
+   "weight": 0.75,
+   "proportions": 0.6,
+   "height": 0.78
+  },
+  "race": {
+   "african": 0,
+   "asian": 0,
+   "caucasian": 1
+  },
+  "skin": "Young caucasian male",
+  "hair": "Short02",
+  "eyebrows": "Eyebrow005",
+  "clothes": [
+   "Male worksuit01",
+   "Shoes04"
+  ],
+  "paint": {
+   "top": [
+    0.72,
+    0.12,
+    0.06
+   ],
+   "sleeve": [
+    0.95,
+    0.45,
+    0.08
+   ],
+   "bottom": [
+    0.18,
+    0.08,
+    0.06
+   ],
+   "shoes": [
+    0.08,
+    0.06,
+    0.05
+   ],
+   "hair": [
+    0.45,
+    0.14,
+    0.06
+   ]
+  }
+ },
+ "mello": {
+  "macros": {
+   "gender": 1.0,
+   "age": 0.42,
+   "muscle": 0.6,
+   "weight": 0.4,
+   "proportions": 0.62,
+   "height": 0.6
+  },
+  "race": {
+   "african": 0,
+   "asian": 0.3,
+   "caucasian": 0.7
+  },
+  "skin": "Young caucasian male",
+  "hair": "Short04",
+  "eyebrows": "Eyebrow003",
+  "clothes": [
+   "Male casualsuit03",
+   "Shoes01"
+  ],
+  "paint": {
+   "top": [
+    0.12,
+    0.3,
+    0.75
+   ],
+   "inner": [
+    0.35,
+    0.75,
+    0.98
+   ],
+   "inner_w": 0.06,
+   "bottom": [
+    0.05,
+    0.07,
+    0.15
+   ],
+   "shoes": [
+    0.35,
+    0.75,
+    0.98
+   ],
+   "hair": [
+    0.1,
+    0.16,
+    0.38
+   ]
+  }
+ },
+ "tarkhan": {
+  "macros": {
+   "gender": 1.0,
+   "age": 0.5,
+   "muscle": 0.98,
+   "weight": 0.62,
+   "proportions": 0.6,
+   "height": 0.7
+  },
+  "race": {
+   "african": 0,
+   "asian": 0.6,
+   "caucasian": 0.4
+  },
+  "skin": "Young asian male",
+  "hair": "Short01",
+  "eyebrows": "Eyebrow005",
+  "clothes": [
+   "Male casualsuit04",
+   "Shoes04"
+  ],
+  "paint": {
+   "top": [
+    0.85,
+    0.42,
+    0.1
+   ],
+   "sleeve": [
+    0.35,
+    0.2,
+    0.1
+   ],
+   "bottom": [
+    0.3,
+    0.18,
+    0.1
+   ],
+   "shoes": [
+    0.1,
+    0.07,
+    0.05
+   ],
+   "hair": [
+    0.03,
+    0.025,
+    0.02
+   ]
+  }
+ },
+ "yass": {
+  "macros": {
+   "gender": 0.0,
+   "age": 0.42,
+   "muscle": 0.5,
+   "weight": 0.36,
+   "proportions": 0.66,
+   "height": 0.52
+  },
+  "race": {
+   "african": 0,
+   "asian": 1,
+   "caucasian": 0
+  },
+  "skin": "Young asian female",
+  "hair": "Ponytail01",
+  "eyebrows": "Eyebrow002",
+  "clothes": [
+   "Female casualsuit01",
+   "Shoes02"
+  ],
+  "paint": {
+   "top": [
+    0.68,
+    0.06,
+    0.08
+   ],
+   "collar": [
+    0.88,
+    0.7,
+    0.28
+   ],
+   "bottom": [
+    0.12,
+    0.03,
+    0.04
+   ],
+   "shoes": [
+    0.88,
+    0.7,
+    0.28
+   ],
+   "hair": [
+    0.03,
+    0.025,
+    0.02
+   ]
+  }
+ },
+ "saraya": {
+  "macros": {
+   "gender": 0.0,
+   "age": 0.45,
+   "muscle": 0.48,
+   "weight": 0.42,
+   "proportions": 0.66,
+   "height": 0.56
+  },
+  "race": {
+   "african": 0.4,
+   "asian": 0,
+   "caucasian": 0.6
+  },
+  "skin": "Young african female",
+  "hair": "Braid01",
+  "eyebrows": "Eyebrow001",
+  "clothes": [
+   "Female casualsuit02",
+   "Shoes02"
+  ],
+  "paint": {
+   "top": [
+    0.22,
+    0.52,
+    0.25
+   ],
+   "stripes": [
+    0.55,
+    0.78,
+    0.35
+   ],
+   "bottom": [
+    0.16,
+    0.3,
+    0.14
+   ],
+   "shoes": [
+    0.4,
+    0.28,
+    0.16
+   ],
+   "hair": [
+    0.45,
+    0.18,
+    0.1
+   ]
+  }
+ },
+ "noor_el": {
+  "macros": {
+   "gender": 0.0,
+   "age": 0.48,
+   "muscle": 0.5,
+   "weight": 0.4,
+   "proportions": 0.68,
+   "height": 0.6
+  },
+  "race": {
+   "african": 0.3,
+   "asian": 0,
+   "caucasian": 0.7
+  },
+  "skin": "Young caucasian female",
+  "hair": "Long01",
+  "eyebrows": "Eyebrow004",
+  "clothes": [
+   "Female elegantsuit01",
+   "Shoes02"
+  ],
+  "paint": {
+   "top": [
+    0.96,
+    0.95,
+    0.9
+   ],
+   "collar": [
+    0.9,
+    0.74,
+    0.3
+   ],
+   "bottom": [
+    0.96,
+    0.95,
+    0.9
+   ],
+   "shoes": [
+    0.9,
+    0.74,
+    0.3
+   ],
+   "hair": [
+    0.12,
+    0.08,
+    0.05
+   ]
+  }
+ },
+ "jo_prince": {
+  "macros": {
+   "gender": 1.0,
+   "age": 0.45,
+   "muscle": 0.55,
+   "weight": 0.3,
+   "proportions": 0.68,
+   "height": 0.62
+  },
+  "race": {
+   "african": 0,
+   "asian": 0.4,
+   "caucasian": 0.6
+  },
+  "skin": "Young caucasian male",
+  "hair": "Short03",
+  "eyebrows": "Eyebrow001",
+  "clothes": [
+   "Male casualsuit06",
+   "Shoes06"
+  ],
+  "paint": {
+   "top": [
+    0.05,
+    0.05,
+    0.06
+   ],
+   "sleeve": [
+    0.7,
+    0.72,
+    0.76
+   ],
+   "bottom": [
+    0.05,
+    0.05,
+    0.06
+   ],
+   "shoes": [
+    0.7,
+    0.72,
+    0.76
+   ],
+   "hair": [
+    0.03,
+    0.025,
+    0.02
+   ]
+  }
+ },
+ "ezra": {
+  "macros": {
+   "gender": 1.0,
+   "age": 0.45,
+   "muscle": 0.8,
+   "weight": 0.42,
+   "proportions": 0.62,
+   "height": 0.62
+  },
+  "race": {
+   "african": 0.3,
+   "asian": 0.2,
+   "caucasian": 0.5
+  },
+  "skin": "Young caucasian male",
+  "hair": "Short01",
+  "eyebrows": "Eyebrow004",
+  "clothes": [
+   "Male casualsuit04",
+   "Shoes05"
+  ],
+  "paint": {
+   "top": [
+    0.06,
+    0.06,
+    0.07
+   ],
+   "sleeve": [
+    0.06,
+    0.06,
+    0.07
+   ],
+   "bottom": [
+    0.75,
+    0.08,
+    0.1
+   ],
+   "shoes": [
+    0.92,
+    0.92,
+    0.92
+   ],
+   "hair": [
+    0.05,
+    0.04,
+    0.03
+   ]
+  }
+ },
+ "flint": {
+  "macros": {
+   "gender": 1.0,
+   "age": 0.5,
+   "muscle": 0.55,
+   "weight": 0.45,
+   "proportions": 0.62,
+   "height": 0.6
+  },
+  "race": {
+   "african": 0,
+   "asian": 0,
+   "caucasian": 1
+  },
+  "skin": "Young caucasian male",
+  "hair": "Short02",
+  "eyebrows": "Eyebrow002",
+  "clothes": [
+   "Male casualsuit01",
+   "Shoes03"
+  ],
+  "paint": {
+   "top": [
+    0.45,
+    0.06,
+    0.12
+   ],
+   "inner": [
+    0.95,
+    0.6,
+    0.7
+   ],
+   "inner_w": 0.07,
+   "bottom": [
+    0.12,
+    0.05,
+    0.07
+   ],
+   "sparkle": [
+    0.95,
+    0.55,
+    0.65
+   ],
+   "shoes": [
+    0.12,
+    0.05,
+    0.07
+   ],
+   "hair": [
+    0.35,
+    0.22,
+    0.12
+   ]
+  }
+ }
 }

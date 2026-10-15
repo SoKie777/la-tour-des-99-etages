@@ -103,7 +103,7 @@ def paint(spec, rig):
         if ob.type != "MESH":
             continue
         n = ob.name.lower()
-        kind = "hair" if spec.get("hair") and spec["hair"].lower() in n else                "shoes" if "shoes" in n else "clothes" if any(c.lower().replace(" ", "_") in n for c in spec.get("clothes", [])) else None
+        kind = "hair" if (spec.get("hair") and spec["hair"].lower() in n) or n.endswith("_locs") else                "shoes" if "shoes" in n else "clothes" if any(c.lower().replace(" ", "_") in n for c in spec.get("clothes", [])) else None
         if kind is None:
             continue
         me = ob.data
@@ -147,7 +147,200 @@ def paint(spec, rig):
         print("PAINT", ob.name, kind, len(me.vertices))
 
 
-def build(fid, spec):
+def add_strands(fid, cfg, basemesh, rig):
+    """Coiffures générées, absentes de MakeHuman. Les mèches partent du cuir chevelu, suivent le crâne
+    (collision avec le corps) puis retombent. Attachées à 100 % à l'os de la tête.
+    cfg["style"] :
+      - "twists"  : two-strand twists (deux tubes enroulés en hélice), cfg : count, length, radius, front_length ;
+      - "curtain" : raie au milieu, mèches plates épaisses qui tombent de part et d'autre du front, cfg : count,
+                    front_length, side_length, back_length, width, thickness."""
+    import bmesh, math, random
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    rnd = random.Random(7)
+    style = cfg.get("style", "twists")
+    head_bone = rig.data.bones.get("mixamorig:Head") or rig.data.bones.get("Head")
+    dg = bpy.context.evaluated_depsgraph_get()
+    ev = basemesh.evaluated_get(dg)
+    me = ev.to_mesh()
+    mw = basemesh.matrix_world
+    gi = basemesh.vertex_groups[head_bone.name].index
+    pts = []
+    for v in me.vertices:
+        if any(g.group == gi and g.weight > 0.5 for g in v.groups):
+            pts.append((mw @ v.co, (mw.to_3x3() @ v.normal).normalized()))
+    bvh = BVHTree.FromPolygons([mw @ v.co for v in me.vertices], [tuple(f.vertices) for f in me.polygons])
+    ev.to_mesh_clear()
+    xs = [q[0].x for q in pts]; ys = [q[0].y for q in pts]; zs = [q[0].z for q in pts]
+    cx, cy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
+    zmin, zmax = min(zs), max(zs)
+    h = zmax - zmin
+
+    def zone(w):  # l'avant du personnage est vers -Y
+        if w.y < cy - 0.03 and abs(w.x - cx) < 0.06:
+            return "front"
+        if w.y > cy + 0.015:
+            return "back"
+        return "side"
+
+    def scalp(w):
+        return w.z > zmin + h * {"front": 0.8, "side": 0.66, "back": 0.4}[zone(w)]
+
+    cands = [q for q in pts if scalp(q[0])]
+    rnd.shuffle(cands)
+    spacing = float(cfg.get("spacing", 0.021 if style == "twists" else 0.011))
+    roots = []
+    for w, n in cands:
+        if style == "curtain" and abs(w.x - cx) < 0.004:
+            continue  # la raie
+        if all((w - r[0]).length > spacing for r in roots):
+            roots.append((w, n))
+        if len(roots) >= int(cfg.get("count", 60)):
+            break
+
+    def surface(p, off):
+        loc, nrm, _i, dist = bvh.find_nearest(p)
+        if loc is None:
+            return p, Vector((0, 0, 1))
+        if (p - loc).dot(nrm) < off:  # dans le corps ou trop près : ramené à la surface
+            p = loc + nrm * off
+        return p, nrm
+
+    bm = bmesh.new()
+
+    def tube(line, normals, ring_fn, sides):
+        prev = None
+        for i, c in enumerate(line):
+            tang = (line[min(i + 1, len(line) - 1)] - line[max(i - 1, 0)]).normalized()
+            ax = tang.cross(normals[i])
+            if ax.length < 1e-5:
+                ax = tang.cross(Vector((0, 0, 1)))
+            ax.normalize()
+            ay = ax.cross(tang).normalized()
+            verts = [bm.verts.new(c + off) for off in ring_fn(i / (len(line) - 1), ax, ay)]
+            if prev:
+                for k in range(sides):
+                    bm.faces.new((prev[k], prev[(k + 1) % sides], verts[(k + 1) % sides], verts[k]))
+            prev = verts
+
+    for w, n in roots:
+        z = zone(w)
+        side = math.copysign(1.0, w.x - cx) if abs(w.x - cx) > 1e-4 else 1.0
+        if style == "twists":
+            rad = float(cfg.get("radius", 0.0042))
+            off = rad * 1.3
+            lo, hi = cfg.get("length", [0.13, 0.2])
+            length = rnd.uniform(lo, hi) * (float(cfg.get("front_length", 0.5)) if z == "front" else 1.0)
+            bias = Vector((side * (0.9 if z == "front" else 0.15), 0.35 if z != "back" else 0.25, -1.0))
+        else:
+            rad = 0.0
+            off = float(cfg.get("thickness", 0.005)) * 0.9
+            length = float(cfg.get(z + "_length", 0.09)) * rnd.uniform(0.85, 1.1)
+            bias = Vector((side * (1.6 if z == "front" else 0.5), 0.1 if z == "front" else 0.6, -1.0))
+        bias.normalize()
+        g = Vector((0, 0, -1))
+        d = (bias - n * bias.dot(n))
+        d = d.normalized() if d.length > 1e-5 else bias
+        p, nrm = surface(w + n * off, off)
+        line, normals = [p], [nrm]
+        steps = 14
+        for i in range(steps):
+            d = (d * 0.7 + (bias * 0.6 + g * 0.4).normalized() * 0.3).normalized()
+            p, nrm = surface(line[-1] + d * (length / steps), off)
+            d = (p - line[-1]).normalized()
+            line.append(p)
+            normals.append(nrm)
+        if style == "twists":
+            turns = length / 0.022
+            for phase in (0.0, math.pi):
+                def ring(t, ax, ay, phase=phase):
+                    a = phase + t * turns * 2 * math.pi
+                    r_tube = rad * 0.62 * (1.0 - 0.45 * t)
+                    c = (ax * math.cos(a) + ay * math.sin(a)) * rad * 0.45
+                    return [c + (ax * math.cos(k / 5 * 2 * math.pi) + ay * math.sin(k / 5 * 2 * math.pi)) * r_tube for k in range(5)]
+                tube(line, normals, ring, 5)
+        else:
+            wid = float(cfg.get("width", 0.016)) * rnd.uniform(0.85, 1.15)
+            th = float(cfg.get("thickness", 0.005))
+            def ring(t, ax, ay):
+                k = max(0.08, 1.0 - t ** 1.6)  # pointe effilée
+                return [ax * math.cos(j / 6 * 2 * math.pi) * wid * 0.5 * k + ay * math.sin(j / 6 * 2 * math.pi) * th * 0.5 * (0.4 + 0.6 * k)
+                        for j in range(6)]
+            tube(line, normals, ring, 6)
+    if cfg.get("cap", 0.0):  # calotte : le cuir chevelu recouvert, légèrement décollé du crâne
+        ev = basemesh.evaluated_get(dg)
+        me = ev.to_mesh()
+        cap_off = float(cfg["cap"])
+        idx = {}
+        for v in me.vertices:
+            w = mw @ v.co
+            if any(g.group == gi and g.weight > 0.5 for g in v.groups) and scalp(w):
+                idx[v.index] = bm.verts.new(w + (mw.to_3x3() @ v.normal).normalized() * cap_off)
+        for f in me.polygons:
+            if all(i in idx for i in f.vertices):
+                bm.faces.new([idx[i] for i in f.vertices])
+        ev.to_mesh_clear()
+    mesh = bpy.data.meshes.new(fid + "_locs")
+    bm.to_mesh(mesh)
+    bm.free()
+    for poly in mesh.polygons:
+        poly.use_smooth = True
+    ob = bpy.data.objects.new(fid + "_locs", mesh)
+    bpy.context.scene.collection.objects.link(ob)
+    ob.parent = rig
+    vg = ob.vertex_groups.new(name=head_bone.name)
+    vg.add(list(range(len(mesh.vertices))), 1.0, "REPLACE")
+    mod = ob.modifiers.new("Armature", "ARMATURE")
+    mod.object = rig
+    mesh.materials.append(bpy.data.materials.new(fid + "_locs_mat"))
+    print("STRANDS", fid, style, len(roots), "mèches", len(mesh.vertices), "sommets")
+    return ob
+
+
+def preview(fid, path):
+    """Rendu de contrôle (corps entier + gros plan de la tête) au lieu de l'export."""
+    import math
+    from mathutils import Vector
+    rig = next(o for o in bpy.data.objects if o.type == "ARMATURE")
+    for ob in bpy.data.objects:  # comme dans Godot : couleurs peintes (vêtements, cheveux) en couleur de base
+        if ob.type == "MESH" and ob.data.color_attributes.get("Col"):
+            for slot in ob.material_slots:
+                nt = slot.material.node_tree
+                bsdf = next(n for n in nt.nodes if n.type == "BSDF_PRINCIPLED")
+                vc = nt.nodes.new("ShaderNodeVertexColor")
+                vc.layer_name = "Col"
+                nt.links.new(vc.outputs["Color"], bsdf.inputs["Base Color"])
+    hb = rig.data.bones.get("mixamorig:Head")
+    head = rig.matrix_world @ hb.head_local + Vector((0, 0, 0.09))
+    sc = bpy.context.scene
+    for eng in ("BLENDER_EEVEE_NEXT", "BLENDER_EEVEE", "BLENDER_WORKBENCH"):
+        try:
+            sc.render.engine = eng
+            break
+        except TypeError:
+            pass
+    sun = bpy.data.objects.new("sun", bpy.data.lights.new("sun", "SUN"))
+    sun.rotation_euler = (math.radians(55), 0, math.radians(25))
+    sun.data.energy = 3.0
+    sc.collection.objects.link(sun)
+    cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam"))
+    sc.collection.objects.link(cam)
+    sc.camera = cam
+    cam.data.type = "ORTHO"
+    sc.render.resolution_x, sc.render.resolution_y = 520, 620
+    shots = [("front", Vector((0, -1, 0)), 0.42), ("trois_quarts", Vector((0.75, -0.75, 0.05)), 0.42),
+             ("dos", Vector((0, 1, 0.05)), 0.42), ("corps", Vector((0.3, -1, 0)), 2.0)]
+    for name, d, scale in shots:
+        target = head if name != "corps" else Vector((head.x, head.y, head.z * 0.52))
+        cam.location = target + d.normalized() * 3.0
+        cam.rotation_euler = (target - cam.location).to_track_quat("-Z", "Y").to_euler()
+        cam.data.ortho_scale = scale
+        sc.render.filepath = path.replace(".png", "_%s.png" % name)
+        bpy.ops.render.render(write_still=True)
+    print("PREVIEW", fid, path)
+
+
+def build(fid, spec, preview_path=None):
     # scène vide (sans recharger les préférences, sinon MPFB est désactivé)
     for ob in list(bpy.data.objects):
         bpy.data.objects.remove(ob, do_unlink=True)
@@ -168,8 +361,13 @@ def build(fid, spec):
     for c in spec.get("clothes", []):
         HumanService.add_mhclo_asset(asset("clothes", c, "mhclo"), basemesh, asset_type="Clothes", subdiv_levels=0)
     rig = next(o for o in bpy.data.objects if o.type == "ARMATURE")
+    if spec.get("strands"):
+        add_strands(fid, spec["strands"], basemesh, rig)
     paint(spec, rig)
     simplify_materials()
+    if preview_path:
+        preview(fid, preview_path)
+        return
     os.makedirs(OUT, exist_ok=True)
     path = os.path.join(OUT, fid + ".fbx")
     bpy.ops.object.select_all(action="SELECT")
@@ -183,9 +381,14 @@ def build(fid, spec):
 def main():
     specs = json.load(open(os.path.join(HERE, "characters.json"), encoding="utf-8"))
     args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    preview_dir = None
+    if "--preview" in args:  # -- --preview <dossier> id... : rendus de contrôle, pas d'export
+        i = args.index("--preview")
+        preview_dir = args[i + 1]
+        args = args[:i] + args[i + 2:]
     for fid in (args or specs.keys()):
         try:
-            build(fid, specs[fid])
+            build(fid, specs[fid], os.path.join(preview_dir, fid + ".png") if preview_dir else None)
         except Exception as e:
             import traceback
             traceback.print_exc()
