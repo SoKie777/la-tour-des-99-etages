@@ -47,6 +47,8 @@ const CHAR_MAP := {
 }
 const HOLD_AT_END := ["ko"]
 ## Vêtements MPFB (peints en couleurs de sommets, sans texture) : mots-clés des noms d'objets.
+const TOON_SHADER := preload("res://assets/materials/shaders/toon_ukiyoe.gdshader")
+const INK := Color("332c29")  # contours (Bible D.A.)
 const CLOTH_WORDS := ["suit", "shoes", "robe", "ninja", "tunic", "jacket", "pants", "boots", "dress", "uniform", "coveralls"]
 
 static var _lib: AnimationLibrary
@@ -186,49 +188,68 @@ func _on_finished(anim_name: StringName) -> void:
 		ap.play("fx/" + anims["idle"])
 
 
-func _toon(c: Color) -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
-	m.albedo_color = c
-	m.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
-	m.specular_mode = BaseMaterial3D.SPECULAR_TOON
-	m.roughness = 0.7
-	m.rim_enabled = true
-	m.rim = 0.3
+## Matériau toon de la Bible D.A. (assets/materials/shaders/toon_ukiyoe.gdshader) : ombre bleu minéral,
+## liseré d'or ; contour couleur encre en seconde passe.
+static func ukiyoe_material(c: Color, tex: Texture2D = null, vertex_color := false, scissor := 0.0,
+		outline := true) -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = TOON_SHADER
+	m.set_shader_parameter("albedo_color", c)
+	m.set_shader_parameter("use_texture", tex != null)
+	if tex != null:
+		m.set_shader_parameter("albedo_texture", tex)
+	m.set_shader_parameter("use_vertex_color", vertex_color)
+	m.set_shader_parameter("alpha_scissor", scissor)
+	if outline:
+		var o := StandardMaterial3D.new()
+		o.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		o.albedo_color = INK
+		o.cull_mode = BaseMaterial3D.CULL_FRONT
+		o.grow = true
+		o.grow_amount = 0.008
+		m.next_pass = o
 	return m
 
 
-## Garde les textures MPFB, rendu cel-shading + contour noir ; vêtements en aplats (couleurs de sommets).
+func _toon(c: Color) -> ShaderMaterial:
+	return ukiyoe_material(c, null, false, 0.0, false)
+
+
+## Garde les textures MPFB avec le rendu toon de la Bible ; vêtements en aplats (couleurs de sommets).
+## Yeux et surfaces double face (mèches) gardent un matériau standard en cel-shading.
 func _toonify(mi: MeshInstance3D) -> void:
 	for i in mi.mesh.get_surface_count():
 		var src := mi.get_active_material(i)
-		var m: StandardMaterial3D = src.duplicate() if src is StandardMaterial3D else StandardMaterial3D.new()
+		var std: StandardMaterial3D = src if src is StandardMaterial3D else null
+		var name_l := str(mi.name).to_lower()
+		var arrays := mi.mesh.surface_get_arrays(i)
+		var has_col: bool = arrays[Mesh.ARRAY_COLOR] != null and (arrays[Mesh.ARRAY_COLOR] as PackedColorArray).size() > 0
+		var is_cloth: bool = CLOTH_WORDS.any(func(w: String) -> bool: return w in name_l)
+		var scissor := 0.4 if ("brow" in name_l or (has_col and not is_cloth)) else 0.0
+		# pas de contour sur les yeux, les sourcils et les mèches générées (trop fines : le contour les noircirait)
+		var outline := not ("eye" in name_l or "brow" in name_l or "locs" in name_l)
+		var keep_std := "eye" in name_l or (std != null and (std.cull_mode == BaseMaterial3D.CULL_DISABLED
+			or std.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA))
+		if not keep_std:
+			var tex: Texture2D = null if (std == null or (has_col and is_cloth)) else std.albedo_texture
+			var col := Color.WHITE if (has_col or std == null) else std.albedo_color
+			mi.set_surface_override_material(i, ukiyoe_material(col, tex, has_col, scissor, outline))
+			continue
+		var m: StandardMaterial3D = std.duplicate() if std != null else StandardMaterial3D.new()
 		m.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
 		m.specular_mode = BaseMaterial3D.SPECULAR_TOON
 		m.roughness = 0.7
 		m.rim_enabled = true
 		m.rim = 0.3
-		var name_l := str(mi.name).to_lower()
-		var arrays := mi.mesh.surface_get_arrays(i)
-		var has_col: bool = arrays[Mesh.ARRAY_COLOR] != null and (arrays[Mesh.ARRAY_COLOR] as PackedColorArray).size() > 0
-		var is_cloth: bool = CLOTH_WORDS.any(func(w: String) -> bool: return w in name_l)
 		if has_col:
 			m.vertex_color_use_as_albedo = true
 			m.vertex_color_is_srgb = true
 			m.albedo_color = Color.WHITE
 			if is_cloth:
 				m.albedo_texture = null
-		if "brow" in name_l or (has_col and not is_cloth):
+		if scissor > 0.0:
 			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-			m.alpha_scissor_threshold = 0.4
-		# pas de contour sur les yeux, les sourcils et les mèches générées (trop fines : le contour les noircirait)
-		if not ("eye" in name_l or "brow" in name_l or "locs" in name_l):
-			var o := StandardMaterial3D.new()
-			o.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-			o.albedo_color = Color(0.02, 0.015, 0.015)
-			o.cull_mode = BaseMaterial3D.CULL_FRONT
-			o.grow = true
-			o.grow_amount = 0.008
-			m.next_pass = o
+			m.alpha_scissor_threshold = scissor
 		mi.set_surface_override_material(i, m)
 
 

@@ -1,3 +1,4 @@
+class_name BattleScene
 extends Node3D
 ## Scène de combat jouable, mise en scène façon Dislyte : ton équipe au premier plan (de dos), les ennemis
 ## dans le fond face à la caméra. Effets : tremblement de caméra, arrêt sur image sur les critiques, éclats
@@ -11,7 +12,8 @@ const UI_BG := Color("14121f")
 const UI_ACCENT := Color("c9a24a")
 const STACK_NAMES := {"spark": "Étincelle", "fury": "Fureur", "rage": "Rage", "visage": "Visage", "dette": "Dette",
 	"clone": "Clones", "inertia": "Inertie"}
-const CAM_POS := Vector3(0, 3.1, 7.9)
+const CAM_FOV := 40.0  # focale serrée (Bible D.A.) : caméra reculée d'autant, les héros ressortent du décor
+const CAM_POS := Vector3(0, 3.69, 10.37)
 const CAM_LOOK := Vector3(0, 1.0, -0.9)
 const RANGED := ["cast", "heal", "roar", "taunt", "block"]  # animations jouées sur place
 const GAME_FONT := preload("res://assets/fonts/LilitaOne-Regular.ttf")  # police libre (OFL), chiffres et titres
@@ -164,7 +166,7 @@ func _anim_name(u: BattleUnit, action: String) -> String:
 func _ultimate_intro(actor: BattleUnit, skill_name: String) -> void:
 	var p := _home(actor)
 	var facing := -1.0 if actor.team == 0 else 1.0  # ton équipe regarde vers le fond : on la filme de face
-	_cam_to(p + Vector3(1.2, 1.55, 3.7 * facing), p + Vector3(0, 1.15, 0), 0.35)
+	_cam_to(p + Vector3(1.5, 1.7, 4.7 * facing), p + Vector3(0, 1.15, 0), 0.35)
 	banner.text = skill_name.to_upper()
 	banner_sub.text = actor.display_name
 	banner.modulate = Color(_col(actor).lightened(0.35), 0.0)
@@ -305,9 +307,10 @@ func _on_battle_event(ev: Dictionary) -> void:
 # --- Monde 3D ---------------------------------------------------------------
 
 func _build_world() -> void:
-	BattleFx.build_arena(self)
+	BattleDecor.build(self, _decor_id())
 	cam = Camera3D.new()
-	cam.fov = 50
+	cam.fov = CAM_FOV
+	cam.attributes = BattleDecor.camera_blur()  # léger flou du lointain : l'arène se détache du décor
 	add_child(cam)
 	cam.position = CAM_POS
 	cam.look_at(CAM_LOOK)
@@ -320,6 +323,19 @@ func _build_world() -> void:
 		p.rotation_degrees.y = 180.0 if u.team == 0 else 0.0  # ton équipe de dos, les ennemis face à toi
 		add_child(p)
 		pawns[u] = p
+
+
+## Décor du lieu (clé « decor » des données) ; argument « --decor=<id> » pour le forcer (captures, tests).
+func _decor_id() -> String:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--decor="):
+			return a.trim_prefix("--decor=")
+	match Session.battle.get("mode", ""):
+		"tower":
+			return Tower.floor_info(int(Session.battle["floor"])).get("decor", "dojo")
+		"loot":
+			return LootBoss.boss(Session.battle["boss"]).get("decor", "dojo")
+	return "dojo"
 
 
 ## Place d'un combattant : ton équipe au premier plan, l'adversaire au fond (un boss seul au centre).
@@ -980,7 +996,7 @@ func _show_result() -> void:
 		if u.is_alive() and u.team == engine.winner:
 			_play_anim(u, "victory")
 	if engine.winner == 0:  # la caméra se rapproche des vainqueurs
-		_cam_to(Vector3(0, 2.2, 6.0), Vector3(0, 1.2, 1.6), 1.2)
+		_cam_to(Vector3(0, 2.5, 7.2), Vector3(0, 1.2, 1.6), 1.2)
 	finished.emit(engine.winner)
 	if Session.smoke_test:
 		print("Test de fumée OK : combat terminé (vainqueur %d, %d actions)" % [engine.winner, engine.total_actions])

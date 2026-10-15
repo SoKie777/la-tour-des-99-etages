@@ -2,7 +2,7 @@
   "_comment": "Ascension de la Tour. 'power' multiplie PV, ATK et DEF des ennemis (1.0 = stats de niveau max, comme les personnages du joueur). Récompenses : 'first' à la première victoire, 'each' à chaque victoire. Réglé par la simulation de tests/run_tests.gd.",
   "universes": [
     {
-      "id": "cite_acier", "name": "Cité d'Acier", "first_floor": 1,
+      "id": "cite_acier", "name": "Cité d'Acier", "first_floor": 1, "decor": "acier", "boss_decor": "forge",
       "floors": [
         {"enemies": ["espion_lumiere", "issa"], "power": 1.0},
         {"enemies": ["nidhogg", "espion_lumiere", "issa"], "power": 0.9},

@@ -11,7 +11,7 @@ static func floor_count() -> int:
 	return n
 
 
-## {number, universe, enemies, power, elite, boss}
+## {number, universe, decor, enemies, power, elite, boss}
 static func floor_info(number: int) -> Dictionary:
 	for u: Dictionary in GameData.tower()["universes"]:
 		var idx := number - int(u["first_floor"])
@@ -19,6 +19,7 @@ static func floor_info(number: int) -> Dictionary:
 			var f: Dictionary = u["floors"][idx].duplicate()
 			f["number"] = number
 			f["universe"] = u["name"]
+			f["decor"] = u.get("boss_decor" if f.has("boss") else "decor", "dojo")
 			return f
 	return {}
 

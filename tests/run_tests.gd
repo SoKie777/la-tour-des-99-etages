@@ -450,6 +450,7 @@ func test_boss() -> void:
 	var pro: BattleUnit = e.units[2]
 	var mel := unit_of(e, "mello")
 	check(pro.id == "promethee" and pro.constellation == "neutre", "Étage 12 : Prométhée, neutre")
+	check(Tower.floor_info(1)["decor"] == "acier" and Tower.floor_info(12)["decor"] == "forge", "Décors : Cité d'Acier, forge du boss")
 	check(not e._try_apply(mel, pro, {"id": "freeze", "turns": 1, "no_roll": true}), "Boss final : immunisé au Gel")
 	var stuns := 0
 	for i in 200:
@@ -492,6 +493,7 @@ func test_loot() -> void:
 	print("Boss de butin")
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 21
+	check(LootBoss.ids().all(func(id: String) -> bool: return LootBoss.boss(id).has("decor")), "Chaque boss de butin a son décor")
 	check(LootBoss.countered_by("chronophage") == "sirius" and LootBoss.countered_by("wyrm") == "orion", "Constellation qui domine chaque boss")
 	# Chronophage : jauge gagnée à chaque tour d'un héros, dégâts croissants
 	var e := BattleEngine.new(["mello"], LootBoss.enemy_units("chronophage", 0), 4)
