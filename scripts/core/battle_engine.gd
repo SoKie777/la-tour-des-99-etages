@@ -16,7 +16,7 @@ signal battle_event(event: Dictionary)
 const ONGOING := -1
 const DRAW := 2
 ## Actions immédiates utilisables dans les listes d'effets (les autres ids sont des effets durables).
-const ACTIONS := ["ap_down", "ap_up", "strip_buffs", "steal_buff", "cleanse", "heal", "stack", "cd_reduce"]
+const ACTIONS := ["ap_down", "ap_up", "strip_buffs", "steal_buff", "cleanse", "heal", "stack", "cd_reduce", "purge_ids", "seal_revive"]
 
 var rules: Dictionary
 var units: Array[BattleUnit] = []
@@ -36,6 +36,7 @@ var tactics := {}
 var sp := 0            # Sceaux de l'équipe du joueur (réserve commune)
 var sp_max := 0
 var team_actions := 0  # actions de l'équipe du joueur (étoile « victoire rapide »)
+var ult_cut := false   # ultimes hors tour (énergie) : seulement contre un boss
 
 
 ## team_a / team_b : listes d'ids de personnages, ou de BattleUnit déjà construits (reliques).
@@ -55,10 +56,6 @@ func _init(team_a: Array, team_b: Array, seed_value: int = 0) -> void:
 			units.append(u)
 	for u in units:
 		stats[u] = {"dealt": 0.0, "taken": 0.0, "shielded": 0.0, "healed": 0.0}
-		var bane: Dictionary = u.data.get("boss_bane", {})
-		if not bane.is_empty() and units.any(func(x: BattleUnit) -> bool: return x.team != u.team and x.id == bane["boss"]):
-			u.flags["bane"] = bane  # kit : arme contre ce boss (ATK ; Ténacité et énergie en mode tactique)
-			u.base["atk"] = float(u.base["atk"]) * (1.0 + float(bane.get("atk_pct", 0)) / 100.0)
 	for u in units:
 		if u.set_specials.has("start_immunity_1"):
 			u.effects.append(_make_effect("immunity", 1, 0.0, u, true))
@@ -75,6 +72,7 @@ func _init(team_a: Array, team_b: Array, seed_value: int = 0) -> void:
 func enable_tactics(enemy_rank := "normal") -> void:
 	tactics = rules["tower_tactics"]
 	sp_max = int(tactics["sp_max"])
+	ult_cut = units.any(func(x: BattleUnit) -> bool: return x.team == 1 and x.get_trait("boss") != null)
 	var cons := {}
 	for u in units:
 		if u.team == 0:
@@ -98,9 +96,6 @@ func enable_tactics(enemy_rank := "normal") -> void:
 		sp_max += int(res["triad_sp_max"])
 		_emit({"type": "resonance", "constellation": "triade"})
 	sp = mini(int(tactics["sp_start"]), sp_max)
-	for u in units:
-		if u.flags.has("bane"):  # arme contre le boss : énergie de départ
-			u.energy = maxf(u.energy, float(u.flags["bane"].get("energy_start", 0)))
 
 
 ## Faiblesses d'un ennemi : celles de ses données (boss), sinon la constellation qui domine la sienne.
@@ -117,7 +112,7 @@ func weakness_of(u: BattleUnit) -> Array[String]:
 
 ## L'ultime d'un héros est prêt (énergie pleine) : il peut couper la ligne de temps.
 func ult_ready(u: BattleUnit) -> bool:
-	return not tactics.is_empty() and winner == ONGOING and u.team == 0 and u.is_alive() and not u.is_passive(2) \
+	return ult_cut and winner == ONGOING and u.team == 0 and u.is_alive() and not u.is_passive(2) \
 		and not u.is_skipping() and not u.has_effect("silence") and u.energy >= float(tactics["energy_max"])
 
 
@@ -148,8 +143,6 @@ func _hit_toughness(u: BattleUnit, t: BattleUnit, idx: int, aoe: bool) -> void:
 	if t.max_toughness <= 0.0 or t.broken or not t.is_alive() or not u.constellation in t.weakness:
 		return
 	var dmg := float(tactics["toughness_dmg"][clampi(idx, 0, 2)]) * (float(tactics["aoe_toughness_mult"]) if aoe else 1.0)
-	if u.flags.has("bane"):  # arme contre ce boss
-		dmg *= float(u.flags["bane"].get("toughness_mult", 1.0))
 	t.toughness = maxf(0.0, t.toughness - dmg)
 	_emit({"type": "toughness", "actor": u, "target": t})
 	if t.toughness <= 0.0:
@@ -225,8 +218,8 @@ func usable_skills(u: BattleUnit) -> Array[int]:
 		if i == 2 and u.has_effect("silence"):
 			continue
 		if not tactics.is_empty() and u.team == 0:
-			if i == 2:
-				continue  # mode tactique : l'ultime se lance avec l'énergie (cast_ultimate)
+			if i == 2 and ult_cut:
+				continue  # contre un boss : l'ultime se lance avec l'énergie (cast_ultimate)
 			if sp < int(tactics["sp_cost"][i]):
 				continue  # pas assez de Sceaux
 		out.append(i)
@@ -903,7 +896,7 @@ func _apply_damage(tgt: BattleUnit, dmg: float, source: BattleUnit, info: Dictio
 			tgt.flags["survived"] = true
 			tgt.hp = 1.0
 			_emit({"type": "survive", "target": tgt})
-		elif tgt.get_trait("revive_self_once") != null and not tgt.flags.has("self_revived"):
+		elif tgt.get_trait("revive_self_once") != null and not tgt.flags.has("self_revived") and not tgt.flags.has("no_revive"):
 			tgt.flags["self_revived"] = true  # Laboratoire infini : le réseau de Clefs le relève
 			tgt.hp = roundf(tgt.max_hp() * float(tgt.get_trait("revive_self_once")) / 100.0)
 			_emit({"type": "boss_revive", "target": tgt})
@@ -1088,6 +1081,28 @@ func _apply_action(caster: BattleUnit, tgt: BattleUnit, ef: Dictionary, ctx: Dic
 				value = float(ef["lowest_value"])
 			tgt.ap = minf(1.0, tgt.ap + value / 100.0)
 			_emit({"type": "ap", "target": tgt, "amount": value})
+			return 1
+		"purge_ids":  # retire des effets précis, même non dissipables (ou quelques cumuls avec « stacks »)
+			if ef.has("chance") and rng.randf() * 100.0 >= float(ef["chance"]):
+				return 0
+			var purged := 0
+			for pid: String in ef["ids"]:
+				var pe := tgt.get_effect(pid)
+				if pe.is_empty():
+					continue
+				var less := int(ef.get("stacks", 0))
+				if less > 0 and int(pe.get("stacks", 1)) > less:
+					pe["stacks"] = int(pe["stacks"]) - less
+				else:
+					_remove_effect(tgt, pid)
+				purged += 1
+			if purged > 0:
+				_emit({"type": "purge", "actor": caster, "target": tgt})
+			return purged
+		"seal_revive":  # la cible ne pourra plus se relever (résurrection de boss annulée)
+			if tgt.get_trait("revive_self_once") != null and not tgt.flags.has("no_revive"):
+				tgt.flags["no_revive"] = true
+				_emit({"type": "seal_revive", "actor": caster, "target": tgt})
 			return 1
 		"strip_buffs":
 			if ef.has("chance") and rng.randf() * 100.0 >= float(ef["chance"]):

@@ -201,7 +201,7 @@ Réglages : `data/rules.json` → `tower_tactics` ; moteur : `BattleEngine.enabl
 
 - **Sceaux d'équipe** (réserve commune, 5 max, 3 au départ) : S1 en donne 1, S2 en coûte 1. Les
   personnages à S2 passive alimentent naturellement les autres.
-- **Énergie et ultime hors tour** : chaque héros remplit sa jauge (S1 +20, S2 +30, coup reçu +8,
+- **Énergie et ultime hors tour (contre un boss seulement ; ailleurs l'ultime reste classique)** : chaque héros remplit sa jauge (S1 +20, S2 +30, coup reçu +8,
   ennemi achevé +10, départ 40). Pleine, l'ultime se lance d'un bouton sur la fiche du héros, **à tout
   moment** : il coupe la ligne de temps sans consommer le tour ni la jauge d'action.
 - **Ténacité et Rupture** : chaque ennemi a une Ténacité (60, Élite 100, boss 180). Seule la
@@ -214,6 +214,10 @@ Réglages : `data/rules.json` → `tower_tactics` ; moteur : `BattleEngine.enabl
   pas brisé avant son tour suivant, **Oblitération** sur toute l'équipe (200 % de son ATK).
 - **Résonance** : 2 héros d'une même constellation → Orion +10 % VIT, Grande Ourse +12 % ATK, Sirius
   +15 % PV ; les 3 constellations (**Triade**) → un Sceau max de plus.
+- **Tutoriel** : au premier combat de la Tour (et page « boss » au premier boss), réaffichable avec le
+  bouton « ? » ; un cadre doré montre la zone expliquée (`scripts/ui/tower_tutorial.gd`). Factions
+  visibles : emblème de constellation devant chaque nom, au-dessus des ennemis et sur la ligne de temps ;
+  faiblesses du boss en grand au-dessus de lui.
 - **Étoiles** (comme la Mémoire du Chaos) : victoire, aucun héros K.O., victoire en 15 actions d'équipe au
   plus. Chaque nouvelle étoile rapporte 2 Éclats ; les étoiles et les faiblesses s'affichent dans la Tour.
 
@@ -227,16 +231,16 @@ tous les étages et bat la Géode environ 1 fois sur 5 ; une équipe d'Épiques 
 Le boss demande donc des reliques. Don Selah n'est pas un adversaire de la Tour tant que son kit n'est
 pas revu (S3 déjà réduite : 130 % ATK + 45 % DEF par coup au lieu de 150 % + 50 %).
 
-### Armes anti-boss (kits, v0.7.1)
+### Armes anti-boss (kits, v0.7.2)
 
-Clé `boss_bane` d'un personnage : contre ce boss, quel que soit le mode, +ATK % ; en mode tactique, il
-entame sa Ténacité plus vite et commence avec de l'énergie. Un 5★ avantagé (tiré au sort) l'a en entier, un
-Épique de la même nation en version réduite. Les portraits apparaissent dans la Tour, sur l'étage du boss.
+Une action du kit, toujours active, qui a l'air anodine mais renverse le combat contre un boss précis
+(clé `boss_bane` : boss visé et explication pour l'interface). Un 5★ avantagé (tiré au sort) l'a en entier,
+un Épique de la même nation en version réduite. Portraits étoilés sur l'étage du boss, fiche en Collection.
 
-| Boss | 5★ | Épique | Mesure (avec Ghost et Jo Prince, sans reliques) |
-|---|---|---|---|
-| Prométhée | Montana : +20 % ATK, Ténacité ×2, ultime prêt | Nyssa : +5 %, ×1,25, 50 % d'énergie | 100 % / 100 % (80 % sans arme) |
-| Impératrice Géode | Mello : +20 % ATK, Ténacité ×2, ultime prêt | Yass : +5 %, ×1,25, 50 % d'énergie | 93 % / 80 % (30 % sans arme) |
+| Boss | 5★ | Épique |
+|---|---|---|
+| Prométhée | Montana : Kairos (Room) efface les Clefs de toute l'équipe et empêche la cible de se relever (annule sa résurrection) | Nyssa : chaque S1 retire une Clef à chaque allié |
+| Impératrice Géode | Mello : chaque coup de S1 brise boucliers et protections (le Prisme cristallin) | Yass : chaque coup de S1 a 25 % de chance de briser le bouclier |
 
 ### Montana, poursuites en chaîne (v0.7.1)
 

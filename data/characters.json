@@ -75,6 +75,9 @@
       {
        "id": "room",
        "chance": 100
+      },
+      {
+       "id": "seal_revive"
       }
      ],
      "while_cooldown": [
@@ -83,7 +86,15 @@
        "value": 10
       }
      ],
-     "desc": "Pose Room (2 tours, non purgeable) : -25 % VIT, Montana vole 10 % de jauge à chacun de ses tours. Ennemis déjà ralentis : -10 % PA. Tant qu'en recharge : alliés +10 % VIT."
+     "desc": "Pose Room (2 tours, non purgeable) : -25 % VIT, Montana vole 10 % de jauge à chacun de ses tours. Ennemis déjà ralentis : -10 % PA. Tant qu'en recharge : alliés +10 % VIT. Kairos dissipe aussi les Clefs des alliés, et une cible prise dans la Room ne peut plus se relever.",
+     "to_allies": [
+      {
+       "id": "purge_ids",
+       "ids": [
+        "clef"
+       ]
+      }
+     ]
     },
     {
      "name": "Selah",
@@ -109,11 +120,8 @@
    ],
    "boss_bane": {
     "boss": "promethee",
-    "name": "Le temps fige la flamme",
-    "atk_pct": 20,
-    "toughness_mult": 2.0,
-    "energy_start": 100,
-    "desc": "Contre Prométhée : +20 % ATK, entame sa Ténacité deux fois plus vite et commence le combat avec l'ultime prêt (mode tactique)."
+    "name": "Kairos",
+    "desc": "Contre Prométhée : la Room efface ses Clefs sur toute l'équipe et annule sa résurrection."
    }
   },
   {
@@ -335,7 +343,16 @@
        "random_other": true
       }
      ],
-     "desc": "Son clone frappe un autre ennemi au hasard à 40 % ATK."
+     "desc": "Son clone frappe un autre ennemi au hasard à 40 % ATK. Retire aussi 1 Clef à chaque allié.",
+     "to_allies": [
+      {
+       "id": "purge_ids",
+       "ids": [
+        "clef"
+       ],
+       "stacks": 1
+      }
+     ]
     },
     {
      "name": "Clones temporels",
@@ -355,11 +372,8 @@
    ],
    "boss_bane": {
     "boss": "promethee",
-    "name": "Écho du temps",
-    "atk_pct": 5,
-    "toughness_mult": 1.25,
-    "energy_start": 50,
-    "desc": "Contre Prométhée : +5 % ATK, entame sa Ténacité 1,25 fois plus vite et commence avec 50 % d'énergie (mode tactique)."
+    "name": "Instant dédoublé",
+    "desc": "Contre Prométhée : chaque S1 retire une Clef à chaque allié."
    }
   },
   {
@@ -550,11 +564,18 @@
          "id": "stack",
          "stack": "visage",
          "on": "self"
+        },
+        {
+         "id": "purge_ids",
+         "ids": [
+          "shield",
+          "dmg_reduce"
+         ]
         }
        ]
       }
      ],
-     "desc": "Chaque coup donne 1 Visage (+6 DC, +4 % ATK par cumul, 6 max ; à 6, l'attaque suivante ignore 30 % DEF et les Visages retombent à 2)."
+     "desc": "Chaque coup donne 1 Visage (+6 DC, +4 % ATK par cumul, 6 max ; à 6, l'attaque suivante ignore 30 % DEF et les Visages retombent à 2). Ses coups brisent les boucliers et les protections de la cible."
     },
     {
      "name": "Respiration du Feu",
@@ -584,11 +605,8 @@
    ],
    "boss_bane": {
     "boss": "geode",
-    "name": "Taille-gemmes",
-    "atk_pct": 20,
-    "toughness_mult": 2.0,
-    "energy_start": 100,
-    "desc": "Contre l'Impératrice Géode : +20 % ATK, entame sa Ténacité deux fois plus vite et commence le combat avec l'ultime prêt (mode tactique)."
+    "name": "Flamme bleue",
+    "desc": "Contre l'Impératrice Géode : chaque S1 brise le Prisme cristallin (bouclier et protection)."
    }
   },
   {
@@ -701,11 +719,18 @@
         {
          "id": "stack",
          "stack": "dette"
+        },
+        {
+         "id": "purge_ids",
+         "ids": [
+          "shield"
+         ],
+         "chance": 25
         }
        ]
       }
      ],
-     "desc": "Chaque coup pose 1 Dette (5 max, 3 tours) : 2 % des PV max par cumul à la fin du tour de la cible, +15 % ATK de Yass par cumul si elle est Maudite."
+     "desc": "Chaque coup pose 1 Dette (5 max, 3 tours) : 2 % des PV max par cumul à la fin du tour de la cible, +15 % ATK de Yass par cumul si elle est Maudite. Chaque coup : 25 % de chance de briser le bouclier de la cible."
     },
     {
      "name": "Dette d'Amour",
@@ -752,11 +777,8 @@
    ],
    "boss_bane": {
     "boss": "geode",
-    "name": "Éclat brisé",
-    "atk_pct": 5,
-    "toughness_mult": 1.25,
-    "energy_start": 50,
-    "desc": "Contre l'Impératrice Géode : +5 % ATK, entame sa Ténacité 1,25 fois plus vite et commence avec 50 % d'énergie (mode tactique)."
+    "name": "Chaînes de Manifestis",
+    "desc": "Contre l'Impératrice Géode : ses chaînes brisent parfois le bouclier du Prisme."
    }
   },
   {

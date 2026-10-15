@@ -52,6 +52,8 @@ var flash_rect: ColorRect  # frame d'impact noir et blanc des ultimes
 ## Mode tactique de la Tour : ultimes en attente (coupure de la ligne de temps), réserve de Sceaux.
 var ult_queue: Array[BattleUnit] = []
 var sp_row: HBoxContainer
+var enemy_col_ref: Control  # fiches (cibles du tutoriel de la Tour)
+var ally_col_ref: Control
 
 
 func _ready() -> void:
@@ -60,13 +62,39 @@ func _ready() -> void:
 	engine.battle_event.connect(_on_battle_event)
 	if Session.battle.get("mode", "") == "tower":  # mode tactique : seulement dans l'Ascension
 		engine.enable_tactics(Tower.tactics_rank(int(Session.battle["floor"])))
-		for u in engine.units:
-			if u.flags.has("bane"):  # arme du kit contre ce boss
-				_float_text.call_deferred(u, "★ " + str(u.flags["bane"]["name"]), UI_ACCENT, 0.9)
 	_build_world()
 	_build_ui()
 	_refresh()
+	var forced := -1  # captures : -- --tuto=<page>
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--tuto="):
+			forced = int(a.trim_prefix("--tuto="))
+	if not engine.tactics.is_empty() and (not Session.smoke_test or forced >= 0):  # tutoriel : premier combat de la Tour, premier boss
+		var prof := Session.profile
+		var pages: Array[Dictionary] = []
+		if forced >= 0:
+			await _open_tutorial(TowerTutorial.page_list(engine.ult_cut), forced)
+		elif not prof.seen_tips.has("tower"):
+			pages = TowerTutorial.page_list(engine.ult_cut)
+			prof.seen_tips["tower"] = true
+			if engine.ult_cut:
+				prof.seen_tips["tower_boss"] = true
+		elif engine.ult_cut and not prof.seen_tips.has("tower_boss"):
+			pages = TowerTutorial.page_list(true, true)
+			prof.seen_tips["tower_boss"] = true
+		if not pages.is_empty():
+			Session.save()
+			await _open_tutorial(pages)
 	_advance()
+
+
+## Explications du mode tactique (pages de TowerTutorial), avec un cadre sur la zone concernée.
+func _open_tutorial(pages: Array[Dictionary], first := 0) -> void:
+	var t := TowerTutorial.new()
+	ui_root.add_child(t)
+	t.start(pages, {"enemies": enemy_col_ref, "allies": ally_col_ref, "track": action_track,
+		"sceaux": sp_row.get_parent() if sp_row != null else null}, first)
+	await t.closed
 
 
 func _process(delta: float) -> void:
@@ -192,7 +220,7 @@ func _impact_flash() -> void:
 ## Ultimes en attente (mode tactique) : joués avant le tour suivant, quel que soit le joueur actif.
 ## En mode Auto, chaque héros lance son ultime dès que son énergie est pleine.
 func _run_ult_queue() -> void:
-	if engine.tactics.is_empty():
+	if not engine.ult_cut:
 		return
 	if Session.auto_battle:
 		for u in engine.ready_ultimates():
@@ -506,6 +534,25 @@ func _make_pawn(u: BattleUnit) -> Node3D:
 	label.outline_size = 8
 	label.modulate = _col(u).lightened(0.45)
 	root.add_child(label)
+	# faction bien visible : emblème de constellation au-dessus du nom ; pour un boss, ses faiblesses en grand
+	var marks: Array[Dictionary] = []
+	if u.get_trait("boss") != null:
+		marks.append({"tex": UiKit.icon_texture("dmg_taken"), "col": UiKit.VERMILION.lightened(0.3)})
+		for c in engine.weakness_of(u):
+			marks.append({"tex": UiKit.icon_texture(c), "col": UiKit.CONST_COLORS[c].lightened(0.35)})
+	elif UiKit.CONST_COLORS.has(u.constellation):
+		marks.append({"tex": UiKit.icon_texture(u.constellation), "col": UiKit.CONST_COLORS[u.constellation].lightened(0.35)})
+	var big := u.get_trait("boss") != null
+	for i in marks.size():
+		var sp := Sprite3D.new()
+		sp.texture = marks[i]["tex"]
+		sp.modulate = marks[i]["col"]
+		sp.pixel_size = 0.0085 if big else 0.0055
+		sp.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		sp.no_depth_test = true
+		sp.render_priority = 2
+		sp.position = Vector3((i - (marks.size() - 1) / 2.0) * (0.62 if big else 0.4), height + (1.05 if big else 0.85), 0)
+		root.add_child(sp)
 	return root
 
 
@@ -690,6 +737,10 @@ func _build_ui() -> void:
 	turn_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(turn_label)
 	ui_root = root
+	if not engine.tactics.is_empty():  # règles de la Tour, à revoir à tout moment
+		var help := UiKit.button("?", func() -> void: _open_tutorial(TowerTutorial.page_list(engine.ult_cut)), Vector2(40, 40))
+		help.add_theme_font_size_override("font_size", 22)
+		top.add_child(help)
 	top.add_child(UiKit.icon_button("info", _toggle_info, 40))
 	top.add_child(UiKit.icon_button("journal", func() -> void: log_panel.visible = not log_panel.visible, 40))
 	var auto := UiKit.icon_button("auto", func() -> void: pass, 40)  # combat automatique : bouton à bascule
@@ -720,6 +771,7 @@ func _build_ui() -> void:
 	enemy_col.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	enemy_col.add_theme_constant_override("separation", 6)
 	root.add_child(enemy_col)
+	enemy_col_ref = enemy_col
 	var ally_col := VBoxContainer.new()  # ta fiche d'équipe en bas à gauche
 	ally_col.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	ally_col.offset_left = 14
@@ -728,6 +780,7 @@ func _build_ui() -> void:
 	ally_col.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	ally_col.add_theme_constant_override("separation", 6)
 	root.add_child(ally_col)
+	ally_col_ref = ally_col
 	for u in engine.units:
 		(ally_col if u.team == 0 else enemy_col).add_child(_make_card(u))
 
@@ -825,7 +878,8 @@ func _build_action_bar(root: Control) -> void:
 		m.add_theme_constant_override("separation", 1)
 		m.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var box := PanelContainer.new()  # case carrée épurée
-		var st := UiKit.panel_style(Color(UI_BG, 0.92), UiKit.PAPER if u.team == 0 else UiKit.VERMILION, 1, 2)
+		var frame: Color = UiKit.CONST_COLORS.get(u.constellation, UiKit.VERMILION).lightened(0.25)  # couleur de faction
+		var st := UiKit.panel_style(Color(UI_BG, 0.92), frame, 2, 2)
 		st.set_content_margin_all(1)
 		box.add_theme_stylebox_override("panel", st)
 		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -872,8 +926,13 @@ func _make_card(u: BattleUnit) -> Control:
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 3)
 	v.add_child(head)
+	if u.get_trait("boss") != null or not UiKit.CONST_COLORS.has(u.constellation):  # faction : emblème avant le nom
+		head.add_child(UiKit.icon("boss", 15, UiKit.VERMILION.lightened(0.3)))
+	else:
+		head.add_child(UiKit.icon(u.constellation, 16, UiKit.CONST_COLORS[u.constellation].lightened(0.3)))
 	head.add_child(UiKit.label(u.display_name, 13))
-	if tactical and u.team == 1:  # faiblesses : constellations qui entament la Ténacité
+	if tactical and u.team == 1 and not u.weakness.is_empty():  # faiblesses : constellations qui entament la Ténacité
+		head.add_child(UiKit.icon("dmg_taken", 12, UiKit.VERMILION.lightened(0.3)))
 		for c in u.weakness:
 			head.add_child(UiKit.icon(c, 14, UiKit.CONST_COLORS[c].lightened(0.3)))
 	var hp := _bar(u.max_hp(), _col(u).lightened(0.25) if u.team == 0 else UiKit.VERMILION.lightened(0.15), 5)
@@ -882,7 +941,7 @@ func _make_card(u: BattleUnit) -> Control:
 	if tactical and u.team == 1 and u.max_toughness > 0.0:
 		c["tough"] = _bar(u.max_toughness, UiKit.PAPER, 3)
 		v.add_child(c["tough"])
-	if tactical and u.team == 0 and not u.is_passive(2):
+	if engine.ult_cut and u.team == 0 and not u.is_passive(2):  # énergie et ultime hors tour : contre un boss
 		c["energy"] = _bar(float(engine.tactics["energy_max"]), UI_ACCENT, 3)
 		v.add_child(c["energy"])
 		var ult := Button.new()  # ultime : coupe la ligne de temps quand l'énergie est pleine
@@ -1161,7 +1220,7 @@ func _show_actions(actor: BattleUnit) -> void:
 	for i in 3:
 		var sk := actor.skill(i)
 		var passive := actor.is_passive(i)
-		var tactical_ult := not engine.tactics.is_empty() and i == 2 and not passive
+		var tactical_ult := engine.ult_cut and i == 2 and not passive
 		var usable := (engine.ult_ready(actor) if tactical_ult else (not passive and i in engine.usable_skills(actor)))
 		var b := _skill_button("", UI_ACCENT if not passive else Color(UI_ACCENT, 0.4), func() -> void: pass, false, i == 2)
 		b.custom_minimum_size = Vector2(92, 92)

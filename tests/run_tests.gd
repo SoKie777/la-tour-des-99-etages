@@ -738,7 +738,7 @@ func test_tactics() -> void:
 	e.enable_tactics()
 	check(e.sp == int(tt["sp_start"]) and e.sp_max == int(tt["sp_max"]), "Sceaux de départ")
 	check(adr.max_toughness == float(tt["toughness"]["normal"]) and adr.weakness == ["orion"], "Ténacité et faiblesse (constellation dominante)")
-	check(not 2 in e.usable_skills(mon) and 1 in e.usable_skills(mon), "Ultime hors des compétences du tour, S2 payable")
+	check(not e.ult_cut and 1 in e.usable_skills(mon), "Étage normal : ultime classique, S2 payable")
 	e.sp = 0
 	check(not 1 in e.usable_skills(mon), "S2 impossible sans Sceau")
 	e.current = mon
@@ -758,12 +758,15 @@ func test_tactics() -> void:
 	e._start_turn(adr)
 	check(not adr.broken and adr.toughness == adr.max_toughness, "Fin de Rupture : Ténacité reconstituée")
 	mon.energy = float(tt["energy_max"])
-	var acts := e.team_actions
-	check(e.ult_ready(mon), "Énergie pleine : ultime prêt")
-	e.cast_ultimate(mon)
-	check(mon.energy < float(tt["energy_max"]) * 0.5 and e.team_actions == acts, "Ultime hors tour : énergie vidée, aucun tour consommé")
+	check(not e.ult_ready(mon), "Étage normal : pas d'ultime hors tour")
 	var b := BattleEngine.new(["montana", "mikhaila", "ghost"], Tower.enemy_units(12), 4)
 	b.enable_tactics()
+	var bm := unit_of(b, "montana")
+	bm.energy = float(tt["energy_max"])
+	var acts := b.team_actions
+	check(b.ult_cut and not 2 in b.usable_skills(bm) and b.ult_ready(bm), "Boss : énergie pleine, ultime hors tour prêt")
+	b.cast_ultimate(bm)
+	check(bm.energy < float(tt["energy_max"]) * 0.5 and b.team_actions == acts, "Ultime hors tour : énergie vidée, aucun tour consommé")
 	var boss: BattleUnit = b.units[3]
 	check(boss.max_toughness == float(tt["toughness"]["boss"]) and not boss.weakness.is_empty(), "Boss : Ténacité et faiblesses propres")
 	for k in int(tt["charge"]["every"]):
@@ -781,14 +784,25 @@ func test_tactics() -> void:
 		if u.team == 0:
 			hp1 += u.hp
 	check(hp1 < hp0 and boss.charging == 0, "Charge non brisée : Oblitération sur l'équipe")
-	var fb := BattleEngine.new(["montana", "nyssa"], Tower.enemy_units(12), 4)
-	var plain := BattleEngine.new(["montana"], ["ghost"], 4)
-	fb.enable_tactics()
-	var fav := unit_of(fb, "montana")
-	check(fav.stat("atk") > unit_of(plain, "montana").stat("atk") and fb.ult_ready(fav), "Kit de Montana : arme contre Prométhée (ATK, ultime prêt)")
+	# armes anti-boss : actions anodines du kit, décisives contre un boss précis
 	check(Tower.boss_banes("promethee") == ["montana", "nyssa"] and Tower.boss_banes("geode") == ["mello", "yass"],
 		"Armes anti-boss : un 5★ et un Épique de la même nation")
-	check(unit_of(fb, "nyssa").energy < float(tt["energy_max"]), "Nyssa : version épique, moins forte")
+	var fb := BattleEngine.new(["montana", "mikhaila"], Tower.enemy_units(12), 4)
+	var pro: BattleUnit = fb.units[2]
+	var mk := unit_of(fb, "mikhaila")
+	fb._try_apply(pro, mk, {"id": "clef", "no_roll": true})
+	pro.base["res"] = -500
+	fb.execute(unit_of(fb, "montana"), unit_of(fb, "montana").skill(1), null, 1)
+	check(not mk.has_effect("clef") and pro.flags.has("no_revive"), "Montana : Kairos efface les Clefs et annule la résurrection")
+	pro.hp = 1.0
+	fb._apply_damage(pro, 10.0, mk, {})
+	check(not pro.is_alive(), "Prométhée sous Room : il ne se relève pas")
+	var gb := BattleEngine.new(["mello"], Tower.enemy_units(25), 4)
+	var geo: BattleUnit = gb.units[1]
+	gb.execute(geo, geo.skill(2), null, 2)
+	var had := geo.has_effect("shield") and geo.has_effect("dmg_reduce")
+	gb.execute(unit_of(gb, "mello"), unit_of(gb, "mello").skill(0), geo, 0)
+	check(had and not geo.has_effect("shield") and not geo.has_effect("dmg_reduce"), "Mello : Flamme bleue brise le Prisme cristallin")
 	var w := BattleEngine.new(["montana", "adrian", "noor_el"], ["ghost"], 3)
 	w.enable_tactics()
 	check(w.sp_max == int(tt["sp_max"]) + int(tt["resonance"]["triad_sp_max"]), "Triade : un Sceau max de plus")

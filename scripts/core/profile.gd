@@ -13,6 +13,7 @@ var next_relic_uid := 1
 var equipped: Dictionary = {}       # id du perso -> {"1".."6": uid}
 var team: Array[String] = []
 var tower_cleared := 0              # plus haut étage gagné
+var seen_tips := {}                 # tutoriels déjà vus (id -> true)
 var tower_stars := {}               # étage -> étoiles obtenues (masque : 1 victoire, 2 aucun K.O., 4 victoire rapide)
 var gacha_state: Dictionary = {}
 var energy := 0
@@ -388,7 +389,7 @@ func to_dict() -> Dictionary:
 	return {
 		"version": SAVE_VERSION, "owned": owned, "currencies": currencies, "relics": relics,
 		"next_relic_uid": next_relic_uid, "equipped": equipped, "team": team,
-		"tower_cleared": tower_cleared, "tower_stars": tower_stars, "gacha_state": gacha_state,
+		"tower_cleared": tower_cleared, "tower_stars": tower_stars, "seen_tips": seen_tips, "gacha_state": gacha_state,
 		"energy": energy, "energy_time": energy_time, "formations": formations, "loot": loot,
 		"grants_received": grants_received, "unseen": unseen,
 	}
@@ -413,6 +414,8 @@ static func from_dict(d: Dictionary) -> Profile:
 			p.equipped[id][slot] = int(d["equipped"][id][slot])
 	p.team.assign(d.get("team", []))
 	p.tower_cleared = int(d.get("tower_cleared", 0))
+	for k: String in d.get("seen_tips", {}):
+		p.seen_tips[k] = true
 	for k: String in d.get("tower_stars", {}):
 		p.tower_stars[k] = int(d["tower_stars"][k])
 	p.gacha_state = d.get("gacha_state", {})
