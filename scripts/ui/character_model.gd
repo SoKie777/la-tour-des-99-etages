@@ -6,11 +6,23 @@ extends Node3D
 
 const BASE_SCENE := "res://assets/mixamo/ybot_idle.fbx"
 const ANIM_DIR := "res://assets/mixamo/anims/"
-const LOOPS := ["idle"]
-## Action du combat -> animation Mixamo
+const LOOPS := ["idle", "idle_caster"]
+## Action du combat -> animation Mixamo (par défaut)
 const MAP := {
 	"idle": "idle", "attack": "cross", "skill": "punch_combo", "ultimate": "hurricane_kick",
-	"hit": "hit", "death": "ko", "victory": "victory",
+	"hit": "hit", "crit_hit": "hit_big", "death": "ko", "victory": "victory",
+}
+## Jeu d'animations de chaque personnage, selon son kit (remplace MAP action par action)
+const CHAR_MAP := {
+	"eirikr": {"attack": "hook", "ultimate": "flying_kick"},
+	"ymir": {"idle": "idle_caster", "attack": "cast_attack", "ultimate": "cast_area"},
+	"nidhogg": {"idle": "idle_caster", "attack": "cast_attack", "ultimate": "heal"},
+	"don_diego": {"attack": "cross", "skill": "taunt", "ultimate": "roar"},
+	"general_metal": {"attack": "punch_combo", "skill": "spin_back_kick", "ultimate": "hurricane_kick"},
+	"espion_lumiere": {"attack": "kick_high", "ultimate": "cast_area"},
+	"moussa": {"attack": "uppercut", "ultimate": "jump_attack"},
+	"issa": {"idle": "idle_caster", "attack": "cast_attack", "ultimate": "cast_buff"},
+	"mohamed": {"attack": "cast_attack", "ultimate": "flip_kick"},
 }
 const HOLD_AT_END := ["ko"]
 
@@ -21,6 +33,7 @@ var skel: Skeleton3D
 var ap: AnimationPlayer
 var meshes: Array[MeshInstance3D] = []
 var dead := false
+var anims: Dictionary = MAP
 
 
 static func _build_library() -> void:
@@ -62,6 +75,7 @@ static func available() -> bool:
 
 
 func setup(char_id: String, tint: Color, height_m: float = 1.75) -> void:
+	anims = MAP.merged(CHAR_MAP.get(char_id, {}), true)
 	var custom := "res://assets/models/%s.fbx" % char_id
 	var is_custom := ResourceLoader.exists(custom)
 	model = (load(custom if is_custom else BASE_SCENE) as PackedScene).instantiate()
@@ -90,7 +104,7 @@ func setup(char_id: String, tint: Color, height_m: float = 1.75) -> void:
 
 
 func play(action: String) -> void:
-	var anim: String = MAP.get(action, action)
+	var anim: String = anims.get(action, action)
 	if dead or _lib == null or not _lib.has_animation(anim):
 		return
 	if anim in HOLD_AT_END:
@@ -99,8 +113,8 @@ func play(action: String) -> void:
 
 
 func _on_finished(anim_name: StringName) -> void:
-	if not dead and str(anim_name) != "fx/idle":
-		ap.play("fx/idle")
+	if not dead and not str(anim_name).trim_prefix("fx/") in LOOPS:
+		ap.play("fx/" + anims["idle"])
 
 
 func _toon(c: Color) -> StandardMaterial3D:

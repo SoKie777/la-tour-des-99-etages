@@ -89,7 +89,7 @@ func _on_battle_event(ev: Dictionary) -> void:
 	match ev["type"]:
 		"damage":
 			_float_text(ev["target"], str(int(ev["amount"])) + ("!" if ev.get("crit", false) else ""), Color("ff6b5b") if ev.get("crit", false) else Color.WHITE)
-			_play_anim(ev["target"], "hit")
+			_play_anim(ev["target"], "crit_hit" if ev.get("crit", false) else "hit")
 		"heal":
 			_float_text(ev["target"], "+" + str(int(ev["amount"])), Color("6bdc8a"))
 		"resist", "immune":

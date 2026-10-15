@@ -1,7 +1,7 @@
 extends SceneTree
 ## Photo de groupe du roster (contrôle visuel des modèles MPFB) :
-## godot --path . --script res://tools/lineup.gd -- [sortie.png] [animation]
-## Sans argument : user://lineup.png, pose « idle ».
+## godot --path . --script res://tools/lineup.gd -- [sortie.png] [action] [secondes]
+## Sans argument : user://lineup.png, action « idle », photo après 0,7 s.
 
 
 func _initialize() -> void:
@@ -36,8 +36,8 @@ func _initialize() -> void:
 	cam.fov = 45
 	world.add_child(cam)
 	cam.look_at(Vector3(0, 0.9, 0))
-	for _f in 40:
-		await process_frame
+	var wait_s: float = float(args[2]) if args.size() > 2 else 0.7
+	await create_timer(wait_s).timeout
 	root.get_texture().get_image().save_png(out)
 	print("LINEUP ", ProjectSettings.globalize_path(out))
 	quit()
