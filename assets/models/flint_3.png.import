@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://baiv1eb61jy06"
+uid="uid://wkaujd1x74vh"
 path.s3tc="res://.godot/imported/flint_3.png-b280075a8b0990a55988de5b25a3769a.s3tc.ctex"
 path.etc2="res://.godot/imported/flint_3.png-b280075a8b0990a55988de5b25a3769a.etc2.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "8b64b94c4fe011aa93a7dc35ccbb2da0"
+"md5": "5f02a8f8347d3a195bb7c2463d37e83f"
 }
 
 [deps]

@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bdfnhchwk6q7y"
+uid="uid://8el1wej1g0j3"
 path.s3tc="res://.godot/imported/nidhogg_0.png-04b4b992dd1b3053da36c0177caed9b1.s3tc.ctex"
 path.etc2="res://.godot/imported/nidhogg_0.png-04b4b992dd1b3053da36c0177caed9b1.etc2.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "43566c016103b22cc621275efe26b445"
+"md5": "e4e2728abebc24ac9ccad5a5623ca25d"
 }
 
 [deps]

@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dql38ake5rv2t"
+uid="uid://sq5sdf6wmsvu"
 path.s3tc="res://.godot/imported/espion_lumiere_1.png-50f92258fcf0b35369da018f5b2c4268.s3tc.ctex"
 path.etc2="res://.godot/imported/espion_lumiere_1.png-50f92258fcf0b35369da018f5b2c4268.etc2.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "67bd4a6045281c2f8aa7f28610223c5c"
+"md5": "a2a0ce522f64a72223daa227bb6b7ea2"
 }
 
 [deps]

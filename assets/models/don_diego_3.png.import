@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bivvysdrmbisw"
+uid="uid://ck16jhd6a6e7m"
 path.s3tc="res://.godot/imported/don_diego_3.png-928d5e197b5eacab80e3b9edd3e6d0c6.s3tc.ctex"
 path.etc2="res://.godot/imported/don_diego_3.png-928d5e197b5eacab80e3b9edd3e6d0c6.etc2.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "8b64b94c4fe011aa93a7dc35ccbb2da0"
+"md5": "5f02a8f8347d3a195bb7c2463d37e83f"
 }
 
 [deps]

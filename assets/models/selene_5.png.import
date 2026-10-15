@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://8x0ntglw1c13"
+uid="uid://di7ikrx0jujeu"
 path.s3tc="res://.godot/imported/selene_5.png-bd21086c53469907fc74faf3759147b4.s3tc.ctex"
 path.etc2="res://.godot/imported/selene_5.png-bd21086c53469907fc74faf3759147b4.etc2.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "2ee56d2a07d2fc9099f00f97ff8f9377"
+"md5": "86461516f1afc0ffd6d48470c524f79c"
 }
 
 [deps]

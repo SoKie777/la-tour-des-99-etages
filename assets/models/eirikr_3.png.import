@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://desne77j7glb7"
+uid="uid://bo5hrc5i3glyh"
 path.s3tc="res://.godot/imported/eirikr_3.png-1b27c869a6e665c01a47b484d3c55f1a.s3tc.ctex"
 path.etc2="res://.godot/imported/eirikr_3.png-1b27c869a6e665c01a47b484d3c55f1a.etc2.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "8b64b94c4fe011aa93a7dc35ccbb2da0"
+"md5": "5f02a8f8347d3a195bb7c2463d37e83f"
 }
 
 [deps]

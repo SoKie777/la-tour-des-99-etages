@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d0a1eu3s5rkr6"
+uid="uid://dd1t51cmduv32"
 path.s3tc="res://.godot/imported/noor_el_2.png-abea9d4a263a02101fbbebcb4486add7.s3tc.ctex"
 path.etc2="res://.godot/imported/noor_el_2.png-abea9d4a263a02101fbbebcb4486add7.etc2.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "ec8197343b819e46f38d9488d56f82eb"
+"md5": "c66637ec6ed046575d2beebd323338c9"
 }
 
 [deps]

@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d4f8w7vd5wjl8"
+uid="uid://dqkg372dgwm2r"
 path.s3tc="res://.godot/imported/montana_0.png-c4f6b5213774ee17d7fa86d9baeb0f71.s3tc.ctex"
 path.etc2="res://.godot/imported/montana_0.png-c4f6b5213774ee17d7fa86d9baeb0f71.etc2.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "f56627b69c40e0500e104f3d0c824677"
+"md5": "2ae7cb8cdd1a6642f90e8ebda64c4b69"
 }
 
 [deps]

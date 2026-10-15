@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bv78mrrhkhsco"
+uid="uid://dq40n2i6uo4c"
 path.s3tc="res://.godot/imported/general_metal_5.png-29e53b75432069e65801c51046c12668.s3tc.ctex"
 path.etc2="res://.godot/imported/general_metal_5.png-29e53b75432069e65801c51046c12668.etc2.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "6af398029006676655e45e3c925b82e4"
+"md5": "28de0ee477966633e444734f42a5bdac"
 }
 
 [deps]

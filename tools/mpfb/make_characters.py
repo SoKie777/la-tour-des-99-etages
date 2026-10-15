@@ -63,6 +63,26 @@ def simplify_materials():
                     if "normal" not in key and "bump" not in key and "rough" not in key and "spec" not in key:
                         diffuse = n
                         break
+            if diffuse is not None:  # taille utile à l'écran d'un téléphone (APK et dépôt plus légers)
+                oname = ob.name.lower()
+                if "suit" in oname or "shoes" in oname or "fedora" in oname:
+                    side = 16  # vêtements peints en couleurs de sommets : la texture n'est pas affichée
+                elif "eye" in oname or "brow" in oname or "lash" in oname:
+                    side = 256
+                elif ob.type == "MESH" and ob.name.endswith("_body"):
+                    side = 1024
+                else:
+                    side = 512  # cheveux
+                img = diffuse.image
+                if img.size[0] > side:
+                    import tempfile, re
+                    img.scale(side, side)
+                    # l'export FBX embarque le fichier : on enregistre la version réduite
+                    tmp = os.path.join(tempfile.gettempdir(), "t99_textures")
+                    os.makedirs(tmp, exist_ok=True)
+                    img.filepath_raw = os.path.join(tmp, re.sub(r"[^A-Za-z0-9_.-]", "_", img.name) + "_%d.png" % side)
+                    img.file_format = "PNG"
+                    img.save()
             new = bpy.data.materials.new(mat.name + "_fbx")
             new.use_nodes = True
             nt = new.node_tree

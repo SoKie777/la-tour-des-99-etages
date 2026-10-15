@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://38j1avpaft2b"
+uid="uid://dues1pk8etdx6"
 path.s3tc="res://.godot/imported/saraya_2.png-7b30be92455c2c1dc4ff2ca08158152c.s3tc.ctex"
 path.etc2="res://.godot/imported/saraya_2.png-7b30be92455c2c1dc4ff2ca08158152c.etc2.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "67bd4a6045281c2f8aa7f28610223c5c"
+"md5": "a2a0ce522f64a72223daa227bb6b7ea2"
 }
 
 [deps]
