@@ -1,0 +1,87 @@
+{
+  "_comment": "Roster MVP (doc 'MVP : triangle des nations et roster', 14/10/2026). Stats niveau max. TC/DC/PRE/RES en points de %. Rareté = proposition à valider.",
+  "characters": [
+    {
+      "id": "eirikr", "name": "Eiríkr", "nation": "A", "class": "dps_single", "voie": "Puer Aeternus", "affinity": "Cosmos", "rarity": 5,
+      "stats": {"hp": 4300, "atk": 1150, "def": 450, "spd": 105, "cr": 15, "cd": 60, "acc": 0, "res": 5},
+      "skills": [
+        {"name": "Froid insignifiant", "target": "enemy", "hits": [{"scale": "atk", "mult": 1.0}]},
+        {"name": "Étincelle", "passive": "spark", "desc": "Touché : +5 TC et +10 % DC jusqu'à la fin du combat (5 cumuls max)."},
+        {"name": "Brèche gravitationnelle", "cd": 5, "target": "enemy", "hits": [{"scale": "atk", "mult": 2.6, "ignore_def": 0.2}]}
+      ]
+    },
+    {
+      "id": "ymir", "name": "Ymir", "nation": "A", "class": "neutralizer", "voie": "Sage", "affinity": "Eau", "rarity": 5,
+      "stats": {"hp": 4200, "atk": 800, "def": 450, "spd": 112, "cr": 5, "cd": 50, "acc": 45, "res": 15},
+      "skills": [
+        {"name": "Voile d'eau", "target": "enemy", "hits": [{"scale": "atk", "mult": 0.9}], "effects": [{"id": "sleep", "chance": 50, "turns": 2}]},
+        {"name": "Lecture du Sage", "passive": "sage_reading", "desc": "+20 PRÉ contre les ennemis qui ont un bonus actif."},
+        {"name": "Mer d'illusions", "cd": 5, "target": "all_enemies", "hits": [{"scale": "atk", "mult": 0.7}], "effects": [{"id": "sleep", "chance": 60, "turns": 2}]}
+      ]
+    },
+    {
+      "id": "nidhogg", "name": "Nidhogg", "nation": "A", "class": "support", "voie": "Souverain", "affinity": "Lumière", "rarity": 4,
+      "stats": {"hp": 4500, "atk": 800, "def": 500, "spd": 110, "cr": 5, "cd": 50, "acc": 0, "res": 30},
+      "skills": [
+        {"name": "Édit", "target": "enemy", "hits": [{"scale": "atk", "mult": 1.0}]},
+        {"name": "Un roi ne pleure pas", "passive": "cc_immune", "desc": "Immunité aux contrôles (Sommeil, Étourdissement, Gel)."},
+        {"name": "Couronne de lumière", "cd": 5, "target": "all_allies", "effects": [{"id": "atk_up", "value": 25, "turns": 2}, {"id": "cd_up", "value": 25, "turns": 2}]}
+      ]
+    },
+    {
+      "id": "don_diego", "name": "Don Diego Lopez", "nation": "B", "class": "tank_def", "voie": "Souverain", "affinity": "Lumière", "rarity": 5,
+      "stats": {"hp": 6500, "atk": 700, "def": 850, "spd": 92, "cr": 5, "cd": 50, "acc": 20, "res": 20},
+      "skills": [
+        {"name": "Sceptre", "target": "enemy", "hits": [{"scale": "def", "mult": 1.5}]},
+        {"name": "Ordre de bataille", "cd": 3, "target": "all_enemies", "effects": [{"id": "atk_down", "value": 20, "chance": 70, "turns": 2}], "self_effects": [{"id": "taunt", "turns": 2}]},
+        {"name": "Citadelle", "cd": 5, "target": "all_allies", "effects": [{"id": "shield", "value": 15, "of": "caster_max_hp", "turns": 2}], "self_effects": [{"id": "taunt", "turns": 2}]}
+      ]
+    },
+    {
+      "id": "general_metal", "name": "Général de Métal", "nation": "B", "class": "dps_aoe", "voie": "Guerrier", "affinity": "Fer", "rarity": 5,
+      "stats": {"hp": 4500, "atk": 1050, "def": 500, "spd": 100, "cr": 10, "cd": 60, "acc": 0, "res": 10},
+      "skills": [
+        {"name": "Taille de fer", "target": "enemy", "hits": [{"scale": "atk", "mult": 1.0}], "gain_fury": 1},
+        {"name": "Balayage de lame", "cd": 3, "target": "all_enemies", "hits": [{"scale": "atk", "mult": 0.6}], "gain_fury": 1},
+        {"name": "Tempête d'acier", "cd": 5, "target": "all_enemies", "hits": [{"scale": "atk", "mult": 1.1, "per_fury": 0.15}], "consume_fury": true}
+      ],
+      "passive_always": "fury"
+    },
+    {
+      "id": "espion_lumiere", "name": "Espion de Lumière", "nation": "B", "class": "neutralizer", "voie": "Chercheur", "affinity": "Vent", "rarity": 4,
+      "stats": {"hp": 3900, "atk": 850, "def": 400, "spd": 118, "cr": 5, "cd": 50, "acc": 50, "res": 10},
+      "skills": [
+        {"name": "Aiguille de lumière", "target": "enemy", "hits": [{"scale": "atk", "mult": 0.9}], "effects": [{"id": "poison", "chance": 50, "turns": 2}]},
+        {"name": "Venin tenace", "passive": "lasting_poison", "desc": "Les Poisons posés durent 1 tour de plus."},
+        {"name": "Pluie d'aiguilles", "cd": 5, "target": "all_enemies", "hits": [{"scale": "atk", "mult": 0.6}], "effects": [{"id": "poison", "chance": 70, "turns": 2}]}
+      ]
+    },
+    {
+      "id": "moussa", "name": "Moussa", "nation": "C", "class": "tank_off", "voie": "Protecteur", "affinity": "Force physique", "rarity": 5,
+      "stats": {"hp": 6300, "atk": 650, "def": 800, "spd": 94, "cr": 10, "cd": 50, "acc": 0, "res": 20},
+      "skills": [
+        {"name": "Poing de pierre", "target": "enemy", "hits": [{"scale": "def", "mult": 1.5}]},
+        {"name": "Zéro perte", "passive": "zero_loss", "desc": "Une fois par combat, un allié qui devrait tomber à 0 PV reste à 1 PV."},
+        {"name": "Séisme du chef", "cd": 5, "target": "all_enemies", "hits": [{"scale": "def", "mult": 1.3}], "self_effects": [{"id": "def_up", "value": 30, "turns": 2}]}
+      ]
+    },
+    {
+      "id": "issa", "name": "Issa", "nation": "C", "class": "support", "voie": "Chercheur", "affinity": "Vent", "rarity": 4,
+      "stats": {"hp": 4300, "atk": 800, "def": 450, "spd": 115, "cr": 5, "cd": 50, "acc": 10, "res": 25},
+      "skills": [
+        {"name": "Rafale", "target": "enemy", "hits": [{"scale": "atk", "mult": 1.0}]},
+        {"name": "Brise vive", "passive": "breeze", "desc": "Début de chaque tour d'Issa : l'allié le plus blessé récupère 10 % de ses PV max."},
+        {"name": "Plan de bataille", "cd": 5, "target": "all_allies", "effects": [{"id": "cr_up", "value": 15, "turns": 2}, {"id": "spd_up", "value": 15, "turns": 2}]}
+      ]
+    },
+    {
+      "id": "mohamed", "name": "Mohamed", "nation": "C", "class": "dps_single", "voie": "Magicien", "affinity": "Ombre", "rarity": 5,
+      "stats": {"hp": 3900, "atk": 1200, "def": 380, "spd": 108, "cr": 20, "cd": 70, "acc": 0, "res": 0},
+      "skills": [
+        {"name": "Lame d'ombre", "target": "enemy", "hits": [{"scale": "atk", "mult": 1.0}]},
+        {"name": "Contre-attaque", "passive": "counter", "desc": "Quand Mohamed est visé : 30 % de chance de contre-attaquer (ATK ×80 %)."},
+        {"name": "Exécution de l'ombre", "cd": 5, "target": "enemy", "hits": [{"scale": "atk", "mult": 2.8, "low_hp_bonus": 0.3}]}
+      ]
+    }
+  ]
+}

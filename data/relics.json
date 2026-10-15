@@ -1,0 +1,27 @@
+{
+  "_comment": "6 emplacements. Combinaisons : un set de 4 + un set de 2, ou trois sets de 2. Stats principales par emplacement inspirées de Dislyte (Una I-IV / Mui I-II).",
+  "slots": {
+    "1": ["atk"],
+    "2": ["atk_pct", "def_pct", "hp_pct", "cr", "cd"],
+    "3": ["def"],
+    "4": ["atk_pct", "def_pct", "hp_pct", "acc", "res"],
+    "5": ["hp"],
+    "6": ["atk_pct", "def_pct", "hp_pct", "spd"]
+  },
+  "main_stat_max": {"atk": 160, "def": 160, "hp": 2400, "atk_pct": 48, "def_pct": 48, "hp_pct": 48, "cr": 36, "cd": 60, "acc": 48, "res": 48, "spd": 30},
+  "substat_pool": ["atk", "atk_pct", "def", "def_pct", "hp", "hp_pct", "spd", "cr", "cd", "acc", "res"],
+  "substat_roll": {"atk": [10, 20], "atk_pct": [4, 8], "def": [10, 20], "def_pct": [4, 8], "hp": [150, 300], "hp_pct": [4, 8], "spd": [2, 5], "cr": [3, 6], "cd": [4, 7], "acc": [4, 8], "res": [4, 8]},
+  "max_level": 15,
+  "substat_milestones": [3, 6, 9, 12, 15],
+  "sets": {
+    "attaque":    {"boss": "orion",        "size": 2, "bonus": {"atk_pct": 15}},
+    "vitesse":    {"boss": "orion",        "size": 2, "bonus": {"spd_pct": 12}},
+    "orion_4":    {"boss": "orion",        "size": 4, "bonus": {}, "special": "a_definir"},
+    "defense":    {"boss": "sirius",       "size": 2, "bonus": {"def_pct": 15}},
+    "immunite":   {"boss": "sirius",       "size": 2, "bonus": {}, "special": "start_immunity_1"},
+    "vampirisme": {"boss": "sirius",       "size": 4, "bonus": {}, "special": "lifesteal_20"},
+    "vie":        {"boss": "grande_ourse", "size": 2, "bonus": {"hp_pct": 15}},
+    "precision":  {"boss": "grande_ourse", "size": 2, "bonus": {"acc": 20}},
+    "gel":        {"boss": "grande_ourse", "size": 4, "bonus": {}, "special": "freeze_on_hit_10"}
+  }
+}

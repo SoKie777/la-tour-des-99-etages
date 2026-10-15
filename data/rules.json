@@ -1,0 +1,43 @@
+{
+  "_comment": "Constantes de combat. Toutes réglables en playtest sans toucher au code.",
+  "ap_constant": 1000,
+  "_tick_mode": "continuous = temps exact jusqu'au prochain 100 % (recommandé). discrete = +VIT/1000 par tic, mais VIT 100 a 111 jouent alors au même rythme.",
+  "tick_mode": "continuous",
+  "def_constant": 1000,
+  "variance_min": 0.95,
+  "variance_max": 1.05,
+  "crit_cap": 100,
+  "effect_chance_min": 15,
+  "effect_chance_max": 100,
+  "triangle": {
+    "beats": {"orion": "grande_ourse", "grande_ourse": "sirius", "sirius": "orion"},
+    "nation_constellation": {"A": "orion", "B": "grande_ourse", "C": "sirius"},
+    "dominant_crit_bonus": 20,
+    "dominated_damage_mult": 0.85
+  },
+  "skill2_cd_default": 3,
+  "skill3_cd_default": 5,
+  "skill3_initial_cd": 2,
+  "max_actions": 300,
+  "effects": {
+    "burn":      {"kind": "debuff", "dot_on": "turn_start", "dot_pct_caster_atk": 35},
+    "poison":    {"kind": "cc",     "dot_on": "after_action", "dot_pct_caster_atk": 40},
+    "curse":     {"kind": "cc",     "dot_on": "turn_start", "dot_pct_caster_atk": 40},
+    "slow":      {"kind": "debuff", "stat": "spd", "pct": -30},
+    "def_break": {"kind": "debuff", "stat": "def", "pct": -20},
+    "disorient": {"kind": "debuff", "stat": "atk", "pct": -25},
+    "atk_down":  {"kind": "debuff", "stat": "atk", "pct_from_value": -1},
+    "silence":   {"kind": "debuff"},
+    "sleep":     {"kind": "cc", "skip_turn": true, "wake_on_hit": true, "hard_cc": true},
+    "stun":      {"kind": "cc", "skip_turn": true, "hard_cc": true},
+    "freeze":    {"kind": "cc", "skip_turn": true, "hard_cc": true, "blocks_ap_gain": true},
+    "taunt":     {"kind": "buff"},
+    "immunity":  {"kind": "buff"},
+    "atk_up":    {"kind": "buff", "stat": "atk", "pct_from_value": 1},
+    "def_up":    {"kind": "buff", "stat": "def", "pct_from_value": 1},
+    "spd_up":    {"kind": "buff", "stat": "spd", "pct_from_value": 1},
+    "cr_up":     {"kind": "buff", "stat": "cr", "flat_from_value": 1},
+    "cd_up":     {"kind": "buff", "stat": "cd", "flat_from_value": 1},
+    "shield":    {"kind": "buff"}
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "_comment": "Taux calqués sur Dislyte (90/9/1, pity Légendaire à 120, Épique garanti toutes les 20 invocations, vedette x2). A ajuster.",
+  "banners": {
+    "standard": {
+      "name": "Appel de la Tour",
+      "cost_currency": "eclat_de_voeu",
+      "rates": {"3": 90.0, "4": 9.0, "5": 1.0},
+      "hard_pity_5": 120,
+      "guarantee_4_every": 20,
+      "featured": [],
+      "featured_multiplier": 1.0
+    },
+    "featured_eirikr": {
+      "name": "L'Étincelle d'Orion",
+      "cost_currency": "eclat_de_voeu",
+      "rates": {"3": 90.0, "4": 9.0, "5": 1.0},
+      "hard_pity_5": 120,
+      "guarantee_4_every": 20,
+      "featured": ["eirikr"],
+      "featured_multiplier": 2.0
+    }
+  },
+  "three_star_pool": ["recrue_orion", "recrue_ourse", "recrue_sirius"]
+}

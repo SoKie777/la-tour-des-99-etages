@@ -1,0 +1,28 @@
+; Engine configuration file.
+
+config_version=5
+
+[application]
+
+config/name="La Tour des 99 Étages"
+config/description="Gacha RPG tour par tour à barre d'action (MVP)."
+run/main_scene="res://scenes/main.tscn"
+config/icon="res://icon.svg"
+config/features=PackedStringArray("4.5", "Mobile")
+
+[autoload]
+
+Session="*res://scripts/autoload/session.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=0
+
+[rendering]
+
+renderer/rendering_method="mobile"
+textures/vram_compression/import_etc2_astc=true
