@@ -1,4 +1,4 @@
-# La Tour des 99 Étages — Game Design Document (v0.1)
+# T99 — Game Design Document (v0.4)
 
 Synthèse de la *Bible d'univers* et du document *MVP : triangle des nations et roster* (14/10/2026),
 complétée par les systèmes de **Dislyte** que l'on reprend. La direction musicale de Dislyte

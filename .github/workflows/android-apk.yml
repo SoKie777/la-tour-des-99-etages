@@ -71,7 +71,7 @@ jobs:
           echo "APP_VERSION=${name}" >> "$GITHUB_ENV"
           sed -i "s/^version\/name=.*/version\/name=\"${name}\"/; s/^version\/code=.*/version\/code=${GITHUB_RUN_NUMBER}/" \
             "$PROJECT_DIR/export_presets.cfg"
-          echo "APK_NAME=tour99-${name}.apk" >> "$GITHUB_ENV"
+          echo "APK_NAME=t99-${name}.apk" >> "$GITHUB_ENV"
 
       - name: Exporter l'APK
         run: |
@@ -94,11 +94,11 @@ jobs:
         with:
           tag_name: v${{ env.APP_VERSION }}
           target_commitish: ${{ github.sha }}
-          name: La Tour des 99 Étages v${{ env.APP_VERSION }}
+          name: T99 v${{ env.APP_VERSION }}
           files: build/${{ env.APK_NAME }}
           prerelease: true
           body: |
-            APK de test (debug) de La Tour des 99 Étages, version ${{ env.APP_VERSION }}.
+            APK de test (debug) de T99, version ${{ env.APP_VERSION }}.
             Sur Android : télécharger le fichier .apk, l'ouvrir, autoriser l'installation depuis cette source.
 
       - name: Release « dernière version » (lien fixe pour le téléphone)
@@ -106,8 +106,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp "build/$APK_NAME" build/tour99-derniere.apk
+          cp "build/$APK_NAME" build/t99-derniere.apk
           gh release delete apk-latest --yes --cleanup-tag || true
-          gh release create apk-latest build/tour99-derniere.apk \
+          gh release create apk-latest build/t99-derniere.apk \
             --title "APK – dernière version (v${APP_VERSION})" \
             --notes "Toujours la dernière version. Compilé depuis ${GITHUB_SHA::7}." --prerelease

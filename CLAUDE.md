@@ -1,6 +1,8 @@
-# CLAUDE.md — La Tour des 99 Étages
+# CLAUDE.md — T99
 
-Gacha RPG 3v3 à barre d'action inspiré de Dislyte (sans sa partie musique). **Godot 4.7**, GDScript typé.
+Jeu : **T99** (anciennement « La Tour des 99 Étages », qui reste le nom de la Tour dans l'univers).
+Gacha RPG 3v3 à barre d'action inspiré de Dislyte (sans sa partie musique).
+Ne pas changer l'identifiant Android `com.tour99.mvp` : un nouvel identifiant installerait une autre appli (sauvegarde perdue). **Godot 4.7**, GDScript typé.
 L'utilisateur ne code pas : il se connecte ou télécharge quand c'est nécessaire (Mixamo, installations).
 Il parle français : écrire docs, commits et textes du jeu en français.
 

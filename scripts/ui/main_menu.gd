@@ -7,7 +7,7 @@ var reset_armed := false
 
 
 func _ready() -> void:
-	var content := UiKit.screen(self, "LA TOUR DES 99 ÉTAGES", "")
+	var content := UiKit.screen(self, "T99", "")
 	var cols := HBoxContainer.new()
 	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	cols.add_theme_constant_override("separation", 24)
