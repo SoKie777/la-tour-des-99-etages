@@ -57,7 +57,12 @@ func _result_card(r: Dictionary) -> Control:
 	p.add_theme_stylebox_override("panel", UiKit.panel_style(Color(col, 0.22), col, 3 if r.get("new", false) else 1))
 	p.custom_minimum_size = Vector2(220, 80)
 	var tail := "NOUVEAU !" if r.get("new", false) else "+%d Fragments" % int(r.get("fragments", 0))
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 8)
+	p.add_child(h)
+	h.add_child(UiKit.portrait(r["id"], 72))
 	var l := UiKit.label("%s\n%s\n%s" % ["★".repeat(rarity), UiKit.char_name(r["id"]), tail], 15, col)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	p.add_child(l)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(l)
 	return p

@@ -249,8 +249,7 @@ func _on_battle_event(ev: Dictionary) -> void:
 				if models.has(t):
 					models[t].flash(Color(1, 1, 1, 0.7) if not crit else Color(1, 0.7, 0.45, 0.9), 0.18)
 				if pawns.has(t):
-					BattleFx.burst(self, pawns[t].position + Vector3(0, 1.2, 0), _col(src) if src != null else Color.WHITE,
-						30 if crit else 16, 5.5 if crit else 4.0)
+					BattleFx.ink_splash(self, pawns[t].position + Vector3(0, 1.2, 0.3), _col(src) if src != null else Color.WHITE, crit)
 				_shake(0.45 if crit else 0.22)
 				if crit:
 					_hitstop(0.07)
@@ -262,7 +261,7 @@ func _on_battle_event(ev: Dictionary) -> void:
 			if models.has(t):
 				models[t].flash(Color(0.36, 1.0, 0.6, 0.6), 0.35)
 			if pawns.has(t):
-				BattleFx.burst(self, pawns[t].position + Vector3(0, 0.4, 0), Color("6bffa0"), 14, 1.6, 0.07, 0.9, true)
+				BattleFx.petals(self, pawns[t].position + Vector3(0, 0.5, 0))
 		"resist", "immune":
 			_float_text(ev["target"], "Résiste", Color("a0a0b8"), 0.6)
 		"miss":
@@ -638,10 +637,13 @@ func _build_action_bar(root: Control) -> void:
 		var st := UiKit.panel_style(Color(_col(u), 0.85), Color.WHITE if u.team == 0 else Color("ff6060"), 1, 5)
 		st.set_content_margin_all(2)
 		m.add_theme_stylebox_override("panel", st)
-		var l := UiKit.label(u.display_name.substr(0, 3), 11, Color.WHITE)
-		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		l.custom_minimum_size = Vector2(30, 0)
-		m.add_child(l)
+		if UiKit.portrait_texture(u.id) != null:
+			m.add_child(UiKit.portrait(u.id, 28))
+		else:
+			var l := UiKit.label(u.display_name.substr(0, 3), 11, Color.WHITE)
+			l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			l.custom_minimum_size = Vector2(30, 0)
+			m.add_child(l)
 		m.position = Vector2(0, 30 if u.team == 0 else 0)  # alliés sous la ligne, ennemis au-dessus
 		m.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		holder.add_child(m)
@@ -655,8 +657,14 @@ func _make_card(u: BattleUnit) -> Control:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 2)
 	panel.add_child(v)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 6)
+	v.add_child(head)
+	if UiKit.portrait_texture(u.id) != null:
+		head.add_child(UiKit.portrait(u.id, 30))
 	var name_label := UiKit.label(u.display_name, 14)
-	v.add_child(name_label)
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	head.add_child(name_label)
 	var hp := ProgressBar.new()
 	hp.max_value = u.max_hp()
 	hp.show_percentage = false

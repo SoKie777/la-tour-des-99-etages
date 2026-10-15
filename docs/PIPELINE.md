@@ -103,3 +103,9 @@ godot --headless --path . res://scenes/battle.tscn -- --smoke
 Changer `VERSION`, puis committer et pousser sur `main`. On obtient :
 - une Release `vX.Y.Z` ;
 - la Release fixe **`apk-latest`**, qui contient toujours la dernière version (le lien ne change pas).
+
+## Icônes des personnages (style estampe ukiyo-e)
+1. `godot --path . --script res://tools/portraits.gd -- <dossier>` : photo de buste de chaque modèle 3D (fond transparent).
+2. `python tools/ukiyoe_portraits.py <dossier>` : aplats façon gravure sur bois, contour à l'encre, papier washi,
+   soleil à la couleur de la constellation, sceau rouge avec la rareté (三 四 五, 鬼 pour les boss) → `assets/portraits/<id>.png`.
+À relancer après chaque remodelage d'un personnage. `UiKit.portrait(id, taille)` affiche l'icône.

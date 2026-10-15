@@ -443,8 +443,9 @@ func _name_card(r: Dictionary) -> void:
 	var rar: int = r["rarity"]
 	var col: Color = UiKit.RARITY_COLORS[rar]
 	var box := VBoxContainer.new()
-	box.position = Vector2(-520, 470)
+	box.position = Vector2(-520, 310)
 	ui.add_child(box)
+	box.add_child(UiKit.portrait(r["id"], 150))
 	var rl := UiKit.label(["", "", "", "RARE", "ÉPIQUE", "LÉGENDAIRE"][rar], 22, col)
 	rl.add_theme_font_override("font", GAME_FONT)
 	box.add_child(rl)

@@ -2,11 +2,14 @@ class_name UiKit
 extends RefCounted
 ## Briques d'interface partagées par les écrans (couleurs, textes, boutons, vue 3D des personnages).
 
-const BG := Color("14121f")
-const PANEL := Color("201c30")
-const ACCENT := Color("c9a24a")
-const DIM := Color("8f8aa8")
-const CONST_COLORS := {"orion": Color("4d8fd6"), "grande_ourse": Color("c8553d"), "sirius": Color("9b6bd6")}
+# Palette d'estampe ukiyo-e : nuit indigo, or ocre, bleu de Prusse (bero-ai), vermillon (shu), glycine (fuji).
+const BG := Color("121726")
+const PANEL := Color("1d2337")
+const ACCENT := Color("d4a446")
+const DIM := Color("9a95a8")
+const PAPER := Color("ece0c6")
+const VERMILION := Color("c4281f")
+const CONST_COLORS := {"orion": Color("4a7ab8"), "grande_ourse": Color("c94f35"), "sirius": Color("8e6bb8")}
 const CONST_NAMES := {"orion": "Orion", "grande_ourse": "Grande Ourse", "sirius": "Sirius"}
 const RARITY_COLORS := {3: Color("8fa3c0"), 4: Color("b07de0"), 5: Color("e8b84a")}
 const CLASS_NAMES := {
@@ -292,6 +295,24 @@ static func screen(owner: Control, title: String, back_scene := "res://scenes/ma
 
 
 ## Carte d'un personnage : nom, étoiles, classe, liseré de constellation.
+## Icône estampe du personnage (assets/portraits, générées par tools/ukiyoe_portraits.py), ou null.
+static func portrait_texture(id: String) -> Texture2D:
+	var path := "res://assets/portraits/%s.png" % id
+	if not ResourceLoader.exists(path):
+		path = "res://assets/portraits/%s.png" % id.trim_suffix("_" + id.get_slice("_", id.get_slice_count("_") - 1))
+	return load(path) if ResourceLoader.exists(path) else null
+
+
+static func portrait(id: String, side: float) -> TextureRect:
+	var t := TextureRect.new()
+	t.texture = portrait_texture(id)
+	t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	t.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	t.custom_minimum_size = Vector2(side, side)
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return t
+
+
 static func char_card(id: String, cb: Callable, selected := false, locked := false) -> Button:
 	var b := Button.new()
 	b.custom_minimum_size = Vector2(170, 86)
@@ -304,6 +325,13 @@ static func char_card(id: String, cb: Callable, selected := false, locked := fal
 	var cls: String = CLASS_NAMES.get(GameData.character(id)["class"], "") if GameData.characters().has(id) else ""
 	b.text = "%s\n%s\n%s" % [char_name(id) if not locked else "???", "★".repeat(rarity), cls]
 	b.add_theme_color_override("font_color", RARITY_COLORS[rarity] if not locked else DIM)
+	if not locked:
+		b.icon = portrait_texture(id)
+		b.expand_icon = true
+		b.add_theme_constant_override("icon_max_width", 64)
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.clip_text = true  # un nom long ne doit pas écraser l'icône
+		b.add_theme_font_size_override("font_size", 14)
 	b.pressed.connect(cb)
 	return b
 
