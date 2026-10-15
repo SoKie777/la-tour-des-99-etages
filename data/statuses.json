@@ -381,5 +381,19 @@
     "duration": 3,
     "dmg_taken_per_stack": 8,
     "resistable": false
+  },
+  "venin_solaire": {
+    "name": "Venin solaire",
+    "kind": "debuff",
+    "max_stacks": 1,
+    "duration": 3,
+    "hooks": {
+      "on_expire": [
+        {
+          "do": "true_damage",
+          "pct_max_hp": 20
+        }
+      ]
+    }
   }
 }

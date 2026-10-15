@@ -1,0 +1,289 @@
+{
+  "_comment": "Boss de butin (Ritual Miracle de Dislyte), un par constellation. Noms et mécaniques PROVISOIRES (à remplacer par la fiche). Chaque boss donne les reliques de sa constellation. Paliers : power (PV, ATK, DEF), relics (nombre), relic_level (niveau de départ des reliques), punish (pénalité des équipes non dominantes : miss en %, dmg_taken en %).",
+  "energy_cost": 12,
+  "pity_wins": 8,
+  "difficulties": [
+    {
+      "id": "facile",
+      "name": "Facile",
+      "power": 1.0,
+      "relics": 2,
+      "relic_level": 0,
+      "pieces": 400
+    },
+    {
+      "id": "difficile",
+      "name": "Difficile",
+      "power": 1.35,
+      "relics": 2,
+      "relic_level": 3,
+      "pieces": 600
+    },
+    {
+      "id": "purgatoire",
+      "name": "Purgatoire",
+      "power": 1.8,
+      "relics": 3,
+      "relic_level": 6,
+      "pieces": 900,
+      "punish": {
+        "miss": 30,
+        "dmg_taken": 20
+      }
+    },
+    {
+      "id": "enfer",
+      "name": "Enfer",
+      "power": 2.4,
+      "relics": 3,
+      "relic_level": 9,
+      "pieces": 1300,
+      "punish": {
+        "miss": 40,
+        "dmg_taken": 35
+      }
+    }
+  ],
+  "bosses": {
+    "chronophage": {
+      "id": "chronophage",
+      "name": "Le Chronophage",
+      "constellation": "orion",
+      "class": "boss",
+      "rarity": 0,
+      "voie": "Gardien d'Orion",
+      "height_m": 2.2,
+      "sets": [
+        "attaque",
+        "vitesse",
+        "taux_critique"
+      ],
+      "mechanic": "Gagne 5 % de jauge à chaque tour d'un héros ; ses dégâts augmentent de 6 % à chacun de ses tours.",
+      "stats": {
+        "hp": 38500,
+        "atk": 735,
+        "def": 600,
+        "spd": 120,
+        "cr": 15,
+        "cd": 60,
+        "acc": 40,
+        "res": 50
+      },
+      "traits": {
+        "boss": "mid",
+        "gain_ap_on_enemy_turn": 5,
+        "ramp_dmg_per_turn": 6
+      },
+      "skills": [
+        {
+          "name": "Aiguilles du temps",
+          "target": "enemy",
+          "hits": [
+            {
+              "scale": "atk",
+              "mult": 0.6,
+              "repeat": 3
+            }
+          ],
+          "desc": "Frappe 3 fois un héros."
+        },
+        {
+          "name": "Sablier inversé",
+          "cd": 3,
+          "target": "all_enemies",
+          "hits": [
+            {
+              "scale": "atk",
+              "mult": 0.9
+            }
+          ],
+          "effects": [
+            {
+              "id": "ap_down",
+              "value": 20,
+              "chance": 60
+            }
+          ],
+          "desc": "Frappe toute l'équipe, 60 % de chance de lui retirer 20 % de jauge."
+        },
+        {
+          "name": "Fin des temps",
+          "target": "all_enemies",
+          "hits": [
+            {
+              "scale": "atk",
+              "mult": 1.8
+            }
+          ],
+          "desc": "Grosse frappe sur toute l'équipe."
+        }
+      ]
+    },
+    "wyrm": {
+      "id": "wyrm",
+      "name": "Le Wyrm de givre",
+      "constellation": "grande_ourse",
+      "class": "boss",
+      "rarity": 0,
+      "voie": "Gardien de la Grande Ourse",
+      "height_m": 2.4,
+      "sets": [
+        "gel",
+        "vie",
+        "precision"
+      ],
+      "mechanic": "3 barres de PV. À chaque barre perdue, il se couvre d'un bouclier (15 % de ses PV) ; s'il tient jusqu'à son tour, il gèle le héros le plus fort et l'écrase.",
+      "stats": {
+        "hp": 44000,
+        "atk": 700,
+        "def": 750,
+        "spd": 105,
+        "cr": 10,
+        "cd": 60,
+        "acc": 40,
+        "res": 60
+      },
+      "traits": {
+        "boss": "mid",
+        "hp_bars": 3,
+        "bar_shield_pct": 15,
+        "shield_punish": {
+          "mult": 2.6
+        }
+      },
+      "skills": [
+        {
+          "name": "Griffe gelée",
+          "target": "enemy",
+          "hits": [
+            {
+              "scale": "atk",
+              "mult": 1.1
+            }
+          ],
+          "effects": [
+            {
+              "id": "spd_down",
+              "value": 20,
+              "turns": 2,
+              "chance": 50
+            }
+          ],
+          "desc": "Frappe un héros, 50 % de chance de -20 % VIT."
+        },
+        {
+          "name": "Tempête de grêle",
+          "cd": 3,
+          "target": "all_enemies",
+          "hits": [
+            {
+              "scale": "atk",
+              "mult": 0.45,
+              "repeat": 2
+            }
+          ],
+          "desc": "Frappe toute l'équipe 2 fois."
+        },
+        {
+          "name": "Souffle polaire",
+          "target": "all_enemies",
+          "hits": [
+            {
+              "scale": "atk",
+              "mult": 1.3
+            }
+          ],
+          "effects": [
+            {
+              "id": "freeze",
+              "turns": 1,
+              "chance": 30
+            }
+          ],
+          "desc": "Frappe toute l'équipe, 30 % de chance de Gel."
+        }
+      ]
+    },
+    "serpent": {
+      "id": "serpent",
+      "name": "Le Serpent solaire",
+      "constellation": "sirius",
+      "class": "boss",
+      "rarity": 0,
+      "voie": "Gardien de Sirius",
+      "height_m": 2.2,
+      "sets": [
+        "vampirisme",
+        "defense",
+        "immunite"
+      ],
+      "mechanic": "Pose du Venin solaire : au bout de 3 tours, il explose (20 % des PV max) sauf si on le purge.",
+      "stats": {
+        "hp": 39500,
+        "atk": 700,
+        "def": 650,
+        "spd": 112,
+        "cr": 15,
+        "cd": 60,
+        "acc": 60,
+        "res": 50
+      },
+      "traits": {
+        "boss": "mid"
+      },
+      "skills": [
+        {
+          "name": "Crochets brûlants",
+          "target": "enemy",
+          "hits": [
+            {
+              "scale": "atk",
+              "mult": 1.0
+            }
+          ],
+          "effects": [
+            {
+              "id": "venin_solaire",
+              "chance": 70
+            }
+          ],
+          "desc": "Frappe un héros, 70 % de chance de Venin solaire."
+        },
+        {
+          "name": "Mue ardente",
+          "cd": 3,
+          "target": "self",
+          "self_effects": [
+            {
+              "id": "heal",
+              "value": 8
+            },
+            {
+              "id": "def_up",
+              "value": 30,
+              "turns": 2
+            }
+          ],
+          "desc": "Se soigne de 8 % de ses PV et gagne +30 % DEF pendant 2 tours."
+        },
+        {
+          "name": "Éclipse",
+          "target": "all_enemies",
+          "hits": [
+            {
+              "scale": "atk",
+              "mult": 1.2
+            }
+          ],
+          "effects": [
+            {
+              "id": "venin_solaire",
+              "chance": 80
+            }
+          ],
+          "desc": "Frappe toute l'équipe, 80 % de chance de Venin solaire."
+        }
+      ]
+    }
+  }
+}

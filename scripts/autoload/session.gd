@@ -33,6 +33,11 @@ func _ready() -> void:
 				profile.owned[id] = 1
 			profile.set_team(["montana", "mikhaila", "ghost"])
 			battle = {"mode": "tower", "floor": 12}
+		if "--loot" in OS.get_cmdline_user_args():  # boss de butin (Wyrm, Facile) : -- --smoke --loot
+			for id in ["mikhaila", "ghost", "montana"]:
+				profile.owned[id] = 1
+			profile.set_team(["montana", "ghost", "mikhaila"])
+			battle = {"mode": "loot", "boss": "wyrm", "diff": 0}
 		if "--v2" in OS.get_cmdline_user_args():  # combat du roster v2 : -- --smoke --v2
 			battle = {"mode": "test", "player": GameData.nation_team("A"), "enemy": GameData.nation_team("C")}
 		get_tree().create_timer(120.0).timeout.connect(func() -> void:
@@ -99,6 +104,17 @@ func start_tower_floor(number: int) -> bool:
 	return true
 
 
+## Lance un boss de butin au palier diff si l'énergie suffit.
+func start_loot(id: String, diff: int) -> bool:
+	var cost := int(LootBoss.cfg()["energy_cost"])
+	if not profile.spend_energy(cost, now()):
+		return false
+	save()
+	battle = {"mode": "loot", "boss": id, "diff": diff, "energy": cost}
+	get_tree().change_scene_to_file("res://scenes/battle.tscn")
+	return true
+
+
 ## Equipes du combat en cours : [joueur, ennemis] (listes de BattleUnit).
 func battle_teams() -> Array:
 	var players: Array[BattleUnit] = []
@@ -111,5 +127,8 @@ func battle_teams() -> Array:
 	else:
 		for id in profile.team:
 			players.append(profile.make_unit(id))
-		enemies = Tower.enemy_units(int(battle.get("floor", 1)))
+		if battle.get("mode", "") == "loot":
+			enemies = LootBoss.enemy_units(battle["boss"], int(battle["diff"]))
+		else:
+			enemies = Tower.enemy_units(int(battle.get("floor", 1)))
 	return [players, enemies]

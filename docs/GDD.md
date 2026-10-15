@@ -131,6 +131,24 @@ et s'illumine). En invocation simple, le personnage sort ensuite de la pièce ; 
 avancent ensemble et les résultats s'affichent. Bouton « Passer ». Pion noir et roi réservés.
 `scripts/ui/summon_cinematic.gd`.
 
+## 8 ter. Boss de butin (v0.4) — noms et mécaniques PROVISOIRES
+
+Un boss par constellation (`data/loot_bosses.json`), chacun donne les reliques de sa constellation ; 12
+d'énergie par combat (rendue en cas de défaite). Mécaniques inspirées des boss de Dislyte (fiche, partie 4) :
+
+| Boss | Constellation (dominé par) | Mécanique | Reliques |
+|---|---|---|---|
+| Le Chronophage | Orion (Sirius) | +5 % de jauge à chaque tour d'un héros, +6 % de dégâts par tour | Attaque, Vitesse, Taux critique |
+| Le Wyrm de givre | Grande Ourse (Orion) | 3 barres de PV ; bouclier à chaque barre ; s'il tient jusqu'à son tour, Gel et écrasement du héros le plus fort | Gel, Vie, Précision |
+| Le Serpent solaire | Sirius (Grande Ourse) | Venin solaire : explose au bout de 3 tours (20 % des PV) sauf purge | Vampirisme, Défense, Immunité |
+
+Paliers Facile / Difficile / Purgatoire / Enfer : puissance ×1 / 1,35 / 1,8 / 2,4, 2 à 3 reliques déjà
+montées à +0 / +3 / +6 / +9. Battre un palier débloque le suivant. En Purgatoire et en Enfer, les équipes
+qui ne dominent pas le boss ratent 30 à 40 % de leurs attaques et subissent +20 à 35 % de dégâts.
+Pitié : une relique du set choisi toutes les 8 victoires. Réglage (`tools/tune_loot.gd`, équipes de 2
+attaquants + 1 soutien, sans reliques) : tout le monde gagne en Facile ; en Difficile la constellation
+dominante gagne presque toujours ; Purgatoire et Enfer demandent des reliques.
+
 ## 9. Invocation et économie (v0.2, réglable dans `data/progression.json` et `data/tower.json`)
 
 - Monnaie premium : **Éclats de Vœu** (1 invocation = 1 éclat). Gagnés à la **première victoire** de chaque
@@ -231,5 +249,5 @@ Ymir. Ces chiffres sont des tendances ; il faut les refaire après chaque régla
 3. **v0.3** : roster v2 (15 Épiques et Légendaires, moteur de kits étendu : fait), modèles et animations
    des 15, équilibrage v2 (durée des combats, triangle), boss Prométhée (étage 12), cinématique
    d'invocation sur l'échiquier, 3 boss de butin, énergie.
-4. **v0.4** : progression (niveau, promotion, ascension), capitaine, premier tutoriel.
+4. **v0.4** : boss de butin (fait), puis progression (niveau, promotion, ascension), capitaine, premier tutoriel.
 5. **v0.5** : guerre de territoire (PvP asynchrone), serveur.

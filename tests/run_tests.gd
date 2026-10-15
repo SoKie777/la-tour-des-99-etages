@@ -18,6 +18,7 @@ func _init() -> void:
 	test_kits_v2()
 	test_generic_effects()
 	test_boss()
+	test_loot()
 	test_gacha()
 	test_relics()
 	test_profile()
@@ -493,6 +494,70 @@ func test_boss() -> void:
 	check(k2.has_effect("freeze"), "Aletheia : désactive un héros qui répète sa compétence")
 	e2.execute(p2, p2.skill(0), m2, 0)
 	check(m2.status_stacks("clef") == 2, "Ignis Divinus : une Clef par coup")
+
+
+## Boss de butin : mécaniques, récompenses, pitié, paliers, pénalité des équipes non dominantes.
+func test_loot() -> void:
+	print("Boss de butin")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 21
+	check(LootBoss.countered_by("chronophage") == "sirius" and LootBoss.countered_by("wyrm") == "orion", "Constellation qui domine chaque boss")
+	# Chronophage : jauge gagnée à chaque tour d'un héros, dégâts croissants
+	var e := BattleEngine.new(["mello"], LootBoss.enemy_units("chronophage", 0), 4)
+	var ch: BattleUnit = e.units[1]
+	ch.ap = 0.0
+	var mel := unit_of(e, "mello")
+	mel.ap = 1.0
+	e.next_turn()
+	check(ch.ap >= 0.05, "Chronophage : +5 % de jauge quand un héros joue")
+	e._start_turn(ch)
+	e._start_turn(ch)
+	approx(float(ch.flags["dmg_bonus_pct"]), 12.0, "Chronophage : +6 % de dégâts par tour")
+	# Wyrm : barre perdue -> bouclier ; bouclier intact à son tour -> Gel et écrasement
+	e = BattleEngine.new(["mello", "adrian"], LootBoss.enemy_units("wyrm", 0), 4)
+	var wy: BattleUnit = e.units[2]
+	e._apply_damage(wy, wy.max_hp() * 0.4, unit_of(e, "adrian"), {})
+	check(wy.shield_value() > 0.0 and wy.flags.has("bar_shield"), "Wyrm : barre perdue, bouclier")
+	var mel_hp := unit_of(e, "mello").hp
+	e._start_turn(wy)
+	check(unit_of(e, "mello").has_effect("freeze") and unit_of(e, "mello").hp < mel_hp, "Wyrm : bouclier intact -> le héros le plus fort est gelé et écrasé")
+	# Serpent : le Venin solaire explose à la fin (20 % PV max)
+	e = BattleEngine.new(["adrian"], LootBoss.enemy_units("serpent", 0), 4)
+	var adr := unit_of(e, "adrian")
+	e._try_apply(e.units[1], adr, {"id": "venin_solaire", "no_roll": true})
+	var hp := adr.hp
+	for i in 4:
+		e.current = adr
+		e._end_turn(adr)
+	approx(hp - adr.hp, roundf(adr.max_hp() * 0.2), "Venin solaire : explose à la fin (20 % des PV max)", 1.0)
+	# Pénalité aux paliers élevés : seule la constellation dominante est épargnée
+	e = BattleEngine.new(["noor_el", "montana"], LootBoss.enemy_units("chronophage", 3), 4)
+	var boss: BattleUnit = e.units[2]
+	var noor := unit_of(e, "noor_el")
+	var mon := unit_of(e, "montana")
+	var misses := [0, 0]
+	for i in 200:
+		if e._rolls_miss(noor, boss, noor.skill(0)):
+			misses[0] += 1
+		if e._rolls_miss(mon, boss, mon.skill(0)):
+			misses[1] += 1
+	check(misses[0] == 0 and misses[1] > 50, "Enfer : Sirius ne rate jamais le Chronophage, Orion rate (%d / 200)" % misses[1])
+	approx(e.compute_damage(boss, mon, 1000.0, {}, false, 1.0) / e.compute_damage(boss, noor, 1000.0, {}, false, 1.0) *
+		(1000.0 + mon.stat("def")) / (1000.0 + noor.stat("def")), 1.35 / 0.85, "Enfer : +35 % de dégâts sur les non-dominants", 0.02)
+	# Récompenses, paliers, pitié
+	var p := Profile.new_game()
+	var rw := p.win_loot("wyrm", 0, rng)
+	check(rw["relics"].size() == 2 and rw["relics"].all(func(r: Dictionary) -> bool: return r["set"] in ["gel", "vie", "precision"]), "Wyrm : 2 reliques de la Grande Ourse")
+	check(p.loot_state("wyrm")["unlocked"] == 1, "Victoire en Facile : Difficile débloqué")
+	var rw3 := LootBoss.rewards("wyrm", 3, rng)
+	check(rw3["relics"].size() == 3 and rw3["relics"].all(func(r: Dictionary) -> bool: return int(r["level"]) == 9), "Enfer : 3 reliques déjà à +9")
+	p.loot_state("wyrm")["pity_set"] = "precision"
+	var forced := ""
+	for i in 7:
+		forced = p.win_loot("wyrm", 0, rng)["pity_used"]
+	check(forced == "precision" and p.loot_state("wyrm")["pity"] == 0, "Pitié : relique du set choisi à la 8e victoire")
+	var back := Profile.from_dict(JSON.parse_string(JSON.stringify(p.to_dict())))
+	check(back.loot_state("wyrm")["wins"] == 8 and back.loot_state("wyrm")["pity_set"] == "precision", "Progression des boss de butin sauvegardée")
 
 
 func test_gacha() -> void:

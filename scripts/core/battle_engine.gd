@@ -139,6 +139,9 @@ func compute_damage(att: BattleUnit, tgt: BattleUnit, raw: float, opts: Dictiona
 		dmg *= float(rules["triangle"]["dominated_damage_mult"])
 	if att.has_passive("fury"):
 		dmg *= 1.0 + 0.08 * att.stack("fury")
+	var punish: Variant = att.get_trait("punish")
+	if punish != null and not dominates(tgt.constellation, att.constellation):
+		dmg *= 1.0 + float(punish.get("dmg_taken", 0.0)) / 100.0
 	if att.flags.has("dmg_bonus_pct"):  # phase de boss
 		dmg *= 1.0 + float(att.flags["dmg_bonus_pct"]) / 100.0
 	if opts.has("low_hp_bonus") and tgt.hp_ratio() < 0.5:
@@ -201,6 +204,9 @@ func next_turn() -> BattleUnit:
 	total_actions += 1
 	current.actions_taken += 1
 	_emit({"type": "turn_start", "actor": current})
+	for x in alive_units():  # Chronophage : chaque tour d'un héros le nourrit
+		if x.team != current.team and x.get_trait("gain_ap_on_enemy_turn") != null:
+			x.ap = minf(1.0, x.ap + float(x.get_trait("gain_ap_on_enemy_turn")) / 100.0)
 	_start_turn(current)
 	if not current.is_alive():
 		_end_turn(current)
@@ -311,9 +317,15 @@ func execute(u: BattleUnit, sk: Dictionary, target: BattleUnit, idx: int, power 
 
 ## Raté (Dislyte) : seul le dominé peut rater, une fois par cible et par compétence.
 func _rolls_miss(u: BattleUnit, t: BattleUnit, sk: Dictionary) -> bool:
-	if sk.get("cannot_miss", false) or not dominates(t.constellation, u.constellation):
+	if sk.get("cannot_miss", false):
 		return false
-	return rng.randf() * 100.0 < float(rules["triangle"].get("dominated_miss_chance", 0.0))
+	var chance := 0.0
+	if dominates(t.constellation, u.constellation):
+		chance += float(rules["triangle"].get("dominated_miss_chance", 0.0))
+	var punish: Variant = t.get_trait("punish")  # boss de butin : seule la constellation dominante est épargnée
+	if punish != null and not dominates(u.constellation, t.constellation):
+		chance += float(punish.get("miss", 0.0))
+	return chance > 0.0 and rng.randf() * 100.0 < chance
 
 
 func _resolve_targets(u: BattleUnit, sk: Dictionary, target: BattleUnit, idx: int) -> Array[BattleUnit]:
@@ -499,6 +511,12 @@ func _start_turn(u: BattleUnit) -> void:
 	u.flags.erase("countered")
 	if u.has_passive("breeze"):
 		_heal(_lowest_hp(allies_of(u)), _lowest_hp(allies_of(u)).max_hp() * 0.10, u)
+	if u.get_trait("ramp_dmg_per_turn") != null:  # montée en puissance (Etheria)
+		u.flags["dmg_bonus_pct"] = float(u.flags.get("dmg_bonus_pct", 0.0)) + float(u.get_trait("ramp_dmg_per_turn"))
+	if u.flags.has("bar_shield"):  # bouclier de barre resté intact : le boss punit
+		u.flags.erase("bar_shield")
+		if u.has_effect("shield"):
+			_shield_punish(u)
 	if u.flags.has("self_burn_pct"):  # phase 2 de Prométhée : la surcharge brûle ses circuits
 		_apply_damage(u, u.max_hp() * float(u.flags["self_burn_pct"]) / 100.0, u, {"dot": "surcharge"})
 		if not u.is_alive():
@@ -697,6 +715,7 @@ func _apply_damage(tgt: BattleUnit, dmg: float, source: BattleUnit, info: Dictio
 	_emit(ev)
 	if tgt.is_alive():
 		_check_phases(tgt)
+		_check_bars(tgt)
 		if direct:
 			if tgt.has_effect("sleep"):
 				_remove_effect(tgt, "sleep")
@@ -721,6 +740,32 @@ func _apply_damage(tgt: BattleUnit, dmg: float, source: BattleUnit, info: Dictio
 		_emit({"type": "death", "target": tgt})
 		_on_death(tgt)
 	return dmg
+
+
+## Wyrm : le bouclier n'a pas été brisé à temps ; il gèle le héros le plus fort et l'écrase.
+func _shield_punish(u: BattleUnit) -> void:
+	var foes := enemies_of(u)
+	if foes.is_empty():
+		return
+	foes.sort_custom(func(a: BattleUnit, b: BattleUnit) -> bool: return a.stat("atk") > b.stat("atk"))
+	var t: BattleUnit = foes[0]
+	_emit({"type": "shield_punish", "actor": u, "target": t})
+	_try_apply(u, t, {"id": "freeze", "turns": 1, "cannot_resist": true})
+	_deal_damage(u, t, u.stat("atk") * float(u.get_trait("shield_punish", {}).get("mult", 2.5)), {})
+
+
+## Barres de PV (fiche, partie 4) : à chaque barre perdue, un bouclier à briser avant le tour du boss.
+func _check_bars(u: BattleUnit) -> void:
+	var n := int(u.get_trait("hp_bars", 1))
+	if n <= 1:
+		return
+	for k in range(n - 1, 0, -1):
+		if u.flags.has("bar_%d" % k) or u.hp_ratio() > float(k) / n:
+			continue
+		u.flags["bar_%d" % k] = true
+		u.flags["bar_shield"] = true
+		_emit({"type": "bar_break", "target": u, "bars_left": k})
+		_try_apply(u, u, {"id": "shield", "value": float(u.get_trait("bar_shield_pct", 15.0)), "of": "target_max_hp", "turns": 99})
 
 
 ## Phases de boss : au passage d'un seuil de PV, une seule fois chacune.

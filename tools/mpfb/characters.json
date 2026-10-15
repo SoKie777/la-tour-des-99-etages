@@ -1261,5 +1261,153 @@
     0.85
    ]
   }
+ },
+ "chronophage": {
+  "macros": {
+   "gender": 1.0,
+   "age": 0.75,
+   "muscle": 0.6,
+   "weight": 0.35,
+   "proportions": 0.5,
+   "height": 1.0
+  },
+  "race": {
+   "african": 0,
+   "asian": 0.3,
+   "caucasian": 0.7
+  },
+  "skin": "Old caucasian male",
+  "hair": "Long01",
+  "eyebrows": "Eyebrow005",
+  "clothes": [
+   "Male elegantsuit01",
+   "Shoes05"
+  ],
+  "paint": {
+   "top": [
+    0.12,
+    0.22,
+    0.45
+   ],
+   "inner": [
+    0.75,
+    0.88,
+    1.0
+   ],
+   "inner_w": 0.08,
+   "cuff": [
+    0.75,
+    0.88,
+    1.0
+   ],
+   "bottom": [
+    0.06,
+    0.1,
+    0.2
+   ],
+   "shoes": [
+    0.75,
+    0.88,
+    1.0
+   ],
+   "hair": [
+    0.85,
+    0.9,
+    0.95
+   ]
+  }
+ },
+ "wyrm": {
+  "macros": {
+   "gender": 1.0,
+   "age": 0.55,
+   "muscle": 1.0,
+   "weight": 0.85,
+   "proportions": 0.5,
+   "height": 1.0
+  },
+  "race": {
+   "african": 0,
+   "asian": 0.5,
+   "caucasian": 0.5
+  },
+  "skin": "Middleage asian male",
+  "hair": "",
+  "eyebrows": "Eyebrow005",
+  "clothes": [
+   "Male worksuit01",
+   "Shoes04"
+  ],
+  "paint": {
+   "top": [
+    0.55,
+    0.08,
+    0.1
+   ],
+   "sleeve": [
+    0.85,
+    0.92,
+    0.98
+   ],
+   "bottom": [
+    0.25,
+    0.05,
+    0.06
+   ],
+   "shoes": [
+    0.85,
+    0.92,
+    0.98
+   ]
+  }
+ },
+ "serpent": {
+  "macros": {
+   "gender": 0.0,
+   "age": 0.5,
+   "muscle": 0.55,
+   "weight": 0.35,
+   "proportions": 0.7,
+   "height": 1.0
+  },
+  "race": {
+   "african": 0.8,
+   "asian": 0,
+   "caucasian": 0.2
+  },
+  "skin": "Young african female",
+  "hair": "Braid01",
+  "eyebrows": "Eyebrow004",
+  "clothes": [
+   "Female elegantsuit01",
+   "Shoes02"
+  ],
+  "paint": {
+   "top": [
+    0.9,
+    0.74,
+    0.28
+   ],
+   "collar": [
+    0.35,
+    0.2,
+    0.05
+   ],
+   "bottom": [
+    0.9,
+    0.74,
+    0.28
+   ],
+   "shoes": [
+    0.35,
+    0.2,
+    0.05
+   ],
+   "hair": [
+    0.95,
+    0.82,
+    0.4
+   ]
+  }
  }
 }

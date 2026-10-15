@@ -41,6 +41,9 @@ const CHAR_MAP := {
 	"don_selah": {"attack": "punch_combo", "skill": "roar", "ultimate": "jump_attack"},
 	# boss
 	"promethee": {"attack": "punch_combo", "skill": "cast_attack", "ultimate": "cast_area"},
+	"chronophage": {"idle": "idle_caster", "attack": "cast_attack", "skill": "cast_area", "ultimate": "cast_buff"},
+	"wyrm": {"attack": "punch_combo", "skill": "hurricane_kick", "ultimate": "roar"},
+	"serpent": {"idle": "idle_caster", "attack": "kick_high", "skill": "heal", "ultimate": "cast_area"},
 }
 const HOLD_AT_END := ["ko"]
 

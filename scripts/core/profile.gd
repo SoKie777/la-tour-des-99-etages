@@ -17,6 +17,7 @@ var gacha_state: Dictionary = {}
 var energy := 0
 var energy_time := 0                # instant (secondes Unix) du dernier point d'énergie compté
 var formations: Array = []          # {"team": [ids], "relics": {id: {"1".."6": uid}}} ou {} si vide
+var loot: Dictionary = {}           # boss de butin : id -> {unlocked, wins, pity, pity_set}
 
 
 static func new_game(now: int = 0) -> Profile:
@@ -285,6 +286,36 @@ func win_floor(number: int, rng: RandomNumberGenerator) -> Dictionary:
 	return rw
 
 
+# --- Boss de butin ------------------------------------------------------------
+
+## État d'un boss de butin : {"unlocked": palier max ouvert, "wins", "pity", "pity_set"}.
+func loot_state(id: String) -> Dictionary:
+	if not loot.has(id):
+		loot[id] = {"unlocked": 0, "wins": 0, "pity": 0, "pity_set": LootBoss.boss(id)["sets"][0]}
+	return loot[id]
+
+
+## Victoire contre un boss de butin : reliques, Pièces, palier suivant débloqué, pitié.
+func win_loot(id: String, diff: int, rng: RandomNumberGenerator) -> Dictionary:
+	var st := loot_state(id)
+	st["wins"] = int(st["wins"]) + 1
+	st["pity"] = int(st["pity"]) + 1
+	var forced := ""
+	if int(st["pity"]) >= int(LootBoss.cfg()["pity_wins"]):
+		forced = st["pity_set"]
+		st["pity"] = 0
+	var rw := LootBoss.rewards(id, diff, rng, forced)
+	for c: String in rw["currencies"]:
+		add(c, int(rw["currencies"][c]))
+	for r: Dictionary in rw["relics"]:
+		add_relic(r)
+	if diff == int(st["unlocked"]) and diff + 1 < LootBoss.difficulty_count():
+		st["unlocked"] = diff + 1
+		rw["unlocked"] = diff + 1
+	rw["pity_used"] = forced
+	return rw
+
+
 ## Balayage (fiche, partie 5) : rejoue un étage déjà gagné sans combat, autant de fois que l'énergie le
 ## permet (au plus « times »). Renvoie {currencies, relics, times} ; times = 0 si impossible.
 func sweep_floor(number: int, times: int, rng: RandomNumberGenerator, now: int) -> Dictionary:
@@ -315,7 +346,7 @@ func to_dict() -> Dictionary:
 		"version": SAVE_VERSION, "owned": owned, "currencies": currencies, "relics": relics,
 		"next_relic_uid": next_relic_uid, "equipped": equipped, "team": team,
 		"tower_cleared": tower_cleared, "gacha_state": gacha_state,
-		"energy": energy, "energy_time": energy_time, "formations": formations,
+		"energy": energy, "energy_time": energy_time, "formations": formations, "loot": loot,
 	}
 
 
@@ -339,6 +370,10 @@ static func from_dict(d: Dictionary) -> Profile:
 	p.team.assign(d.get("team", []))
 	p.tower_cleared = int(d.get("tower_cleared", 0))
 	p.gacha_state = d.get("gacha_state", {})
+	for id: String in d.get("loot", {}):
+		var ls: Dictionary = d["loot"][id]
+		p.loot[id] = {"unlocked": int(ls.get("unlocked", 0)), "wins": int(ls.get("wins", 0)), "pity": int(ls.get("pity", 0)),
+			"pity_set": str(ls.get("pity_set", ""))}
 	p.energy = int(d.get("energy", GameData.progression()["energy"]["max"]))
 	p.energy_time = int(d.get("energy_time", Time.get_unix_time_from_system()))
 	for f: Variant in d.get("formations", []):

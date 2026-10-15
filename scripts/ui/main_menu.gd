@@ -34,6 +34,7 @@ func _ready() -> void:
 	var tower := UiKit.button("Ascension de la Tour\nÉtage %d / %d" % [next_floor, Tower.floor_count()], _go.bind("tower"), Vector2(400, 96))
 	tower.add_theme_font_size_override("font_size", 22)
 	right.add_child(tower)
+	right.add_child(UiKit.button("Boss de butin (reliques)", _go.bind("loot"), Vector2(400, 60)))
 	right.add_child(UiKit.button("Équipe", _go.bind("team"), Vector2(400, 60)))
 	right.add_child(UiKit.button("Collection et reliques (%d)" % p.relics.size(), _go.bind("collection"), Vector2(400, 60)))
 	right.add_child(UiKit.button("Invocation", _go.bind("summon"), Vector2(400, 60)))

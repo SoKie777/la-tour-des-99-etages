@@ -102,6 +102,10 @@ func _on_battle_event(ev: Dictionary) -> void:
 			_float_text(ev["target"], "Raté", Color("a0a0b8"))
 		"phase":
 			_float_text(ev["target"], ev["name"].to_upper(), Color("ff8a3d"))
+		"bar_break":
+			_float_text(ev["target"], "BOUCLIER !", Color("7fc8ff"))
+		"shield_punish":
+			_float_text(ev["target"], "ÉCRASEMENT", Color("ff5050"))
 		"boss_revive":
 			_float_text(ev["target"], "RÉSURRECTION", Color("ff8a3d"))
 		"clone_absorb":
@@ -418,6 +422,28 @@ func _show_result() -> void:
 	v.add_child(title)
 	var floor_n := int(Session.battle.get("floor", 0))
 	var in_tower: bool = Session.battle.get("mode", "") == "tower"
+	var in_loot: bool = Session.battle.get("mode", "") == "loot"
+	if in_loot and engine.winner != 0 and not Session.smoke_test:
+		Session.profile.refund_energy(int(Session.battle.get("energy", 0)))
+		Session.save()
+		var ll := Label.new()
+		ll.text = "Énergie rendue (+%d)" % int(Session.battle.get("energy", 0))
+		ll.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(ll)
+	if in_loot and engine.winner == 0 and not Session.smoke_test:
+		var lrw := Session.profile.win_loot(Session.battle["boss"], int(Session.battle["diff"]), Session.rng)
+		Session.save()
+		var ls: Array[String] = ["+%d Pièces" % lrw["currencies"]["pieces"]]
+		for r: Dictionary in lrw["relics"]:
+			ls.append("Relique : " + UiKit.relic_title(r))
+		if lrw["pity_used"] != "":
+			ls.append("Relique garantie : set " + UiKit.SET_NAMES.get(lrw["pity_used"], lrw["pity_used"]))
+		if lrw.has("unlocked"):
+			ls.append("Palier débloqué : " + LootBoss.difficulty(int(lrw["unlocked"]))["name"])
+		var lab := Label.new()
+		lab.text = "\n".join(ls)
+		lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(lab)
 	if in_tower and engine.winner != 0 and not Session.smoke_test and GameData.progression()["energy"]["refund_on_defeat"]:
 		Session.profile.refund_energy(int(Session.battle.get("energy", 0)))
 		Session.save()
@@ -447,6 +473,10 @@ func _show_result() -> void:
 		var nb := UiKit.button("Étage suivant", func() -> void: Session.start_tower_floor(floor_n + 1))
 		nb.disabled = Session.profile.energy < Session.profile.floor_cost(floor_n + 1)
 		row.add_child(nb)
+	if in_loot:
+		var lb := UiKit.button("Rejouer", func() -> void: Session.start_loot(Session.battle["boss"], int(Session.battle["diff"])))
+		lb.disabled = Session.profile.energy < int(LootBoss.cfg()["energy_cost"])
+		row.add_child(lb)
 	if in_tower:
 		var rb := UiKit.button("Rejouer", func() -> void: Session.start_tower_floor(floor_n))
 		rb.disabled = Session.profile.energy < Session.profile.floor_cost(floor_n)
@@ -464,5 +494,5 @@ func _show_result() -> void:
 
 
 func _back_to_menu() -> void:
-	var tower: bool = Session.battle.get("mode", "") == "tower"
-	get_tree().change_scene_to_file("res://scenes/tower.tscn" if tower else "res://scenes/main.tscn")
+	var back := {"tower": "res://scenes/tower.tscn", "loot": "res://scenes/loot.tscn"}
+	get_tree().change_scene_to_file(back.get(Session.battle.get("mode", ""), "res://scenes/main.tscn"))

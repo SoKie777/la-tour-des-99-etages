@@ -51,6 +51,10 @@ static func describe(ev: Dictionary) -> String:
 			return "Zéro perte ! %s reste à 1 PV." % ev["target"].display_name
 		"death":
 			return "%s est hors combat." % ev["target"].display_name
+		"bar_break":
+			return "%s perd une barre de vie et se couvre d'un bouclier ! Brisez-le avant son tour." % ev["target"].display_name
+		"shield_punish":
+			return "%s gèle %s et l'écrase !" % [ev["actor"].display_name, ev["target"].display_name]
 		"phase":
 			return "%s entre en phase : %s !" % [ev["target"].display_name, ev["name"]]
 		"boss_revive":
