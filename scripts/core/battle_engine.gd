@@ -474,9 +474,11 @@ func _pursuit_chain(u: BattleUnit, t: BattleUnit, chain: Dictionary) -> void:
 	var was := _in_reaction
 	_in_reaction = true
 	var chances: Array = chain["chances"]
+	var done := 0
 	for k in chances.size():
 		if not t.is_alive() or not u.is_alive() or rng.randf() * 100.0 >= float(chances[k]):
 			break
+		done += 1
 		_emit({"type": "pursuit", "actor": u, "target": t, "n": k + 1})
 		var raw := _raw(u, h0) * float(chain["power"][k])
 		if t.has_effect("room"):
@@ -487,6 +489,8 @@ func _pursuit_chain(u: BattleUnit, t: BattleUnit, chain: Dictionary) -> void:
 				_apply_action(u, t, ef, {"removed": 0, "dealt": 0.0, "success": [], "power": 1.0, "missed": []})
 		if not tactics.is_empty() and u.team == 0 and t.team == 1:
 			_hit_toughness(u, t, int(chain["skill"]), false)
+	if done > 0:
+		_emit({"type": "pursuit_end", "actor": u})  # l'affichage rejoue les poursuites une à une
 	_in_reaction = was
 
 

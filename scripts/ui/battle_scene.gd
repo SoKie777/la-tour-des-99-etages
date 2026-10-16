@@ -44,6 +44,10 @@ var cam_look := CAM_LOOK
 var trauma := 0.0
 var active_ring: MeshInstance3D
 var hitstop_used := false
+## Poursuites de Montana : le moteur les calcule d'un coup, l'affichage les rejoue une à une après la frappe.
+var pursuit_buf: Array = []
+var pursuit_live := false
+var pursuit_replay := false
 var info_panel: PanelContainer
 var ui_root: Control
 var stars := {}       # BattleUnit -> étoiles qui tournent au-dessus de la tête (Étourdissement)
@@ -210,11 +214,35 @@ func _perform(actor: BattleUnit, skill_idx: int, target: BattleUnit, cut := fals
 	if skill_idx == 2:
 		_impact_flash()
 	_refresh()
+	await _play_pursuits()
 	if melee:
 		var back := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		back.tween_property(pawn, "position", home, 0.25 / Session.battle_speed)
 		await back.finished
 	await _pause(0.3)
+
+
+## Rejoue les poursuites en attente : une frappe visible par poursuite, avec ses dégâts et ses effets.
+func _play_pursuits() -> void:
+	while not pursuit_buf.is_empty():
+		var group: Array = pursuit_buf.pop_front()
+		await _pause(0.22)
+		var head: Dictionary = group[0]
+		var pa: BattleUnit = head["actor"]
+		if pawns.has(pa):
+			var pawn: Node3D = pawns[pa]
+			var lunge := create_tween().set_trans(Tween.TRANS_QUAD)
+			var fwd: Vector3 = pawn.position + (_home(head["target"]) - pawn.position).normalized() * 0.35
+			lunge.tween_property(pawn, "position", fwd, 0.08 / Session.battle_speed)
+			lunge.tween_property(pawn, "position", pawn.position, 0.14 / Session.battle_speed)
+		_float_text(pa, "POURSUITE" if int(head["n"]) == 1 else "POURSUITE ×%d" % int(head["n"]), UI_ACCENT, 1.1 + 0.15 * int(head["n"]))
+		pursuit_replay = true
+		for ev: Dictionary in group:
+			_on_battle_event(ev)
+		pursuit_replay = false
+		_shake(0.18 + 0.06 * int(head["n"]))
+		_refresh()
+	await _pause(0.1)
 
 
 ## Frame d'impact d'un ultime : un éclair noir et blanc à l'encre (Bible D.A., étape 4).
@@ -361,6 +389,16 @@ func _hitstop(duration: float) -> void:
 
 
 func _on_battle_event(ev: Dictionary) -> void:
+	if ev["type"] == "pursuit" and not pursuit_replay:
+		pursuit_live = true
+		pursuit_buf.append([ev])
+		return
+	if ev["type"] == "pursuit_end":
+		pursuit_live = false
+		return
+	if pursuit_live:
+		pursuit_buf[-1].append(ev)
+		return
 	if ev["type"] in ["effect", "effect_end", "death", "revive"] and ev.has("target"):
 		_status_look.call_deferred(ev["target"])
 	var line := BattleLog.describe(ev)
@@ -430,7 +468,6 @@ func _on_battle_event(ev: Dictionary) -> void:
 		"pursuit":  # Montana : poursuite en chaîne
 			var pa: BattleUnit = ev["actor"]
 			var pt: BattleUnit = ev["target"]
-			_float_text(pa, "»%d" % int(ev["n"]), UI_ACCENT, 1.0 + 0.15 * int(ev["n"]))
 			_play_anim(pa, "attack")
 			if pawns.has(pt):
 				BattleFx.ink_slash(self, pawns[pt].position + Vector3(0, 1.1, 0.45), _col(pa).lightened(0.3), false, 0.22 / Session.battle_speed)
