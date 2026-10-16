@@ -48,6 +48,7 @@ var hitstop_used := false
 var pursuit_buf: Array = []
 var pursuit_live := false
 var pursuit_replay := false
+var active_aura: MeshInstance3D  # aura au sol de l'unité qui joue
 var info_panel: PanelContainer
 var ui_root: Control
 var stars := {}       # BattleUnit -> étoiles qui tournent au-dessus de la tête (Étourdissement)
@@ -353,9 +354,15 @@ func _skill_vfx(actor: BattleUnit, sk: Dictionary, focus: BattleUnit) -> void:
 		await get_tree().create_timer(dur).timeout
 	elif kind == "all_enemies":
 		var line_z := -3.0 if actor.team == 0 else 2.3
+		var sig := _sig(actor)
 		for t in engine.enemies_of(actor):
 			BattleFx.projectile(self, from, _home(t) + Vector3(0, 1.1, 0), col, dur)
 		await get_tree().create_timer(dur).timeout
+		for t in engine.enemies_of(actor):  # tornade de Yass Ming, orbes de pouvoir pour les autres
+			if actor.id == "yass":
+				BattleFx.tornado(self, _home(t), sig, 1.0 / Session.battle_speed)
+			else:
+				BattleFx.orb(self, _home(t) + Vector3(0, 1.0, 0), sig, 0.5 / Session.battle_speed)
 		BattleFx.shockwave(self, Vector3(0, 0, line_z), col, 4.5, 0.5 / Session.battle_speed)
 		_shake(0.2)
 	elif kind in ["all_allies", "ally", "other_ally", "self"]:
@@ -419,8 +426,10 @@ func _on_battle_event(ev: Dictionary) -> void:
 					models[t].flash(Color(1, 1, 1, 0.7) if not crit else Color(1, 0.7, 0.45, 0.9), 0.18)
 				if pawns.has(t):
 					BattleFx.ink_splash(self, pawns[t].position + Vector3(0, 1.2, 0.3), _col(src) if src != null else Color.WHITE, crit)
-					BattleFx.ink_slash(self, pawns[t].position + Vector3(0, 1.1, 0.45), _col(src).lightened(0.3) if src != null else UI_ACCENT,
-						crit, 0.28 / Session.battle_speed)
+					var hit_at: Vector3 = pawns[t].position + Vector3(0, 1.1, 0.45)
+					var sig := _sig(src) if src != null else UI_ACCENT
+					BattleFx.arc_slash(self, hit_at, sig, crit, 0.3 / Session.battle_speed)
+					BattleFx.impact(self, hit_at, sig, crit)
 				_shake(0.45 if crit else 0.22)
 				if crit:
 					_hitstop(0.07)
@@ -462,9 +471,12 @@ func _on_battle_event(ev: Dictionary) -> void:
 			_float_text(bt, "RUPTURE", UiKit.PAPER, 1.5)
 			if pawns.has(bt):
 				BattleFx.ink_splash(self, pawns[bt].position + Vector3(0, 1.2, 0.3), UiKit.PAPER, true)
+				BattleFx.crystal_break(self, pawns[bt].position + Vector3(0, 1.2, 0.2))
 				BattleFx.shockwave(self, pawns[bt].position, UiKit.PAPER, 2.5, 0.4 / Session.battle_speed)
 			_shake(0.6)
 			_hitstop(0.09)
+		"turn_start":  # aura au sol de celui qui va jouer
+			_set_aura(ev["actor"])
 		"pursuit":  # Montana : poursuite en chaîne
 			var pa: BattleUnit = ev["actor"]
 			var pt: BattleUnit = ev["target"]
@@ -688,6 +700,21 @@ func _move_ring(actor: BattleUnit) -> void:
 	mat.emission = mat.albedo_color
 	var tw := create_tween()
 	tw.tween_property(active_ring, "position", _home(actor) + Vector3(0, 0.03, 0), 0.15)
+
+
+## Couleur signature des pouvoirs d'une unité (BattleFx.SIGNATURE), sinon celle de sa constellation.
+func _sig(u: BattleUnit) -> Color:
+	return BattleFx.SIGNATURE.get(u.id, _col(u).lightened(0.3))
+
+
+func _set_aura(u: BattleUnit) -> void:
+	if active_aura != null and is_instance_valid(active_aura):
+		active_aura.queue_free()
+	active_aura = null
+	if u == null or not pawns.has(u) or not u.is_alive():
+		return
+	active_aura = BattleFx.aura(_sig(u))
+	pawns[u].add_child(active_aura)
 
 
 func _col(u: BattleUnit) -> Color:

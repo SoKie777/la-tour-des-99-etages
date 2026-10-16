@@ -9,6 +9,12 @@ const SAKURA := Color("f29ab4")
 
 const SLASH_SHADER := preload("res://assets/materials/shaders/ink_slash.gdshader")
 const SEAL_SHADER := preload("res://assets/materials/shaders/unit_seal.gdshader")
+const TRAIL_SHADER := preload("res://assets/materials/shaders/vfx_scrolling.gdshader")
+const TORNADO_SHADER := preload("res://assets/materials/shaders/vfx_tornado.gdshader")
+const AURA_SHADER := preload("res://assets/materials/shaders/vfx_aura.gdshader")
+## Couleur signature des pouvoirs (sinon la couleur de la constellation).
+const SIGNATURE := {"montana": Color("ffc94a"), "ghost": Color("5ab4ff"), "yass": Color("b06aff"),
+	"promethee": Color("ff6a2a"), "geode": Color("d07aff"), "don_selah": Color("e8e0d0")}
 
 static var _disc_tex: GradientTexture2D
 static var _crescent: ArrayMesh
@@ -347,3 +353,179 @@ static func shockwave(parent: Node3D, center: Vector3, c: Color, radius: float, 
 	tf.tween_property(foam, "scale", Vector3(radius * 0.88, 0.05, radius * 0.88), duration * 1.1).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
 	tf.tween_property(fm, "albedo_color:a", 0.0, duration * 1.1)
 	tf.chain().tween_callback(foam.queue_free)
+
+
+# --- Pipeline VFX : traînées, tornades, impacts, rupture, auras ------------------------
+
+static var _arc_mesh: ArrayMesh
+static var _shard_mesh: Mesh
+
+
+## Arc de cercle plat (UV.x le long de l'arc, UV.y en travers), base des traînées de lame.
+static func arc_mesh() -> ArrayMesh:
+	if _arc_mesh == null:
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		var n := 28
+		for i in n:
+			var a0 := lerpf(-1.25, 1.25, float(i) / n)
+			var a1 := lerpf(-1.25, 1.25, float(i + 1) / n)
+			var w0 := 0.22 * sin(PI * float(i) / n) + 0.03
+			var w1 := 0.22 * sin(PI * float(i + 1) / n) + 0.03
+			var pts := [Vector3(sin(a0) * (1.0 - w0), cos(a0) * (1.0 - w0), 0), Vector3(sin(a0) * (1.0 + w0), cos(a0) * (1.0 + w0), 0),
+				Vector3(sin(a1) * (1.0 + w1), cos(a1) * (1.0 + w1), 0), Vector3(sin(a1) * (1.0 - w1), cos(a1) * (1.0 - w1), 0)]
+			var uvs := [Vector2(float(i) / n, 0), Vector2(float(i) / n, 1), Vector2(float(i + 1) / n, 1), Vector2(float(i + 1) / n, 0)]
+			for idx: int in [0, 1, 2, 0, 2, 3]:
+				st.set_uv(uvs[idx])
+				st.add_vertex(pts[idx])
+		_arc_mesh = st.commit()
+	return _arc_mesh
+
+
+## Coup de lame : un arc d'énergie colorée qui balaie la cible (shader à défilement d'UV).
+static func arc_slash(parent: Node3D, pos: Vector3, c: Color, crit := false, duration := 0.3) -> void:
+	var mi := MeshInstance3D.new()
+	mi.mesh = arc_mesh()
+	var m := ShaderMaterial.new()
+	m.shader = TRAIL_SHADER
+	m.set_shader_parameter("color", c)
+	m.set_shader_parameter("energy", 3.0 if crit else 2.2)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.position = pos
+	mi.rotation = Vector3(randf_range(-0.3, 0.3), randf_range(-0.4, 0.4), randf_range(-1.1, 1.1) + (PI if randf() < 0.5 else 0.0))
+	mi.scale = Vector3.ONE * (1.25 if crit else 0.95)
+	parent.add_child(mi)
+	var tw := mi.create_tween()
+	tw.tween_method(func(v: float) -> void: m.set_shader_parameter("progress", v), 0.0, 1.6, duration)
+	tw.tween_callback(mi.queue_free)
+
+
+## Tornade (sorts de zone de Yass Ming, souffles) : entonnoir en spirale qui monte puis s'efface.
+static func tornado(parent: Node3D, pos: Vector3, c: Color, duration := 1.1, height := 3.2, radius := 1.1) -> void:
+	var mi := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = radius
+	cyl.bottom_radius = radius
+	cyl.height = height
+	cyl.radial_segments = 24
+	cyl.rings = 10
+	cyl.cap_top = false
+	cyl.cap_bottom = false
+	mi.mesh = cyl
+	var m := ShaderMaterial.new()
+	m.shader = TORNADO_SHADER
+	m.set_shader_parameter("color", c)
+	m.set_shader_parameter("intensity", 0.0)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.position = pos + Vector3(0, height * 0.5, 0)
+	parent.add_child(mi)
+	var tw := mi.create_tween()
+	tw.tween_method(func(v: float) -> void: m.set_shader_parameter("intensity", v), 0.0, 1.0, duration * 0.25)
+	tw.tween_interval(duration * 0.45)
+	tw.tween_method(func(v: float) -> void: m.set_shader_parameter("intensity", v), 1.0, 0.0, duration * 0.3)
+	tw.tween_callback(mi.queue_free)
+	burst(parent, pos + Vector3(0, 0.3, 0), c, 18, 3.0, 0.07, 0.9, true)
+
+
+## Orbe de pouvoir (sorts de zone) : sphère lumineuse qui gonfle puis éclate.
+static func orb(parent: Node3D, pos: Vector3, c: Color, duration := 0.6, radius := 0.9) -> void:
+	var mi := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 1.0
+	sm.height = 2.0
+	mi.mesh = sm
+	var mat := glow_material(c.lightened(0.2), 3.0)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color.a = 0.55
+	mi.material_override = mat
+	mi.position = pos
+	mi.scale = Vector3.ONE * 0.1
+	parent.add_child(mi)
+	var tw := mi.create_tween().set_parallel()
+	tw.tween_property(mi, "scale", Vector3.ONE * radius, duration * 0.7).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(mat, "albedo_color:a", 0.0, duration * 0.4).set_delay(duration * 0.6)
+	tw.chain().tween_callback(mi.queue_free)
+	parent.get_tree().create_timer(duration * 0.6).timeout.connect(func() -> void:
+		if is_instance_valid(parent):
+			burst(parent, pos, c, 26, 5.0, 0.08, 0.5))
+
+
+## Impact d'un coup : gerbe d'étincelles à la couleur du lanceur et éclair d'impact très court.
+static func impact(parent: Node3D, pos: Vector3, c: Color, crit := false) -> void:
+	burst(parent, pos, c.lightened(0.25), 30 if crit else 16, 6.5 if crit else 4.5, 0.06, 0.35)
+	var star := MeshInstance3D.new()
+	var q := QuadMesh.new()
+	q.size = Vector2(1, 1)
+	star.mesh = q
+	var mat := flat_material(Color(1, 1, 1, 0.95), true)
+	mat.albedo_texture = disc_texture()
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	star.material_override = mat
+	star.position = pos
+	star.scale = Vector3.ONE * 0.2
+	parent.add_child(star)
+	var size := 2.2 if crit else 1.4
+	var tw := star.create_tween().set_parallel()
+	tw.tween_property(star, "scale", Vector3.ONE * size, 0.07)
+	tw.tween_property(mat, "albedo_color:a", 0.0, 0.12).set_delay(0.05)
+	tw.chain().tween_callback(star.queue_free)
+
+
+## Rupture : explosion de cristaux brisés or et orange qui jaillissent de la cible.
+static func crystal_break(parent: Node3D, pos: Vector3) -> void:
+	if _shard_mesh == null:
+		var pm := PrismMesh.new()
+		pm.size = Vector3(0.12, 0.32, 0.08)
+		_shard_mesh = pm
+	for c: Color in [Color("ffd060"), Color("ff8a2a")]:
+		var p := CPUParticles3D.new()
+		p.one_shot = true
+		p.emitting = true
+		p.explosiveness = 1.0
+		p.amount = 22
+		p.lifetime = 0.9
+		p.position = pos
+		p.mesh = _shard_mesh
+		var mat := glow_material(c, 2.5)
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.vertex_color_use_as_albedo = true
+		p.material_override = mat
+		p.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+		p.emission_sphere_radius = 0.4
+		p.direction = Vector3(0, 1, 0)
+		p.spread = 180.0
+		p.initial_velocity_min = 4.0
+		p.initial_velocity_max = 8.0
+		p.gravity = Vector3(0, -9.0, 0)
+		p.angular_velocity_min = -720.0
+		p.angular_velocity_max = 720.0
+		p.angle_max = 360.0
+		var g := Gradient.new()
+		g.set_color(0, Color(c, 1.0))
+		g.set_color(1, Color(c, 0.0))
+		p.color_ramp = g
+		var curve := Curve.new()
+		curve.max_value = 1.5
+		curve.add_point(Vector2(0, 1.4))
+		curve.add_point(Vector2(1, 0.4))
+		p.scale_amount_curve = curve
+		parent.add_child(p)
+		parent.get_tree().create_timer(1.3).timeout.connect(p.queue_free)
+	impact(parent, pos, Color("ffd060"), true)
+
+
+## Aura au sol de l'unité qui s'apprête à jouer (dans son cercle).
+static func aura(c: Color, radius := 0.6) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(radius * 2.0, radius * 2.0)
+	mi.mesh = pm
+	var m := ShaderMaterial.new()
+	m.shader = AURA_SHADER
+	m.set_shader_parameter("color", c)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.position.y = 0.03
+	return mi

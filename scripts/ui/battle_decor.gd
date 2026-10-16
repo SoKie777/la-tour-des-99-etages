@@ -64,10 +64,12 @@ static func build(parent: Node3D, id: String) -> void:
 			_acier(parent)
 		"forge":
 			_forge(parent)
+			_forge_rich(parent)
 		"orion":
 			_orion(parent)
 		"givre":
 			_givre(parent)
+			_givre_rich(parent)
 		"sirius":
 			_sirius(parent)
 		"gemmes":
@@ -76,6 +78,7 @@ static func build(parent: Node3D, id: String) -> void:
 			_geode(parent)
 		_:
 			_dojo(parent)
+			_dojo_rich(parent)
 
 
 # --- Ciel, lumières, sol -------------------------------------------------------
@@ -1136,3 +1139,218 @@ static func _geode(p: Node3D) -> void:
 			Color("b07de0") if i % 3 else Color("e8c8ff"), Vector3(side * -12.0, i * 23.0, 0), 0.8)
 	_light(p, Color("d08cff"), Vector3(0, 3.0, -9.0), 1.6, 10.0)
 	_ambient(p, Color("e8c8ff"), 50, 7.0, Vector3(0, 3.0, -4), Vector3(12, 3.0, 5), Vector3(0, 0.15, 0), 0.06, 1.0, 180.0)
+
+
+# --- Habillage anti-« espace lisse » : plans intermédiaires et climat ------------------------
+
+const PULSE_GLOW := """shader_type spatial;
+render_mode unshaded, cull_disabled, shadows_disabled;
+uniform vec4 color : source_color = vec4(1.0, 0.35, 0.1, 1.0);
+uniform float energy = 2.4;
+uniform float speed = 1.6;
+void fragment() {
+	float p = 0.55 + 0.45 * sin(TIME * speed + NODE_POSITION_WORLD.x * 0.7 + UV.x * 6.0);
+	ALBEDO = color.rgb * energy * p;
+}
+"""
+const GROUND_MIST := """shader_type spatial;
+render_mode unshaded, blend_mix, cull_disabled, depth_draw_never, shadows_disabled;
+uniform vec4 color : source_color = vec4(0.9, 0.95, 1.0, 0.5);
+uniform float drift = 0.04;
+float n2(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	float a = fract(sin(dot(i, vec2(12.9898, 78.233))) * 43758.5453);
+	float b = fract(sin(dot(i + vec2(1, 0), vec2(12.9898, 78.233))) * 43758.5453);
+	float c = fract(sin(dot(i + vec2(0, 1), vec2(12.9898, 78.233))) * 43758.5453);
+	float d = fract(sin(dot(i + vec2(1, 1), vec2(12.9898, 78.233))) * 43758.5453);
+	return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+void fragment() {
+	vec2 uv = UV * 4.0 + vec2(TIME * drift, TIME * drift * 0.4);
+	float n = n2(uv) * 0.6 + n2(uv * 2.3) * 0.4;
+	float edge = 1.0 - smoothstep(0.25, 0.5, length(UV - 0.5));
+	ALBEDO = color.rgb;
+	ALPHA = color.a * smoothstep(0.3, 0.8, n) * edge;
+}
+"""
+
+static var _pulse_shader: Shader
+static var _mist_shader: Shader
+
+
+static func _pulse_mat(c: Color, energy := 2.4, speed := 1.6) -> ShaderMaterial:
+	if _pulse_shader == null:
+		_pulse_shader = Shader.new()
+		_pulse_shader.code = PULSE_GLOW
+	var m := ShaderMaterial.new()
+	m.shader = _pulse_shader
+	m.set_shader_parameter("color", c)
+	m.set_shader_parameter("energy", energy)
+	m.set_shader_parameter("speed", speed)
+	return m
+
+
+## Nappe de brouillard au ras du sol (le rendu mobile n'a pas de brouillard volumétrique) : plans de bruit qui dérivent.
+static func _ground_mist(p: Node3D, c: Color, centers: Array[Vector3], size := 14.0) -> void:
+	if _mist_shader == null:
+		_mist_shader = Shader.new()
+		_mist_shader.code = GROUND_MIST
+	for i in centers.size():
+		var pm := PlaneMesh.new()
+		pm.size = Vector2(size, size * 0.6)
+		var m := ShaderMaterial.new()
+		m.shader = _mist_shader
+		m.set_shader_parameter("color", c)
+		m.set_shader_parameter("drift", 0.03 + 0.015 * (i % 3))
+		var mi := _mesh(p, pm, m, centers[i])
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+## Rocher stylisé (toon, facettes) posé au sol.
+static func _rock(p: Node3D, at: Vector3, s: float, c: Color, rng: RandomNumberGenerator) -> void:
+	var sm := SphereMesh.new()
+	sm.radius = 1.0
+	sm.height = 2.0
+	sm.radial_segments = 6
+	sm.rings = 3
+	var mi := _mesh(p, sm, _toon(c, 0.0, 0.4), at + Vector3(0, 0.25 * s, 0), Vector3(0, rng.randf_range(0, 360), rng.randf_range(-8, 8)))
+	mi.scale = Vector3(rng.randf_range(0.9, 1.4), rng.randf_range(0.5, 0.8), rng.randf_range(0.8, 1.2)) * s
+
+
+## Touffes d'herbe : brins effilés regroupés (un seul MultiMesh pour tout le décor).
+static func _grass(p: Node3D, spots: Array[Vector3], c: Color, rng: RandomNumberGenerator, blades := 9) -> void:
+	var pm := PrismMesh.new()
+	pm.size = Vector3(0.08, 0.6, 0.02)
+	var xf: Array[Transform3D] = []
+	for at in spots:
+		for k in blades:
+			var h := rng.randf_range(0.6, 1.3)
+			var b := Basis(Vector3.UP, rng.randf_range(0, TAU)) * Basis(Vector3.RIGHT, rng.randf_range(-0.35, 0.35)) * Basis.from_scale(Vector3(1, h, 1))
+			xf.append(Transform3D(b, at + Vector3(rng.randf_range(-0.35, 0.35), 0.3 * h - 0.05, rng.randf_range(-0.35, 0.35))))
+	_multi(p, pm, _toon(c, 0.0, 0.3), xf)
+
+
+## Jizō de pierre : petite statue au bonnet et bavoir rouges.
+static func _jizo(p: Node3D, at: Vector3, s := 1.0) -> void:
+	var stone := _toon(Color("7a7480"), 0.0, 0.3)
+	_mesh(p, _cyl(0.32 * s, 0.4 * s, 0.25 * s, 8), stone, at + Vector3(0, 0.12 * s, 0))
+	_mesh(p, _cyl(0.22 * s, 0.3 * s, 0.75 * s, 10), stone, at + Vector3(0, 0.62 * s, 0))
+	_mesh(p, _sphere(0.2 * s), stone, at + Vector3(0, 1.15 * s, 0))
+	_mesh(p, _cyl(0.05 * s, 0.31 * s, 0.25 * s, 10), _toon(Color("c0302a")), at + Vector3(0, 0.88 * s, 0.02))  # bavoir
+	_mesh(p, _cyl(0.12 * s, 0.21 * s, 0.14 * s, 10), _toon(Color("c0302a")), at + Vector3(0, 1.3 * s, 0))  # bonnet
+
+
+## Barrière traditionnelle en bois (poteaux et deux lisses) de a à b.
+static func _fence(p: Node3D, a: Vector3, b: Vector3) -> void:
+	var wood := _toon(Color("5a3a28"), 0.0, 0.3)
+	var d := b - a
+	var n := maxi(2, int(d.length() / 1.6))
+	for i in n + 1:
+		_mesh(p, _box(Vector3(0.14, 1.1, 0.14)), wood, a + d * (float(i) / n) + Vector3(0, 0.55, 0))
+	var yaw := rad_to_deg(atan2(-d.z, d.x))
+	for y: float in [0.45, 0.9]:
+		_mesh(p, _box(Vector3(d.length(), 0.08, 0.08)), wood, (a + b) * 0.5 + Vector3(0, y, 0), Vector3(0, yaw, 0))
+
+
+## Lucioles / flammèches qui s'élèvent autour d'une lanterne.
+static func _fireflies(p: Node3D, at: Vector3, c := Color("ffd27a")) -> void:
+	_ambient(p, c, 8, 3.5, at + Vector3(0, 1.4, 0), Vector3(0.9, 0.6, 0.9), Vector3(0, 0.45, 0), 0.07, 0.6, 60.0)
+
+
+## Cour du torii : rochers, herbes, Jizō, barrières à mi-distance ; pétales plus denses, lucioles.
+static func _dojo_rich(p: Node3D) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 31
+	var rock_c := Color("4a3a48")
+	for at: Vector3 in [Vector3(-11, 0, -9), Vector3(-8.5, 0, -17), Vector3(10.5, 0, -10), Vector3(8, 0, -19),
+			Vector3(-16, 0, -21), Vector3(17, 0, -22), Vector3(-3.5, 0, -22), Vector3(4, 0, -25)]:
+		_rock(p, at, rng.randf_range(0.6, 1.3), rock_c, rng)
+	var tufts: Array[Vector3] = []
+	for i in 46:
+		var a := deg_to_rad(rng.randf_range(190, 350))
+		var r := rng.randf_range(7.8, 20.0)
+		tufts.append(Vector3(cos(a) * r, -0.05, sin(a) * r * 1.2))
+	_grass(p, tufts, Color("4a5a3a"), rng)
+	for at: Vector3 in [Vector3(-6.8, 0, -12.5), Vector3(-5.6, 0, -12.9), Vector3(6.2, 0, -12.6)]:
+		_jizo(p, at, 0.8)
+	_fence(p, Vector3(-19, 0, -18), Vector3(-9, 0, -16))
+	_fence(p, Vector3(9, 0, -16), Vector3(19, 0, -18))
+	_fence(p, Vector3(-26, 0, -27), Vector3(-15, 0, -26))
+	_fence(p, Vector3(15, 0, -26), Vector3(26, 0, -27))
+	_ambient(p, BattleFx.SAKURA, 70, 8.0, Vector3(0, 4, -8), Vector3(16, 4, 7), Vector3(0.6, -0.25, 0.1), 0.09)
+	for at: Vector3 in [Vector3(-9.2, 0, -3.5), Vector3(9.2, 0, -3.5), Vector3(-5.5, 0, -9.5), Vector3(5.5, 0, -9.5)]:
+		_fireflies(p, at)
+
+
+## Volcan éclipsé : pics rocheux, sanctuaire brisé, fumée sombre, braises, fissures de lave qui pulsent.
+static func _forge_rich(p: Node3D) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 47
+	var basalt := _toon(Color("1e1214"), 0.0, 0.45)
+	for i in 14:
+		var a := deg_to_rad(rng.randf_range(195, 345))
+		var r := rng.randf_range(9.0, 22.0)
+		var h := rng.randf_range(2.0, 6.5)
+		_mesh(p, _cyl(0.0, rng.randf_range(0.5, 1.2), h, 5), basalt, Vector3(cos(a) * r, h * 0.5 - 0.3, sin(a) * r),
+			Vector3(rng.randf_range(-12, 12), rng.randf_range(0, 70), rng.randf_range(-12, 12)))
+	# sanctuaire brisé : piliers rompus, poutre tombée, toit effondré
+	var lacquer := _toon(Color("5a1a18"), 0.0, 0.3)
+	var dark := _toon(Color("1a1214"))
+	for x: float in [-13.0, -9.0]:
+		_mesh(p, _cyl(0.28, 0.32, 3.2 if x < -10 else 1.6, 8), lacquer, Vector3(x, (3.2 if x < -10 else 1.6) * 0.5, -17))
+	_mesh(p, _box(Vector3(5.2, 0.35, 0.4)), lacquer, Vector3(-10.5, 0.4, -16.2), Vector3(0, 12, 8))
+	_mesh(p, _cyl(0.4, 2.6, 0.9, 4), dark, Vector3(12, 0.3, -18), Vector3(18, 45, -10))
+	_mesh(p, _cyl(0.22, 0.26, 2.3, 8), lacquer, Vector3(10.5, 1.15, -17.5), Vector3(0, 0, -14))
+	# fumée sombre qui monte, braises plus nombreuses
+	_ambient(p, Color("2a1414", 0.45), 14, 10.0, Vector3(0, 1.0, -26), Vector3(24, 0.5, 4), Vector3(0.2, 1.0, 0), 1.6, 2.5, 15.0)
+	_ambient(p, Color("ffb050"), 50, 4.0, Vector3(0, 0.2, -6), Vector3(13, 0.3, 8), Vector3(0, 1.6, 0), 0.06, 0.4, 25.0)
+	# micro-fissures de lave autour de l'arène, lueur qui pulse
+	var cracks: Array[Transform3D] = []
+	for i in 26:
+		var a := deg_to_rad(rng.randf_range(0, 360))
+		var r := rng.randf_range(7.6, 15.0)
+		var p0 := Vector2(cos(a), sin(a)) * r
+		var p1 := p0 + Vector2.from_angle(rng.randf_range(0, TAU)) * rng.randf_range(0.8, 2.2)
+		cracks.append(_seg_xform(p0, p1, -0.4, 0.07))
+	_multi(p, _box(Vector3(1, 0.04, 1)), _pulse_mat(Color("ff5a1a"), 2.6, 1.4), cracks)
+
+
+## Toundra : sapins enneigés, amas de glace, ruines gelées ; blizzard et brouillard de froid au sol.
+static func _givre_rich(p: Node3D) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 59
+	var fir := _toon(Color("2e4a52"), 0.0, 0.35)
+	var snow := _toon(Color("f4f8ff"), 0.1, 0.4)
+	var trunk := _toon(Color("3a2a24"))
+	for i in 18:
+		var x := rng.randf_range(-28, 28)
+		if absf(x) < 8.0:
+			x += signf(x) * 8.0
+		var z := rng.randf_range(-30, -15)
+		var s := rng.randf_range(0.8, 1.6)
+		_mesh(p, _cyl(0.12 * s, 0.16 * s, 0.8 * s, 6), trunk, Vector3(x, 0.4 * s - 0.3, z))
+		for k in 3:
+			var y := (0.9 + k * 0.75) * s
+			var r := (1.15 - k * 0.3) * s
+			_mesh(p, _cyl(0.0, r, 1.1 * s, 8), fir, Vector3(x, y, z))
+			_mesh(p, _cyl(0.0, r * 0.75, 0.45 * s, 8), snow, Vector3(x, y + 0.3 * s, z))
+	var ice := _toon(Color(0.7, 0.88, 0.98, 0.9), 0.3, 0.6)
+	for c: Vector3 in [Vector3(-9.5, 0, -7), Vector3(9.8, 0, -6.5), Vector3(-13, 0, -13), Vector3(13, 0, -12.5)]:
+		for k in 5:
+			var h := rng.randf_range(0.5, 1.6)
+			_mesh(p, _box(Vector3(rng.randf_range(0.4, 0.9), h, rng.randf_range(0.4, 0.8))), ice,
+				c + Vector3(rng.randf_range(-1.2, 1.2), h * 0.4 - 0.2, rng.randf_range(-1.0, 1.0)),
+				Vector3(rng.randf_range(-25, 25), rng.randf_range(0, 90), rng.randf_range(-25, 25)))
+	# ruines de glace : piliers brisés et arche
+	var ruin := _toon(Color(0.78, 0.9, 1.0, 0.85), 0.25, 0.6)
+	for x: float in [-4.0, 4.0]:
+		_mesh(p, _box(Vector3(0.9, 4.2 if x < 0 else 2.6, 0.9)), ruin, Vector3(x, (4.2 if x < 0 else 2.6) * 0.5 - 0.2, -20))
+	_mesh(p, _box(Vector3(5.5, 0.7, 0.9)), ruin, Vector3(-1.6, 4.3, -20), Vector3(0, 0, -6))
+	_mesh(p, _box(Vector3(2.2, 0.6, 0.8)), ruin, Vector3(5.6, 0.1, -18.5), Vector3(10, 30, 70))
+	# blizzard léger et brouillard de froid au ras du sol
+	_ambient(p, Color("ffffff"), 140, 4.0, Vector3(-4, 4, -2), Vector3(18, 4, 8), Vector3(2.6, -1.1, 0.4), 0.06, 1.0, 12.0)
+	var fog: Array[Vector3] = [Vector3(-9, 0.15, 2), Vector3(9, 0.18, 1), Vector3(-12, 0.2, -9), Vector3(12, 0.22, -10),
+		Vector3(0, 0.25, -14), Vector3(-6, 0.2, -18), Vector3(7, 0.2, -19)]
+	_ground_mist(p, Color(0.92, 0.96, 1.0, 0.55), fog)
