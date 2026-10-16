@@ -3,8 +3,8 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bh0vfkcdextdo"
-path.s3tc="res://.godot/imported/noor_el_0.png-984298d4e624d77bca4bc07ba57793d3.s3tc.ctex"
-path.etc2="res://.godot/imported/noor_el_0.png-984298d4e624d77bca4bc07ba57793d3.etc2.ctex"
+path.bptc="res://.godot/imported/noor_el_0.png-984298d4e624d77bca4bc07ba57793d3.bptc.ctex"
+path.astc="res://.godot/imported/noor_el_0.png-984298d4e624d77bca4bc07ba57793d3.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -16,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/noor_el_0.png"
-dest_files=["res://.godot/imported/noor_el_0.png-984298d4e624d77bca4bc07ba57793d3.s3tc.ctex", "res://.godot/imported/noor_el_0.png-984298d4e624d77bca4bc07ba57793d3.etc2.ctex"]
+dest_files=["res://.godot/imported/noor_el_0.png-984298d4e624d77bca4bc07ba57793d3.bptc.ctex", "res://.godot/imported/noor_el_0.png-984298d4e624d77bca4bc07ba57793d3.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0

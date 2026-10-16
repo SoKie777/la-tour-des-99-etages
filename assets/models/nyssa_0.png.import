@@ -2,26 +2,26 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b087q86my134v"
-path.s3tc="res://.godot/imported/nyssa_0.png-ec3f56aa34edec1c119a42529696073b.s3tc.ctex"
-path.etc2="res://.godot/imported/nyssa_0.png-ec3f56aa34edec1c119a42529696073b.etc2.ctex"
+uid="uid://cojj0cw6k2n15"
+path.bptc="res://.godot/imported/nyssa_0.png-ec3f56aa34edec1c119a42529696073b.bptc.ctex"
+path.astc="res://.godot/imported/nyssa_0.png-ec3f56aa34edec1c119a42529696073b.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
-"md5": "299e2769f0e0badfa873e71ac17e302e"
+"md5": "c309c7db7d208a77790c90a43cba5640"
 }
 
 [deps]
 
 source_file="res://assets/models/nyssa_0.png"
-dest_files=["res://.godot/imported/nyssa_0.png-ec3f56aa34edec1c119a42529696073b.s3tc.ctex", "res://.godot/imported/nyssa_0.png-ec3f56aa34edec1c119a42529696073b.etc2.ctex"]
+dest_files=["res://.godot/imported/nyssa_0.png-ec3f56aa34edec1c119a42529696073b.bptc.ctex", "res://.godot/imported/nyssa_0.png-ec3f56aa34edec1c119a42529696073b.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0

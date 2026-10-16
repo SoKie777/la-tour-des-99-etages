@@ -4,7 +4,7 @@
 // - dégradé vertical sculpté : plus sombre vers les pieds, plus clair vers le haut du corps ;
 // - reflet net en bande (cheveux, tissus soyeux), sans lissage réaliste.
 
-uniform sampler2D albedo_texture : source_color, filter_linear_mipmap, hint_default_white;
+uniform sampler2D albedo_texture : source_color, filter_linear_mipmap_anisotropic, hint_default_white;  // textures VRoid nettes de loin
 uniform vec4 albedo_color : source_color = vec4(1.0);
 uniform bool use_texture = true;
 uniform bool use_vertex_color = false;  // vêtements MPFB peints en couleurs de sommets (sRGB)

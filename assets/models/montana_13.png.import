@@ -3,8 +3,8 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://gno3fewo23ra"
-path.s3tc="res://.godot/imported/montana_13.png-550fa8057ed65ad1912ff3d98d0a4f5d.s3tc.ctex"
-path.etc2="res://.godot/imported/montana_13.png-550fa8057ed65ad1912ff3d98d0a4f5d.etc2.ctex"
+path.bptc="res://.godot/imported/montana_13.png-550fa8057ed65ad1912ff3d98d0a4f5d.bptc.ctex"
+path.astc="res://.godot/imported/montana_13.png-550fa8057ed65ad1912ff3d98d0a4f5d.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -16,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/montana_13.png"
-dest_files=["res://.godot/imported/montana_13.png-550fa8057ed65ad1912ff3d98d0a4f5d.s3tc.ctex", "res://.godot/imported/montana_13.png-550fa8057ed65ad1912ff3d98d0a4f5d.etc2.ctex"]
+dest_files=["res://.godot/imported/montana_13.png-550fa8057ed65ad1912ff3d98d0a4f5d.bptc.ctex", "res://.godot/imported/montana_13.png-550fa8057ed65ad1912ff3d98d0a4f5d.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0

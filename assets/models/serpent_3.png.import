@@ -3,8 +3,8 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bfxauotksjq5b"
-path.s3tc="res://.godot/imported/serpent_3.png-4e7e35bc46732491c5ceb0158d7f90da.s3tc.ctex"
-path.etc2="res://.godot/imported/serpent_3.png-4e7e35bc46732491c5ceb0158d7f90da.etc2.ctex"
+path.bptc="res://.godot/imported/serpent_3.png-4e7e35bc46732491c5ceb0158d7f90da.bptc.ctex"
+path.astc="res://.godot/imported/serpent_3.png-4e7e35bc46732491c5ceb0158d7f90da.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -16,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/serpent_3.png"
-dest_files=["res://.godot/imported/serpent_3.png-4e7e35bc46732491c5ceb0158d7f90da.s3tc.ctex", "res://.godot/imported/serpent_3.png-4e7e35bc46732491c5ceb0158d7f90da.etc2.ctex"]
+dest_files=["res://.godot/imported/serpent_3.png-4e7e35bc46732491c5ceb0158d7f90da.bptc.ctex", "res://.godot/imported/serpent_3.png-4e7e35bc46732491c5ceb0158d7f90da.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0

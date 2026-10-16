@@ -9,8 +9,15 @@ extends RefCounted
 const BG := Color("21172f")
 const PANEL := Color("2a2040")
 const ACCENT := Color("d1ad62")
-const DIM := Color("a89eb4")
-const PAPER := Color("e8dec5")
+const DIM := Color("a89cb8")  # texte secondaire (lavande)
+const PAPER := Color("f5f0e6")  # texte primaire (ivoire)
+const HIGHLIGHT := Color("ffd700")  # valeurs mises en avant
+const CYAN := Color("00e5ff")
+const CARD_BG := Color(0.098, 0.063, 0.149, 0.9)  # #191026 à 90 %
+const CARD_BORDER := Color("4a3763")
+const CTA_TOP := Color("e6b84b")
+const CTA_BOTTOM := Color("c28e28")
+const CTA_EDGE := Color("fff0b3")
 const VERMILION := Color("b83a35")
 const MINERAL := Color("263c4a")
 const INK := Color("332c29")
@@ -259,6 +266,11 @@ static func icon_button(id: String, cb: Callable, side := 44.0) -> Button:
 
 # --- Widgets -----------------------------------------------------------------
 
+## Panneau / carte : violet sombre translucide, liseré indigo, coins de 16 px.
+static func card_style() -> StyleBoxFlat:
+	return panel_style(CARD_BG, CARD_BORDER, 1, 16)
+
+
 static func panel_style(bg: Color, border := Color.TRANSPARENT, width := 2, radius := 8) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
 	s.bg_color = bg
@@ -268,6 +280,47 @@ static func panel_style(bg: Color, border := Color.TRANSPARENT, width := 2, radi
 		s.border_color = border
 		s.set_border_width_all(width)
 	return s
+
+
+## Bouton principal (valider, invoquer...) : or chaud en dégradé, liseré or brillant, ombre portée.
+static func cta_style(state := "normal") -> StyleBox:
+	var top := CTA_TOP.lightened(0.12 if state == "hover" else 0.0)
+	var bottom := CTA_BOTTOM.darkened(0.12 if state == "pressed" else 0.0)
+	if state == "disabled":
+		return panel_style(Color(PANEL, 0.9), Color(CTA_EDGE, 0.25), 2, 12)
+	var s := panel_style(top.lerp(bottom, 0.5), CTA_EDGE, 2, 12)
+	s.shadow_color = Color(0, 0, 0, 0.3)  # le dégradé est un reflet posé par cta()
+	s.shadow_size = 6
+	s.shadow_offset = Vector2(0, 3)
+	return s
+
+
+## Applique le style « bouton principal » (fond or en dégradé, texte encre 22 px).
+static func cta(b: Button) -> Button:
+	for st in ["normal", "hover", "pressed", "disabled"]:
+		b.add_theme_stylebox_override(st, cta_style(st))
+	b.add_theme_color_override("font_color", INK)
+	b.add_theme_color_override("font_hover_color", INK)
+	b.add_theme_color_override("font_pressed_color", INK)
+	b.add_theme_font_size_override("font_size", 22)
+	var grad := GradientTexture2D.new()  # reflet en dégradé par-dessus le fond plat
+	var g := Gradient.new()
+	g.set_color(0, Color(1, 0.97, 0.85, 0.35))
+	g.set_color(1, Color(0.45, 0.3, 0.05, 0.25))
+	grad.gradient = g
+	grad.fill_from = Vector2(0, 0)
+	grad.fill_to = Vector2(0, 1)
+	var sheen := TextureRect.new()
+	sheen.texture = grad
+	sheen.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sheen.stretch_mode = TextureRect.STRETCH_SCALE
+	sheen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	for side in ["left", "top", "right", "bottom"]:
+		sheen.set("offset_" + side, 3.0 if side in ["left", "top"] else -3.0)
+	sheen.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(sheen)
+	b.move_child(sheen, 0)
+	return b
 
 
 static func panel(border := Color.TRANSPARENT) -> PanelContainer:
@@ -308,6 +361,8 @@ static func button(text: String, cb: Callable, min_size := Vector2(150, 52)) -> 
 
 ## Bouton qui s'enfonce quand on appuie et rebondit quand on relâche.
 static func juice(b: Control) -> void:
+	if b is BaseButton:  # les boutons sont animés par l'autoload UiJuicer
+		return
 	b.resized.connect(func() -> void: b.pivot_offset = b.size / 2.0)
 	b.gui_input.connect(func(ev: InputEvent) -> void:
 		if not (ev is InputEventMouseButton or ev is InputEventScreenTouch):
@@ -368,12 +423,20 @@ static func badge(target: Control, text := "!", icon_id := "") -> void:
 
 static func currency_bar() -> HBoxContainer:
 	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 18)
+	h.add_theme_constant_override("separation", 8)
 	var labels := {}
 	for k in ["eclat_de_voeu", "pieces", "fragments_etage", "energie"]:
-		var box := amount(k, "", 15, ACCENT if k == "eclat_de_voeu" else (Color("9fd8b0") if k == "energie" else PAPER))
+		var box := amount(k, "", 15, HIGHLIGHT if k == "eclat_de_voeu" else (Color("9fd8b0") if k == "energie" else PAPER))
 		labels[k] = box.get_child(1)
-		h.add_child(box)
+		var pill := PanelContainer.new()  # chaque ressource dans une pastille arrondie
+		var ps := panel_style(Color(0.04, 0.02, 0.07, 0.72), Color(ACCENT, 0.3), 1, 20)
+		ps.content_margin_left = 12
+		ps.content_margin_right = 14
+		ps.content_margin_top = 4
+		ps.content_margin_bottom = 4
+		pill.add_theme_stylebox_override("panel", ps)
+		pill.add_child(box)
+		h.add_child(pill)
 	var refresh := func() -> void:
 		for k: String in labels:
 			if k != "energie":
@@ -431,6 +494,9 @@ static func theme() -> Theme:
 		t.set_color("icon_hover_color", cls, Color("fff6e0"))
 		t.set_color("icon_disabled_color", cls, Color(PAPER, 0.35))
 	t.set_color("font_color", "Label", PAPER)
+	t.set_font_size("font_size", "Button", 22)
+	t.set_stylebox("panel", "PanelContainer", card_style())
+	t.set_stylebox("panel", "Panel", card_style())
 	t.set_stylebox("panel", "TabContainer", panel_style(Color(BG, 0.9), Color.TRANSPARENT, 0, 8))
 	t.set_stylebox("tab_selected", "TabContainer", panel_style(PANEL.lightened(0.06), ACCENT, 1, 6))
 	t.set_stylebox("tab_unselected", "TabContainer", panel_style(BG.darkened(0.2), Color.TRANSPARENT, 0, 6))
@@ -470,7 +536,7 @@ static func screen(owner: Control, title: String, back_scene := "res://scenes/ma
 	v.add_child(head)
 	if back_scene != "":
 		head.add_child(icon_button("back", func() -> void: owner.get_tree().change_scene_to_file(back_scene)))
-	var t := label(title, 28, ACCENT)
+	var t := label(title, 32, ACCENT)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(t)
 	head.add_child(currency_bar())

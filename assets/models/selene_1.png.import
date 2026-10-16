@@ -2,26 +2,26 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c4cfces0i6tqt"
-path.s3tc="res://.godot/imported/selene_1.png-a4432d0db460b5572062e395a1382a57.s3tc.ctex"
-path.etc2="res://.godot/imported/selene_1.png-a4432d0db460b5572062e395a1382a57.etc2.ctex"
+uid="uid://dr58uepp7ywiu"
+path.bptc="res://.godot/imported/selene_1.png-a4432d0db460b5572062e395a1382a57.bptc.ctex"
+path.astc="res://.godot/imported/selene_1.png-a4432d0db460b5572062e395a1382a57.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
-"md5": "851a442a8f09c633ec059dcc0475a623"
+"md5": "fa698b4677f5addf78f9dff8540b6f86"
 }
 
 [deps]
 
 source_file="res://assets/models/selene_1.png"
-dest_files=["res://.godot/imported/selene_1.png-a4432d0db460b5572062e395a1382a57.s3tc.ctex", "res://.godot/imported/selene_1.png-a4432d0db460b5572062e395a1382a57.etc2.ctex"]
+dest_files=["res://.godot/imported/selene_1.png-a4432d0db460b5572062e395a1382a57.bptc.ctex", "res://.godot/imported/selene_1.png-a4432d0db460b5572062e395a1382a57.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0

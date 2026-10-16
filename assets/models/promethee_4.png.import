@@ -2,26 +2,26 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://gwbhjuvdn0c1"
-path.s3tc="res://.godot/imported/promethee_4.png-36d5406c2dc388c239f8aa6cc4e9f0d7.s3tc.ctex"
-path.etc2="res://.godot/imported/promethee_4.png-36d5406c2dc388c239f8aa6cc4e9f0d7.etc2.ctex"
+uid="uid://q8md7tttgu3h"
+path.bptc="res://.godot/imported/promethee_4.png-36d5406c2dc388c239f8aa6cc4e9f0d7.bptc.ctex"
+path.astc="res://.godot/imported/promethee_4.png-36d5406c2dc388c239f8aa6cc4e9f0d7.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
-"md5": "4c445ac0cd654e8ccd09980603ea86ae"
+"md5": "c6b0bfd0adeaea20b179ec2d5b2a0ad0"
 }
 
 [deps]
 
 source_file="res://assets/models/promethee_4.png"
-dest_files=["res://.godot/imported/promethee_4.png-36d5406c2dc388c239f8aa6cc4e9f0d7.s3tc.ctex", "res://.godot/imported/promethee_4.png-36d5406c2dc388c239f8aa6cc4e9f0d7.etc2.ctex"]
+dest_files=["res://.godot/imported/promethee_4.png-36d5406c2dc388c239f8aa6cc4e9f0d7.bptc.ctex", "res://.godot/imported/promethee_4.png-36d5406c2dc388c239f8aa6cc4e9f0d7.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0

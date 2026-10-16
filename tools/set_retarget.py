@@ -30,6 +30,7 @@ def patch_texture(imp):
     """Textures extraites des modèles MPFB : 1024 px max et compression GPU (mémoire et taille de l'APK)."""
     s = open(imp, encoding="utf-8").read()
     s2 = re.sub(r"compress/mode=\d+", "compress/mode=2", s)
+    s2 = s2.replace("compress/high_quality=false", "compress/high_quality=true")  # BPTC / ASTC : visages nets
     s2 = re.sub(r"process/size_limit=\d+", "process/size_limit=1024", s2)
     if s2 != s:
         open(imp, "w", encoding="utf-8", newline="\n").write(s2)

@@ -96,6 +96,7 @@ func start(p: Array[Dictionary], t: Dictionary, first := 0) -> void:
 	box.add_theme_stylebox_override("panel", UiKit.panel_style(Color(UiKit.BG, 0.97), UiKit.ACCENT, 2, 10))
 	box.custom_minimum_size = Vector2(620, 0)
 	add_child(box)
+	UiJuicer.pop_in(box, false)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 10)
 	box.add_child(v)

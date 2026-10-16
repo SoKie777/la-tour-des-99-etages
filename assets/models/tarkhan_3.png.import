@@ -3,8 +3,8 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bpb8pvc6j7xcl"
-path.s3tc="res://.godot/imported/tarkhan_3.png-2d220cb768d5bd2fa336cd42ab62606c.s3tc.ctex"
-path.etc2="res://.godot/imported/tarkhan_3.png-2d220cb768d5bd2fa336cd42ab62606c.etc2.ctex"
+path.bptc="res://.godot/imported/tarkhan_3.png-2d220cb768d5bd2fa336cd42ab62606c.bptc.ctex"
+path.astc="res://.godot/imported/tarkhan_3.png-2d220cb768d5bd2fa336cd42ab62606c.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -16,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/tarkhan_3.png"
-dest_files=["res://.godot/imported/tarkhan_3.png-2d220cb768d5bd2fa336cd42ab62606c.s3tc.ctex", "res://.godot/imported/tarkhan_3.png-2d220cb768d5bd2fa336cd42ab62606c.etc2.ctex"]
+dest_files=["res://.godot/imported/tarkhan_3.png-2d220cb768d5bd2fa336cd42ab62606c.bptc.ctex", "res://.godot/imported/tarkhan_3.png-2d220cb768d5bd2fa336cd42ab62606c.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0

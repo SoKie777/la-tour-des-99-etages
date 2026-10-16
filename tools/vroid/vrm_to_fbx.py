@@ -37,7 +37,7 @@ ROLES = [("EyeIris", "eye_iris"), ("EyeHighlight", "eye_highlight"), ("EyeWhite"
          ("FaceEyeline", "eye_line"), ("FaceEyelash", "eye_lash"), ("FaceBrow", "brow"), ("FaceMouth", "mouth"),
          ("Face_", "face"), ("HairBack", "hair_back"), ("Hair", "hair"), ("Body", "body"), ("Tops", "jacket"),
          ("Bottoms", "pants"), ("Shoes", "shoes"), ("Accessory", "accessory")]
-SIDE = {"eye": 256, "brow": 256, "mouth": 256, "face": 1024, "body": 1024}  # taille max des textures
+SIDE = {"eye": 512, "brow": 512, "mouth": 512, "face": 1024, "body": 1024}  # taille max des textures
 GOLD = (0.819, 0.678, 0.384)
 
 

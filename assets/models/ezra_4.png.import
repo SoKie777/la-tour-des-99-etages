@@ -3,8 +3,8 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://4u61q26pwnx1"
-path.s3tc="res://.godot/imported/ezra_4.png-21365d18dc0596e6c12c4da9ab98d0f1.s3tc.ctex"
-path.etc2="res://.godot/imported/ezra_4.png-21365d18dc0596e6c12c4da9ab98d0f1.etc2.ctex"
+path.bptc="res://.godot/imported/ezra_4.png-21365d18dc0596e6c12c4da9ab98d0f1.bptc.ctex"
+path.astc="res://.godot/imported/ezra_4.png-21365d18dc0596e6c12c4da9ab98d0f1.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -16,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/ezra_4.png"
-dest_files=["res://.godot/imported/ezra_4.png-21365d18dc0596e6c12c4da9ab98d0f1.s3tc.ctex", "res://.godot/imported/ezra_4.png-21365d18dc0596e6c12c4da9ab98d0f1.etc2.ctex"]
+dest_files=["res://.godot/imported/ezra_4.png-21365d18dc0596e6c12c4da9ab98d0f1.bptc.ctex", "res://.godot/imported/ezra_4.png-21365d18dc0596e6c12c4da9ab98d0f1.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0

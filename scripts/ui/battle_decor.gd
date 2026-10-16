@@ -101,11 +101,14 @@ static func _environment(parent: Node3D, t: Dictionary) -> void:
 	e.ambient_light_energy = 0.4  # ombres plus marquées sous les pieds
 	# réglages de la Bible D.A. : halo doux sur l'or et les runes, contraste et saturation relevés
 	e.glow_enabled = true
-	e.glow_intensity = 0.8
+	e.glow_intensity = 0.6
 	e.glow_strength = 1.0
-	e.glow_bloom = 0.03
+	e.glow_bloom = 0.15
 	e.glow_hdr_threshold = 1.0  # seuls les VFX et les néons brillent
 	e.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
+	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC  # noirs profonds, blancs non brûlés
+	e.tonemap_exposure = 1.1
+	e.tonemap_white = 1.0
 	e.adjustment_enabled = true  # étalonnage : un peu plus sombre, noirs renforcés
 	e.adjustment_brightness = 0.95
 	e.adjustment_contrast = 1.25

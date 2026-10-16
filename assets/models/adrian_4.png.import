@@ -2,26 +2,26 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bwwqbndtt12t1"
-path.s3tc="res://.godot/imported/adrian_4.png-771d573bbcf8903ff171a92933f04907.s3tc.ctex"
-path.etc2="res://.godot/imported/adrian_4.png-771d573bbcf8903ff171a92933f04907.etc2.ctex"
+uid="uid://c7t7mcjedwfo"
+path.bptc="res://.godot/imported/adrian_4.png-771d573bbcf8903ff171a92933f04907.bptc.ctex"
+path.astc="res://.godot/imported/adrian_4.png-771d573bbcf8903ff171a92933f04907.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
-"md5": "d45ab9d55bcfe6879ad8ce7723e92740"
+"md5": "ff13c1f0923e06be94a3520105cb8909"
 }
 
 [deps]
 
 source_file="res://assets/models/adrian_4.png"
-dest_files=["res://.godot/imported/adrian_4.png-771d573bbcf8903ff171a92933f04907.s3tc.ctex", "res://.godot/imported/adrian_4.png-771d573bbcf8903ff171a92933f04907.etc2.ctex"]
+dest_files=["res://.godot/imported/adrian_4.png-771d573bbcf8903ff171a92933f04907.bptc.ctex", "res://.godot/imported/adrian_4.png-771d573bbcf8903ff171a92933f04907.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0

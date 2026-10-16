@@ -333,7 +333,9 @@ func _play() -> void:
 	if single:
 		await _reveal(results[0], promos[0])
 	else:
-		await _wait(1.0 if best == 5 else 0.6)
+		if best == 5:
+			_light_beam()
+		await _wait(1.6 if best == 5 else 0.6)
 	_finish()
 
 
@@ -432,10 +434,74 @@ func _reveal(r: Dictionary, piece: Node3D) -> void:
 	tw.tween_property(m, "rotation_degrees:y", 0.0, 0.9).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	BattleFx.burst(self, piece.position + Vector3(0, 0.4, 0), RARITY_GLOW[rar], 30, 3.0, 0.08, 1.0, true)
 	BattleFx.shockwave(self, piece.position, RARITY_GLOW[rar], 3.0, 0.8)
+	if rar == 5:
+		_light_beam()
 	m.flash(Color(RARITY_GLOW[rar], 0.8), 0.7)
 	_tween_cam(piece.position + Vector3(0, 1.5, 3.6), piece.position + Vector3(0, 1.0, 0), 0.9)
 	_name_card(r)
 	await _wait(1.7 if rar == 5 else 1.2)
+
+
+## Tirage 5★ : colonne de lumière verticale dorée et étincelles qui montent (par-dessus la 3D).
+func _light_beam() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 0
+	add_child(layer)
+	var vp := get_viewport().get_visible_rect().size
+	var beam := TextureRect.new()
+	var grad := GradientTexture2D.new()
+	var g := Gradient.new()
+	g.set_color(0, Color(1, 0.85, 0.35, 0.0))
+	g.set_color(1, Color(1, 0.85, 0.35, 0.0))
+	g.add_point(0.5, Color(1, 0.97, 0.8, 0.95))
+	g.add_point(0.38, Color(1, 0.8, 0.3, 0.45))
+	g.add_point(0.62, Color(1, 0.8, 0.3, 0.45))
+	grad.gradient = g
+	grad.fill_from = Vector2(0, 0)
+	grad.fill_to = Vector2(1, 0)
+	beam.texture = grad
+	beam.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	beam.stretch_mode = TextureRect.STRETCH_SCALE
+	var add := CanvasItemMaterial.new()
+	add.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	beam.material = add
+	beam.size = Vector2(260, vp.y)
+	beam.position = Vector2(vp.x * 0.5 - 130, 0)
+	beam.pivot_offset = beam.size / 2.0
+	beam.scale = Vector2(0.05, 1)
+	beam.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(beam)
+	var sparks := GPUParticles2D.new()
+	var pm := ParticleProcessMaterial.new()
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pm.emission_box_extents = Vector3(90, 10, 0)
+	pm.direction = Vector3(0, -1, 0)
+	pm.spread = 8.0
+	pm.initial_velocity_min = 260.0
+	pm.initial_velocity_max = 520.0
+	pm.gravity = Vector3.ZERO
+	pm.scale_min = 3.0
+	pm.scale_max = 7.0
+	pm.color = Color(1, 0.9, 0.55)
+	var fade := Gradient.new()
+	fade.set_color(0, Color(1, 1, 1, 1))
+	fade.set_color(1, Color(1, 1, 1, 0))
+	var ft := GradientTexture1D.new()
+	ft.gradient = fade
+	pm.color_ramp = ft
+	sparks.process_material = pm
+	sparks.amount = 70
+	sparks.lifetime = 1.4
+	sparks.material = add
+	sparks.position = Vector2(vp.x * 0.5, vp.y + 10)
+	layer.add_child(sparks)
+	var tw := beam.create_tween()
+	tw.tween_property(beam, "scale:x", 1.0, 0.25).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	tw.tween_interval(0.9)
+	tw.tween_property(beam, "modulate:a", 0.0, 0.6)
+	tw.tween_callback(func() -> void: sparks.emitting = false)
+	tw.tween_interval(1.4)
+	tw.tween_callback(layer.queue_free)
 
 
 ## Carte de présentation qui glisse : rareté, nom, étoiles.

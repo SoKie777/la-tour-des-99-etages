@@ -3,8 +3,8 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://do3se00jy5hfj"
-path.s3tc="res://.godot/imported/geode_8.png-3c4d4ea94a2794afa9dd5fa671135092.s3tc.ctex"
-path.etc2="res://.godot/imported/geode_8.png-3c4d4ea94a2794afa9dd5fa671135092.etc2.ctex"
+path.bptc="res://.godot/imported/geode_8.png-3c4d4ea94a2794afa9dd5fa671135092.bptc.ctex"
+path.astc="res://.godot/imported/geode_8.png-3c4d4ea94a2794afa9dd5fa671135092.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -16,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/geode_8.png"
-dest_files=["res://.godot/imported/geode_8.png-3c4d4ea94a2794afa9dd5fa671135092.s3tc.ctex", "res://.godot/imported/geode_8.png-3c4d4ea94a2794afa9dd5fa671135092.etc2.ctex"]
+dest_files=["res://.godot/imported/geode_8.png-3c4d4ea94a2794afa9dd5fa671135092.bptc.ctex", "res://.godot/imported/geode_8.png-3c4d4ea94a2794afa9dd5fa671135092.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0

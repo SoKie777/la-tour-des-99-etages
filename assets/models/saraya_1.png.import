@@ -3,8 +3,8 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bh0cax6862ba6"
-path.s3tc="res://.godot/imported/saraya_1.png-90f75b7c98a5dfe918740db18f73d4a5.s3tc.ctex"
-path.etc2="res://.godot/imported/saraya_1.png-90f75b7c98a5dfe918740db18f73d4a5.etc2.ctex"
+path.bptc="res://.godot/imported/saraya_1.png-90f75b7c98a5dfe918740db18f73d4a5.bptc.ctex"
+path.astc="res://.godot/imported/saraya_1.png-90f75b7c98a5dfe918740db18f73d4a5.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -16,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/saraya_1.png"
-dest_files=["res://.godot/imported/saraya_1.png-90f75b7c98a5dfe918740db18f73d4a5.s3tc.ctex", "res://.godot/imported/saraya_1.png-90f75b7c98a5dfe918740db18f73d4a5.etc2.ctex"]
+dest_files=["res://.godot/imported/saraya_1.png-90f75b7c98a5dfe918740db18f73d4a5.bptc.ctex", "res://.godot/imported/saraya_1.png-90f75b7c98a5dfe918740db18f73d4a5.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0

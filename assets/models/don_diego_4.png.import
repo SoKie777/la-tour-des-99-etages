@@ -3,8 +3,8 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c1uborghpsfaf"
-path.s3tc="res://.godot/imported/don_diego_4.png-207d176ca7002faae6c7d6af5caf7cfb.s3tc.ctex"
-path.etc2="res://.godot/imported/don_diego_4.png-207d176ca7002faae6c7d6af5caf7cfb.etc2.ctex"
+path.bptc="res://.godot/imported/don_diego_4.png-207d176ca7002faae6c7d6af5caf7cfb.bptc.ctex"
+path.astc="res://.godot/imported/don_diego_4.png-207d176ca7002faae6c7d6af5caf7cfb.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -16,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/don_diego_4.png"
-dest_files=["res://.godot/imported/don_diego_4.png-207d176ca7002faae6c7d6af5caf7cfb.s3tc.ctex", "res://.godot/imported/don_diego_4.png-207d176ca7002faae6c7d6af5caf7cfb.etc2.ctex"]
+dest_files=["res://.godot/imported/don_diego_4.png-207d176ca7002faae6c7d6af5caf7cfb.bptc.ctex", "res://.godot/imported/don_diego_4.png-207d176ca7002faae6c7d6af5caf7cfb.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0

@@ -2,26 +2,26 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cf01iq8u1f56c"
-path.s3tc="res://.godot/imported/mello_6.png-623e210e77a511e6744daa4d4c7a2efb.s3tc.ctex"
-path.etc2="res://.godot/imported/mello_6.png-623e210e77a511e6744daa4d4c7a2efb.etc2.ctex"
+uid="uid://ccen83yqy1vmt"
+path.bptc="res://.godot/imported/mello_6.png-623e210e77a511e6744daa4d4c7a2efb.bptc.ctex"
+path.astc="res://.godot/imported/mello_6.png-623e210e77a511e6744daa4d4c7a2efb.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
-"md5": "b12f811c5b145750b3eb596b7234773c"
+"md5": "ff13c1f0923e06be94a3520105cb8909"
 }
 
 [deps]
 
 source_file="res://assets/models/mello_6.png"
-dest_files=["res://.godot/imported/mello_6.png-623e210e77a511e6744daa4d4c7a2efb.s3tc.ctex", "res://.godot/imported/mello_6.png-623e210e77a511e6744daa4d4c7a2efb.etc2.ctex"]
+dest_files=["res://.godot/imported/mello_6.png-623e210e77a511e6744daa4d4c7a2efb.bptc.ctex", "res://.godot/imported/mello_6.png-623e210e77a511e6744daa4d4c7a2efb.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0

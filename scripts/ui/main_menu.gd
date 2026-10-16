@@ -168,6 +168,7 @@ func _toggle_settings() -> void:
 	settings.offset_top = -150
 	settings.offset_bottom = 150
 	add_child(settings)
+	UiJuicer.pop_in(settings)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
 	settings.add_child(v)

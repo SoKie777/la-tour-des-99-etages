@@ -3,8 +3,8 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bjo5jxk7viqne"
-path.s3tc="res://.godot/imported/mohamed_1.png-fc7e5ee857a5a8a2507f7560b0b4a634.s3tc.ctex"
-path.etc2="res://.godot/imported/mohamed_1.png-fc7e5ee857a5a8a2507f7560b0b4a634.etc2.ctex"
+path.bptc="res://.godot/imported/mohamed_1.png-fc7e5ee857a5a8a2507f7560b0b4a634.bptc.ctex"
+path.astc="res://.godot/imported/mohamed_1.png-fc7e5ee857a5a8a2507f7560b0b4a634.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -16,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/mohamed_1.png"
-dest_files=["res://.godot/imported/mohamed_1.png-fc7e5ee857a5a8a2507f7560b0b4a634.s3tc.ctex", "res://.godot/imported/mohamed_1.png-fc7e5ee857a5a8a2507f7560b0b4a634.etc2.ctex"]
+dest_files=["res://.godot/imported/mohamed_1.png-fc7e5ee857a5a8a2507f7560b0b4a634.bptc.ctex", "res://.godot/imported/mohamed_1.png-fc7e5ee857a5a8a2507f7560b0b4a634.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0

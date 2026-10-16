@@ -2,33 +2,30 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bfp0bp8gi05xu"
-path.s3tc="res://.godot/imported/yass_1.png-0d459ccc77495f45d43baa261a419fce.s3tc.ctex"
-path.etc2="res://.godot/imported/yass_1.png-0d459ccc77495f45d43baa261a419fce.etc2.ctex"
+uid="uid://ciqqykevac4k7"
+path.bptc="res://.godot/imported/yass_1.png-0d459ccc77495f45d43baa261a419fce.bptc.ctex"
+path.astc="res://.godot/imported/yass_1.png-0d459ccc77495f45d43baa261a419fce.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
-}
-generator_parameters={
-"md5": "f075e24da3da7a18274b8a65d5010eac"
 }
 
 [deps]
 
 source_file="res://assets/models/yass_1.png"
-dest_files=["res://.godot/imported/yass_1.png-0d459ccc77495f45d43baa261a419fce.s3tc.ctex", "res://.godot/imported/yass_1.png-0d459ccc77495f45d43baa261a419fce.etc2.ctex"]
+dest_files=["res://.godot/imported/yass_1.png-0d459ccc77495f45d43baa261a419fce.bptc.ctex", "res://.godot/imported/yass_1.png-0d459ccc77495f45d43baa261a419fce.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

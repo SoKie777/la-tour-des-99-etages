@@ -3,8 +3,8 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bgu1dfwiynm7d"
-path.s3tc="res://.godot/imported/espion_lumiere_3.png-8c3c2f6525dc08f2e981af6c04d82fc5.s3tc.ctex"
-path.etc2="res://.godot/imported/espion_lumiere_3.png-8c3c2f6525dc08f2e981af6c04d82fc5.etc2.ctex"
+path.bptc="res://.godot/imported/espion_lumiere_3.png-8c3c2f6525dc08f2e981af6c04d82fc5.bptc.ctex"
+path.astc="res://.godot/imported/espion_lumiere_3.png-8c3c2f6525dc08f2e981af6c04d82fc5.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -16,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/espion_lumiere_3.png"
-dest_files=["res://.godot/imported/espion_lumiere_3.png-8c3c2f6525dc08f2e981af6c04d82fc5.s3tc.ctex", "res://.godot/imported/espion_lumiere_3.png-8c3c2f6525dc08f2e981af6c04d82fc5.etc2.ctex"]
+dest_files=["res://.godot/imported/espion_lumiere_3.png-8c3c2f6525dc08f2e981af6c04d82fc5.bptc.ctex", "res://.godot/imported/espion_lumiere_3.png-8c3c2f6525dc08f2e981af6c04d82fc5.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0

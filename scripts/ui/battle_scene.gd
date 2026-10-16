@@ -932,6 +932,7 @@ func _build_ui() -> void:
 	result_panel.custom_minimum_size.x = 460
 	result_panel.visible = false
 	center.add_child(result_panel)
+	UiJuicer.pop_in(result_panel)
 
 
 ## Barre d'action (Dislyte) : la position de chaque combattant suit sa jauge ; à droite, il joue.
@@ -1201,6 +1202,7 @@ func _toggle_info() -> void:
 	info_panel.offset_top = 52
 	info_panel.offset_bottom = -20
 	ui_root.add_child(info_panel)
+	UiJuicer.pop_in(info_panel)
 	var v := VBoxContainer.new()
 	info_panel.add_child(v)
 	var head := HBoxContainer.new()
@@ -1564,6 +1566,7 @@ func _toggle_battle_stats() -> void:
 	stats_panel.offset_top = -200
 	stats_panel.offset_bottom = 200
 	ui_root.add_child(stats_panel)
+	UiJuicer.pop_in(stats_panel)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 10)
 	stats_panel.add_child(v)

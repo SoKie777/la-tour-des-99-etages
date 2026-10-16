@@ -3,8 +3,8 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bikrol166s00n"
-path.s3tc="res://.godot/imported/wyrm_2.png-44986f74b59fd9607aae0c1d13330814.s3tc.ctex"
-path.etc2="res://.godot/imported/wyrm_2.png-44986f74b59fd9607aae0c1d13330814.etc2.ctex"
+path.bptc="res://.godot/imported/wyrm_2.png-44986f74b59fd9607aae0c1d13330814.bptc.ctex"
+path.astc="res://.godot/imported/wyrm_2.png-44986f74b59fd9607aae0c1d13330814.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -16,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/wyrm_2.png"
-dest_files=["res://.godot/imported/wyrm_2.png-44986f74b59fd9607aae0c1d13330814.s3tc.ctex", "res://.godot/imported/wyrm_2.png-44986f74b59fd9607aae0c1d13330814.etc2.ctex"]
+dest_files=["res://.godot/imported/wyrm_2.png-44986f74b59fd9607aae0c1d13330814.bptc.ctex", "res://.godot/imported/wyrm_2.png-44986f74b59fd9607aae0c1d13330814.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0

@@ -3,8 +3,8 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bith4xix5rgxq"
-path.s3tc="res://.godot/imported/don_selah_11.png-bfd62f4f399a77607436f789cb6b5e9a.s3tc.ctex"
-path.etc2="res://.godot/imported/don_selah_11.png-bfd62f4f399a77607436f789cb6b5e9a.etc2.ctex"
+path.bptc="res://.godot/imported/don_selah_11.png-bfd62f4f399a77607436f789cb6b5e9a.bptc.ctex"
+path.astc="res://.godot/imported/don_selah_11.png-bfd62f4f399a77607436f789cb6b5e9a.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -16,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/don_selah_11.png"
-dest_files=["res://.godot/imported/don_selah_11.png-bfd62f4f399a77607436f789cb6b5e9a.s3tc.ctex", "res://.godot/imported/don_selah_11.png-bfd62f4f399a77607436f789cb6b5e9a.etc2.ctex"]
+dest_files=["res://.godot/imported/don_selah_11.png-bfd62f4f399a77607436f789cb6b5e9a.bptc.ctex", "res://.godot/imported/don_selah_11.png-bfd62f4f399a77607436f789cb6b5e9a.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0

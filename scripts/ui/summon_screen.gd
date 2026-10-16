@@ -156,13 +156,8 @@ func _big_name(text: String) -> Label:
 func _pull_button(n: int, cost: int) -> Button:
 	var enough := Session.profile.amount("eclat_de_voeu") >= n * cost
 	var bt := UiKit.rich_button("[font_size=22][b]×%d[/b][/font_size]    %s %d" % [n, UiKit.bb("eclat_de_voeu", 20, UiKit.INK), n * cost],
-		_pull.bind(n), Vector2(250, 64), 18, UiKit.INK if enough else UiKit.DIM)
-	var fill := UiKit.ACCENT if n == 10 else Color("8fe6d6")
-	for state in ["normal", "hover", "pressed", "disabled"]:
-		var s := UiKit.panel_style(fill.lightened(0.15 if state == "hover" else 0.0) if state != "disabled" else Color(UiKit.PANEL, 0.9),
-			UiKit.PAPER if state == "pressed" else Color.TRANSPARENT, 2, 4)
-		s.skew = Vector2(0.28, 0)  # boutons inclinés
-		bt.add_theme_stylebox_override(state, s)
+		_pull.bind(n), Vector2(250, 64), 22, UiKit.INK if enough else UiKit.DIM)
+	UiKit.cta(bt)  # même style or que les boutons principaux
 	bt.disabled = not enough
 	return bt
 

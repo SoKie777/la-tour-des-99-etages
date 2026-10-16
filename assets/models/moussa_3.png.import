@@ -3,8 +3,8 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bf55dpo4c6lia"
-path.s3tc="res://.godot/imported/moussa_3.png-9a334242ca848655a06305d7bf2a43d9.s3tc.ctex"
-path.etc2="res://.godot/imported/moussa_3.png-9a334242ca848655a06305d7bf2a43d9.etc2.ctex"
+path.bptc="res://.godot/imported/moussa_3.png-9a334242ca848655a06305d7bf2a43d9.bptc.ctex"
+path.astc="res://.godot/imported/moussa_3.png-9a334242ca848655a06305d7bf2a43d9.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -16,12 +16,12 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/moussa_3.png"
-dest_files=["res://.godot/imported/moussa_3.png-9a334242ca848655a06305d7bf2a43d9.s3tc.ctex", "res://.godot/imported/moussa_3.png-9a334242ca848655a06305d7bf2a43d9.etc2.ctex"]
+dest_files=["res://.godot/imported/moussa_3.png-9a334242ca848655a06305d7bf2a43d9.bptc.ctex", "res://.godot/imported/moussa_3.png-9a334242ca848655a06305d7bf2a43d9.astc.ctex"]
 
 [params]
 
 compress/mode=2
-compress/high_quality=false
+compress/high_quality=true
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0

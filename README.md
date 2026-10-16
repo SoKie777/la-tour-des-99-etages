@@ -2,12 +2,23 @@
 
 Gacha RPG mobile au tour par tour (3 contre 3, barre d'action), inspiré de Dislyte, dans un univers
 d'estampe japonaise : anime 3D, encre ukiyo-e et symbolique des échecs. Moteur : **Godot 4.7**.
-Version actuelle : **v0.7.0** (fichier `VERSION`).
+Version actuelle : **v0.14.0** (fichier `VERSION`).
 
 - **Jouer sur Android :** Releases → **[`apk-latest`](../../releases/tag/apk-latest)** (toujours la dernière version).
   L'APK est signé avec une clé fixe : on installe chaque nouvelle version **par-dessus** l'ancienne et la
   sauvegarde est conservée.
 - **Jouer sur PC :** `Lancer le jeu.bat` · **Modifier :** `Ouvrir dans Godot.bat`
+
+<p align="center">
+  <img src="docs/images/combat.png" width="49%" alt="Combat">
+  <img src="docs/images/invocation.png" width="49%" alt="Invocation">
+</p>
+<p align="center">
+  <img src="docs/images/decor_volcan.png" width="32%" alt="Volcan de Prométhée">
+  <img src="docs/images/decor_toundra.png" width="32%" alt="Toundra">
+  <img src="docs/images/decor_torii.png" width="32%" alt="Cour du torii">
+</p>
+<p align="center"><img src="docs/images/portraits_vroid.png" width="70%" alt="Portraits VRoid : Montana, Don Selah, Prométhée, Géode"></p>
 
 ## Ce qu'on peut faire
 
@@ -32,6 +43,24 @@ Version actuelle : **v0.7.0** (fichier `VERSION`).
 - **Équipe** de 3 et formations, **Collection** (fiche, stats, compétences) et **reliques** (6 emplacements,
   ensembles, niveaux, recyclage).
 - Progression **sauvegardée** sur l'appareil.
+
+## Nouveautés récentes
+
+- **v0.14.0** — Adrian, Mello, Nyssa et Sélène passent en **VRoid**. Interface refondue : boutons principaux or en dégradé, cartes violettes translucides
+  (coins de 16 px), ressources en pastilles, police Fredoka 22 px sur les boutons ; chaque bouton grossit au
+  survol, s'enfonce avec un clic et rebondit ; fenêtres en fondu + zoom sur fond flouté ; colonne de lumière
+  dorée et étincelles sur un tirage 5★. Netteté : rendu 3D à 100 %, MSAA 2× + FXAA, tonemapping Filmic,
+  textures VRoid plus fines (yeux en 512 px, compression haute qualité, filtrage anisotrope).
+- **v0.13.1** — Caméra cinématique (38°, 3/4 épaule, contre-plongée), étalonnage plus contrasté, ombres
+  4096 px, liseré renforcé ; boutons de compétence presque transparents.
+- **v0.13.0** — Décors enrichis (torii : rochers, herbes, Jizō, lucioles ; volcan : pics, sanctuaire brisé,
+  braises, lave qui pulse ; toundra : sapins, ruines de glace, blizzard, brouillard au sol) et effets de
+  pouvoir : arcs de lame à la couleur signature, impacts, tornade de Yass Ming, cristaux de Rupture, aura au
+  sol de l'unité qui joue.
+- **v0.12** — Don Selah, Prométhée et l'Impératrice Géode refaits dans **VRoid** ; police plus grande et
+  plus marquée ; portraits anime.
+- **v0.11** — **Montana** refait dans VRoid (locks vanille noires, tenue noir et or) ; ses poursuites sont
+  visibles une à une.
 
 ## Direction artistique (Bible D.A.)
 
@@ -60,6 +89,7 @@ Version actuelle : **v0.7.0** (fichier `VERSION`).
 
 | Outil | À quoi il sert | Qui |
 |---|---|---|
+| **VRoid Studio** | Personnages **anime** (Légendaires, boss, puis tout le roster) : modèle piloté par Claude via le MCP `vroid-studio`, export VRM 0.0, puis `tools/vroid/vrm_to_fbx.py` (Blender) le convertit au squelette Mixamo. | Claude + toi : clic « Exporter VRM » |
 | **MPFB2** | **MakeHuman dans Blender** : corps 3D de chaque personnage (morphologie, peau, cheveux, vêtements peints) avec un squelette compatible Mixamo, exporté en FBX. | Claude : `tools/mpfb/make_characters.py` + `tools/mpfb/characters.json` |
 | **Mixamo** | Bibliothèque d'**animations** (Adobe). Pas d'API : il faut se connecter. | Toi : télécharger les FBX (*Without Skin*) |
 | **Godot** | Le **moteur du jeu**. À l'import, il recible les animations Mixamo sur tous les personnages (`assets/mixamo/mixamo_bonemap.tres`). | Claude |
