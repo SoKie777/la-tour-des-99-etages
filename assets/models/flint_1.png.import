@@ -2,12 +2,15 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://rmiy8xhmg7co"
+uid="uid://bv0ljokgxyxq2"
 path.bptc="res://.godot/imported/flint_1.png-4b8123c7ee47c6238b9eb13bddeba163.bptc.ctex"
 path.astc="res://.godot/imported/flint_1.png-4b8123c7ee47c6238b9eb13bddeba163.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
+}
+generator_parameters={
+"md5": "ed0d38884ea7895def43729478533c87"
 }
 
 [deps]
@@ -25,7 +28,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

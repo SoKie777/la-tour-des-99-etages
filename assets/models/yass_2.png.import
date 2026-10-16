@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dim5m8m233y7g"
+uid="uid://mualrr06t28r"
 path.bptc="res://.godot/imported/yass_2.png-5ea534683d66f3f1a14f54b52c1837e9.bptc.ctex"
 path.astc="res://.godot/imported/yass_2.png-5ea534683d66f3f1a14f54b52c1837e9.astc.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "8aae933827f09fd61ef5a9455101f664"
+"md5": "a68979c34c99e6e49328d01ce9ad3b25"
 }
 
 [deps]

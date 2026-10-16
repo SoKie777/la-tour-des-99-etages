@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b10ywwwaspm16"
+uid="uid://dfb8cv8r2kc36"
 path.bptc="res://.godot/imported/ghost_1.png-a2425486f69161de8e51d701627a482f.bptc.ctex"
 path.astc="res://.godot/imported/ghost_1.png-a2425486f69161de8e51d701627a482f.astc.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "a2a0ce522f64a72223daa227bb6b7ea2"
+"md5": "260fec89cbaa1d089a2d9db88ce372ef"
 }
 
 [deps]

@@ -2,7 +2,7 @@
 
 Gacha RPG mobile au tour par tour (3 contre 3, barre d'action), inspiré de Dislyte, dans un univers
 d'estampe japonaise : anime 3D, encre ukiyo-e et symbolique des échecs. Moteur : **Godot 4.7**.
-Version actuelle : **v0.14.0** (fichier `VERSION`).
+Version actuelle : **v0.15.0** (fichier `VERSION`).
 
 - **Jouer sur Android :** Releases → **[`apk-latest`](../../releases/tag/apk-latest)** (toujours la dernière version).
   L'APK est signé avec une clé fixe : on installe chaque nouvelle version **par-dessus** l'ancienne et la
@@ -19,6 +19,8 @@ Version actuelle : **v0.14.0** (fichier `VERSION`).
   <img src="docs/images/decor_torii.png" width="32%" alt="Cour du torii">
 </p>
 <p align="center"><img src="docs/images/portraits_vroid.png" width="70%" alt="Portraits VRoid : Montana, Don Selah, Prométhée, Géode"></p>
+<p align="center"><img src="docs/images/roster_vroid.png" width="90%" alt="Les 18 derniers personnages passés en VRoid"></p>
+<p align="center"><img src="docs/images/portraits_v015.png" width="90%" alt="Leurs nouveaux portraits"></p>
 
 ## Ce qu'on peut faire
 
@@ -46,6 +48,10 @@ Version actuelle : **v0.14.0** (fichier `VERSION`).
 
 ## Nouveautés récentes
 
+- **v0.15.0** — **Tout le roster est en VRoid** : les 18 derniers personnages (Mikhaïla, Ghost, Tarkhan, Yass, Saraya,
+  Noor-El, Jo Prince, Ezra, Flint et les 9 Rares : Eiríkr, Ymir, Nidhogg, Don Diego, Général de Métal, Espion de
+  Lumière, Moussa, Issa, Mohamed) ont leur modèle anime et un nouveau portrait en estampe. Les Rares, aussi
+  adversaires de la Tour, gardent des tenues simples. GDD mis à jour (direction artistique v0.11 à v0.15).
 - **v0.14.0** — Adrian, Mello, Nyssa et Sélène passent en **VRoid**. Interface refondue : boutons principaux or en dégradé, cartes violettes translucides
   (coins de 16 px), ressources en pastilles, police Fredoka 22 px sur les boutons ; chaque bouton grossit au
   survol, s'enfonce avec un clic et rebondit ; fenêtres en fondu + zoom sur fond flouté ; colonne de lumière

@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://buo7itlhpbj4g"
+uid="uid://dcnqp0mkw83jg"
 path.bptc="res://.godot/imported/moussa_4.png-acbf03da7e75d3111367165d73548f3c.bptc.ctex"
 path.astc="res://.godot/imported/moussa_4.png-acbf03da7e75d3111367165d73548f3c.astc.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "14eaa3a7abb9153ad797084ce5c72d5e"
+"md5": "1d25d079dea3c8b1a7c3be4467779e1c"
 }
 
 [deps]

@@ -2,12 +2,15 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dyg40iy6lgd6g"
+uid="uid://cunq648aqpj0m"
 path.bptc="res://.godot/imported/moussa_0.png-42082ae37467ee1c2fb985e78348f0ab.bptc.ctex"
 path.astc="res://.godot/imported/moussa_0.png-42082ae37467ee1c2fb985e78348f0ab.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
+}
+generator_parameters={
+"md5": "81577785a93d6c160f99083b28d33128"
 }
 
 [deps]
@@ -25,7 +28,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

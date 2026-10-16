@@ -2,12 +2,15 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://0hy2ytcuasnt"
+uid="uid://b8j3n52lgdbmb"
 path.bptc="res://.godot/imported/mohamed_0.png-1326ee707927a65f11f5c20bc33e545d.bptc.ctex"
 path.astc="res://.godot/imported/mohamed_0.png-1326ee707927a65f11f5c20bc33e545d.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
+}
+generator_parameters={
+"md5": "6dc6afb92f95ca8cb6819155131dae29"
 }
 
 [deps]
@@ -25,7 +28,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

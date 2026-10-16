@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://oth0jdhnultw"
+uid="uid://bqf64orjmm60r"
 path.bptc="res://.godot/imported/tarkhan_1.png-46a1fe3981f4eda844559fb8aae6c392.bptc.ctex"
 path.astc="res://.godot/imported/tarkhan_1.png-46a1fe3981f4eda844559fb8aae6c392.astc.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "851a442a8f09c633ec059dcc0475a623"
+"md5": "ad53b05feea79b191147e944a2b20ea2"
 }
 
 [deps]

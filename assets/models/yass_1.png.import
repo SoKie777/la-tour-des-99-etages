@@ -2,12 +2,15 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ciqqykevac4k7"
+uid="uid://irh6n5ty1r62"
 path.bptc="res://.godot/imported/yass_1.png-0d459ccc77495f45d43baa261a419fce.bptc.ctex"
 path.astc="res://.godot/imported/yass_1.png-0d459ccc77495f45d43baa261a419fce.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
+}
+generator_parameters={
+"md5": "02e216e5ff105953e60c79f14be2a23b"
 }
 
 [deps]
@@ -25,7 +28,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

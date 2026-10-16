@@ -1,4 +1,4 @@
-# T99 — Game Design Document (v0.4)
+# T99 — Game Design Document (à jour v0.15.0)
 
 Synthèse de la *Bible d'univers* et du document *MVP : triangle des nations et roster* (14/10/2026),
 complétée par les systèmes de **Dislyte** que l'on reprend. La direction musicale de Dislyte
@@ -225,7 +225,7 @@ Réglages : `data/rules.json` → `tower_tactics` ; moteur : `BattleEngine.enabl
 
 Ennemis du roster v2 (puissance 0,9 à 1,1), Élites aux étages 18 et 24, boss **l'Impératrice Géode**
 (étage 25, faible à Grande Ourse et Sirius ; Éclat tranchant, Pluie de gemmes, Prisme cristallin ; phase
-Cœur de quartz sous 50 % PV). Modèle provisoire (celui de Saraya) en attendant son modèle MPFB.
+Cœur de quartz sous 50 % PV). Modèle VRoid dédié (tenue repeinte en améthyste) depuis la v0.12.
 Réglage mesuré en mode tactique, sans reliques : une équipe 5★ (Montana, Adrian, Noor-El) passe presque
 tous les étages et bat la Géode environ 1 fois sur 5 ; une équipe d'Épiques bloque dès l'étage 18.
 Le boss demande donc des reliques. Don Selah n'est pas un adversaire de la Tour tant que son kit n'est
@@ -277,6 +277,27 @@ composition d'équipe et Résonance, boss et armes anti-boss, élites), **au moi
   sans Légendaire (Eiríkr, Yass, Issa) 27 à 90 % ; Mello sans Yass perd souvent contre Prométhée.
 - Les sauvegardes d'avant la v0.8 sont considérées comme ayant fini le prologue.
 
+## 9 ter. Direction artistique (v0.11 à v0.15)
+
+- **Personnages** : modélisés dans VRoid Studio, exportés en VRM 0.0, puis convertis par
+  `tools/vroid/vrm_to_fbx.py` (squelette renommé en Mixamo, pour garder les animations existantes).
+  Depuis la v0.15, **les 24 personnages jouables** et les boss Prométhée et Géode sont en VRoid. Les Rares
+  (3★), qui servent aussi d'adversaires dans la Tour, gardent des tenues simples. Le pipeline est décrit dans
+  `docs/PIPELINE.md`.
+- **Identités visuelles fixées** : Montana a les cheveux noirs en locks vanille et une tenue kente noir et or ;
+  la Géode a une tenue repeinte en améthyste.
+- **Portraits** : buste rendu dans le jeu puis stylisé en estampe (`tools/ukiyoe_portraits.py --soft` :
+  rendu anime conservé, seul le contour est encré) ; disque de la constellation et rang en kanji.
+- **Interface** : police Fredoka (OFL), or et cartes sombres, pastilles de ressources, boutons « CTA » ;
+  chaque bouton réagit au toucher (zoom, clic, rebond) et les fenêtres apparaissent sur fond flou.
+- **Combat** : caméra cinématique (FOV 38, cadrage fixe validé), profondeur de champ, étalonnage
+  Filmic, ombres 4096, liseré de lumière sur les personnages ; décors enrichis par univers (dojo à torii,
+  forge volcanique, toundra) ; VFX par shaders (entailles, tornades, orbes, impacts, bris de cristal,
+  aura au début du tour) et signature visuelle par personnage.
+- **Invocation** : colonne de lumière dorée pour un 5★.
+- **Licences** : aucun modèle VRM téléchargé (redistribution interdite) n'entre dans le dépôt ni dans
+  l'APK ; seuls les personnages créés pour le jeu sont utilisés.
+
 ## 10. Résultats de simulation (IA simple des deux côtés, 400 combats par duel)
 
 | Duel (équipes d'une seule nation) | Avec triangle | Sans triangle |
@@ -318,9 +339,8 @@ Ymir. Ces chiffres sont des tendances ; il faut les refaire après chaque régla
 3. Zéro perte (Moussa) : trop fort ? À mesurer en simulation (avec et sans le passif).
 4. Capitaine, promotion, ascension : à valider avant de les coder.
 5. Rééquilibrage de la nation A (tank Tormund en 2e vague ?).
-6. Style visuel : MakeHuman donne un rendu réaliste et des vêtements de ville. C'est proche de
-   Dislyte (urbain moderne), mais les tenues de la Tour (armures, tenues d'univers) demanderont des
-   vêtements sur mesure.
+6. Style visuel : tranché en v0.11-v0.15, tous les personnages passent en VRoid (style anime, voir
+   section 9 ter). Reste à faire : tenues d'univers sur mesure (armures, tenues de la Tour).
 
 ## 13. Feuille de route
 
@@ -334,3 +354,6 @@ Ymir. Ces chiffres sont des tendances ; il faut les refaire après chaque régla
    d'invocation sur l'échiquier, 3 boss de butin, énergie.
 4. **v0.4** : boss de butin (fait), puis progression (niveau, promotion, ascension), capitaine, premier tutoriel.
 5. **v0.5** : guerre de territoire (PvP asynchrone), serveur.
+6. **v0.11 à v0.15 (fait)** : direction artistique anime : les 24 personnages et les boss Prométhée et
+   Géode en VRoid, portraits en estampe, police Fredoka, décors enrichis (dojo, forge, toundra), VFX
+   par shaders, caméra cinématique et post-traitement, refonte de l'interface (or, cartes, « juice »).

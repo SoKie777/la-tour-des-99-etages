@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://csskj4svon60i"
+uid="uid://bc07q5iaruoor"
 path.bptc="res://.godot/imported/jo_prince_4.png-3edf746eae8fdc6809675323c46a24d5.bptc.ctex"
 path.astc="res://.godot/imported/jo_prince_4.png-3edf746eae8fdc6809675323c46a24d5.astc.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "14eaa3a7abb9153ad797084ce5c72d5e"
+"md5": "5f4d56351743526c7386e6a1719f71ff"
 }
 
 [deps]

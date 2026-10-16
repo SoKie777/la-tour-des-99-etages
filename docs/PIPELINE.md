@@ -154,7 +154,7 @@ accessoires 3D et particules. Le décor vient des données : `decor` / `boss_dec
 - Effets : tranchant d'encre à défilement d'UV (`ink_slash.gdshader`, `BattleFx.ink_slash`), sceau doré sous
   chaque unité (`unit_seal.gdshader`), frame d'impact noir et blanc sur les ultimes (`impact_flash.gdshader`).
 
-## Légendaires VRoid (v0.11)
+## Personnages VRoid (v0.11, tout le roster depuis la v0.15)
 VRoid Studio (MCP « vroid-studio ») → l'utilisateur clique « Exporter VRM » (**VRM 0.0**) →
 `blender --background --python tools/vroid/vrm_to_fbx.py -- <id> <fichier.vrm> [--locs] [--gold] [--preview <dossier>]`
 → `assets/models/<id>.fbx` → `python tools/set_retarget.py` → `godot --headless --import`.
@@ -162,4 +162,6 @@ VRoid Studio (MCP « vroid-studio ») → l'utilisateur clique « Exporter VRM �
   Source : `D:/Claude/t99/vroid/montana.vroid`.
 - Don Selah : `-- don_selah D:/Claude/t99/vroid/domselah.vrm` ; Prométhée : `-- promethee D:/Claude/t99/vroid/Promethée.vrm` ;
   Géode : `-- geode D:/Claude/t99/vroid/Geode.vrm --amethyst` (boss : `"model": "geode"` dans bosses.json). Ne plus le régénérer avec `make_characters.py` (écraserait le modèle VRoid).
+- Autres personnages : `-- <id> D:/Claude/t99/vroid/<fichier>.vrm` sans option (sources `.vroid` dans le même dossier).
+  Les textures sont dans le `.fbx` : les `<id>_N.png` n'apparaissent qu'après l'import Godot.
 - Les VRM gratuits trouvés en ligne ont tous « redistribution interdite » : jamais dans le dépôt ni l'APK.

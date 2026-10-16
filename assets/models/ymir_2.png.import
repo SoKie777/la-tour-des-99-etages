@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cj1lahfdytp6c"
+uid="uid://b2ijacghxqi0w"
 path.bptc="res://.godot/imported/ymir_2.png-b64a4fb80e5c2e3ceac38111e103dc62.bptc.ctex"
 path.astc="res://.godot/imported/ymir_2.png-b64a4fb80e5c2e3ceac38111e103dc62.astc.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "e4ff073cbf6fd237f666772a16f4b5a1"
+"md5": "a68979c34c99e6e49328d01ce9ad3b25"
 }
 
 [deps]

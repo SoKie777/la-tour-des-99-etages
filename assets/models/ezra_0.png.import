@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d5vhwws6ylw1"
+uid="uid://jlx4diuc5tsd"
 path.bptc="res://.godot/imported/ezra_0.png-510df39828df3fb7410998770cfb5061.bptc.ctex"
 path.astc="res://.godot/imported/ezra_0.png-510df39828df3fb7410998770cfb5061.astc.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "2ae7cb8cdd1a6642f90e8ebda64c4b69"
+"md5": "27a2268768be207e725967fb50da952b"
 }
 
 [deps]
