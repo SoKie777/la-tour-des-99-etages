@@ -525,4 +525,5 @@ func _finish() -> void:
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_child(row)
-	row.add_child(UiKit.button("Continuer", func() -> void: get_tree().change_scene_to_file("res://scenes/summon.tscn"), Vector2(200, 50)))
+	var back := "res://scenes/prologue.tscn" if Session.profile.in_prologue() else "res://scenes/summon.tscn"
+	row.add_child(UiKit.button("Continuer", func() -> void: get_tree().change_scene_to_file(back), Vector2(200, 50)))

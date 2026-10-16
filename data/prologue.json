@@ -1,0 +1,29 @@
+{
+  "_comment": "Prologue : joué dès le début d'une partie, avec Eiríkr seul. 8 niveaux en mode tactique ; chacun rapporte 'reward' (10 Éclats = une invocation x10). 'safe' : impossible de perdre (les héros ne descendent pas sous 1 PV). 'tips' : pages du tutoriel (TowerTutorial) montrées au premier combat du niveau. 'brief' : consigne affichée sur la carte du niveau. Invocations gratuites sur la bannière 'banner' après les niveaux listés dans 'free_multis_after' (garantie Légendaire à 20 : la 2e x10 la touche). La Tour s'ouvre après le dernier niveau.",
+  "banner": "debut",
+  "free_multis_after": [2, 3],
+  "reward": {"eclat_de_voeu": 10, "pieces": 1500},
+  "levels": [
+    {"name": "Le Réveil", "enemies": ["espion_lumiere"], "power": 0.45, "safe": true, "decor": "dojo",
+     "tips": ["prologue", "basics", "sceaux"],
+     "brief": "Eiríkr se réveille au pied de la Tour. Un espion lui barre la route."},
+    {"name": "Le Triangle", "enemies": ["general_metal", "espion_lumiere"], "power": 0.5, "safe": true, "decor": "dojo",
+     "tips": ["triangle", "tenacite", "rupture"],
+     "brief": "Ces ennemis sont de la Grande Ourse : Orion les domine. Brise leur Ténacité."},
+    {"name": "L'Équipe", "enemies": ["moussa", "issa", "mohamed"], "power": 0.5, "safe": true, "decor": "acier", "team": 3,
+     "tips": ["team"],
+     "brief": "Trois gardiens de Sirius : Sirius domine Orion, Eiríkr seul ne suffira pas. Seule la Grande Ourse brise leur Ténacité : compose ton équipe."},
+    {"name": "L'Écho de Prométhée", "boss_unit": "promethee", "power": 0.8, "decor": "forge", "team": 3,
+     "tips": ["boss"],
+     "brief": "Un écho du gardien de la Cité d'Acier. Ses faiblesses : Orion et Sirius. Eiríkr brise sa Ténacité, Mello frappe."},
+    {"name": "Les Trois Voies", "enemies": ["ymir", "don_diego", "moussa"], "power": 0.95, "decor": "acier", "team": 3,
+     "brief": "Trois constellations en face : chacune a sa faiblesse. Une équipe variée les brise toutes."},
+    {"name": "La Garde d'Acier", "enemies": ["don_diego", "general_metal", "espion_lumiere"], "power": 1.0, "elite": true, "decor": "acier", "team": 3,
+     "tips": ["elite"],
+     "brief": "Une élite de la Grande Ourse : Ténacité renforcée. Mise sur Orion et la Résonance."},
+    {"name": "Les Sentinelles", "enemies": ["ymir", "nidhogg", "eirikr"], "power": 1.05, "decor": "gemmes", "team": 3,
+     "brief": "Des guerriers d'Orion, comme Eiríkr : Sirius les domine."},
+    {"name": "L'Écho de la Géode", "boss_unit": "geode", "power": 0.85, "decor": "geode", "team": 3,
+     "brief": "Le dernier écho garde la porte de la Tour. Mello et Yass portent une arme contre elle : son Prisme ne tiendra pas."}
+  ]
+}

@@ -189,6 +189,8 @@ func _banner_bar() -> Control:
 	bar.add_child(h)
 	for id: String in GameData.gacha()["banners"]:
 		var bd: Dictionary = GameData.gacha()["banners"][id]
+		if bd.get("hidden", false):
+			continue  # bannière de départ (prologue)
 		var selected := id == Session.gacha.banner_id
 		var v := VBoxContainer.new()
 		v.add_theme_constant_override("separation", 0)

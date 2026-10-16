@@ -7,6 +7,9 @@ var reset_armed := false
 
 
 func _ready() -> void:
+	if Session.profile.in_prologue():  # nouvelle partie : le prologue d'abord, la Tour ensuite
+		get_tree().change_scene_to_file.call_deferred("res://scenes/prologue.tscn")
+		return
 	var content := UiKit.screen(self, "T99", "")
 	var cols := HBoxContainer.new()
 	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL

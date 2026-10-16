@@ -156,8 +156,8 @@ dominante gagne presque toujours ; Purgatoire et Enfer demandent des reliques.
 - **Pièces** : gagnées à chaque victoire (300 + 60 × étage). Elles servent à monter les reliques
   (100 + 100 × niveau actuel, soit 12 000 pour aller de +0 à +15).
 - **Reliques** : 1 relique aléatoire (set et emplacement) à chaque victoire, même en rejouant un étage.
-- **Nouveau joueur** : Nidhogg, Espion de Lumière et Issa (les trois 4★, un par nation), 20 Éclats
-  (deux invocations x10), 2 000 Pièces.
+- **Nouveau joueur** : Eiríkr seul, 0 Éclat, 2 000 Pièces, puis le **prologue** (section 9 bis). Les
+  cadeaux de test (`grants`) ne sont versés qu'à la fin du prologue.
 - Bannières : standard + vedette (taux de la vedette x2 parmi les 5★). Garanties : Légendaire à
   80, Épique au moins toutes les 10. Les compteurs sont communs à toutes les bannières et sauvegardés.
 - Taux de la fiche : Rare 70 %, Épique 25 %, Légendaire 5 % (indicatifs, à régler avec l'économie).
@@ -247,6 +247,35 @@ un Épique de la même nation en version réduite. Portraits étoilés sur l'ét
 S1 : frappe puis poursuites (1re certaine, puis 50 %, 30 %, 10 %), à 50 / 45 / 40 / 35 % de l'ATK, +15 %
 sous Room. Toute compétence de Montana qui touche un ennemi gelé déclenche la même chaîne ; Selah (S3)
 qui gèle la déclenche donc aussitôt. En moyenne 1,67 poursuite par S1.
+
+## 9 bis. Prologue (v0.8, `data/prologue.json`)
+
+Joué dès le lancement d'une nouvelle partie : le menu et la Tour restent fermés jusqu'à la fin.
+Objectif : sortir du prologue avec les bases (tour de jeu, Sceaux, triangle, Ténacité et Rupture,
+composition d'équipe et Résonance, boss et armes anti-boss, élites), **au moins 2 Légendaires** et
+**8 invocations x10** en poche.
+
+- On commence avec **Eiríkr** (Orion) seul. 8 niveaux en mode tactique ; chaque victoire rapporte
+  **10 Éclats** (une x10) et 1 500 Pièces. Les pages du tutoriel arrivent niveau par niveau.
+- Niveaux 1 à 3 **impossibles à perdre** (les héros ne descendent pas sous 1 PV).
+  1. Le Réveil : un espion de la Grande Ourse. Tour de jeu, compétences, Sceaux.
+  2. Le Triangle : deux ennemis de la Grande Ourse, dominés par Orion. Triangle, Ténacité, Rupture.
+  3. L'Équipe : trois gardiens de Sirius (qui domine Orion) : il faut composer une équipe de 3 avec la
+     Grande Ourse (Yass). Le bouton « Combattre » n'apparaît qu'une fois l'équipe complète.
+  4. L'Écho de Prométhée (boss, 80 %) : page des boss (faiblesses Orion et Sirius : Eiríkr).
+  5. Les Trois Voies : une constellation de chaque. 6. La Garde d'Acier (élite de la Grande Ourse).
+  7. Les Sentinelles (Orion, dominés par Sirius). 8. L'Écho de la Géode (boss, 85 %) : armes de Mello et Yass.
+- **Bannière de départ « Premier Appel »** (cachée ensuite) : deux x10 **offertes**, après les niveaux 2
+  et 3. Le prix (10 Éclats, que le joueur possède) est affiché barré en grand. Aucun Légendaire avant la
+  garantie, fixée à 20 :
+  - 1re x10 : Rares et Épiques seulement, la 10e invocation donne **Yass** (arme contre la Géode) ;
+  - 2e x10 : la 20e invocation touche la garantie et donne **Mello** (arme contre la Géode). Choix de
+    l'auteur : Mello plutôt que Montana, vedette de la bannière payante.
+  Les compteurs de garantie sont partagés : après la bannière de départ, la garantie Légendaire repart
+  de zéro, et les 80 Éclats du prologue (80 invocations) assurent un 2e Légendaire.
+- Simulation (sans reliques, IA) : Mello + Yass + Eiríkr (ou un Épique) gagnent 100 % des niveaux 4 à 8 ;
+  sans Légendaire (Eiríkr, Yass, Issa) 27 à 90 % ; Mello sans Yass perd souvent contre Prométhée.
+- Les sauvegardes d'avant la v0.8 sont considérées comme ayant fini le prologue.
 
 ## 10. Résultats de simulation (IA simple des deux côtés, 400 combats par duel)
 

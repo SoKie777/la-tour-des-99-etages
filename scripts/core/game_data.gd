@@ -44,6 +44,10 @@ static func progression() -> Dictionary:
 	return load_json("res://data/progression.json")
 
 
+static func prologue() -> Dictionary:
+	return load_json("res://data/prologue.json")
+
+
 static func bosses() -> Dictionary:
 	return load_json("res://data/bosses.json")
 

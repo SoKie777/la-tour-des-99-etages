@@ -1,12 +1,10 @@
 {
-  "_comment": "Nouveau joueur, conversion des doublons, coût et recyclage des reliques, énergie (fiche, partie 5 : généreuse, se recharge pendant l'absence ; étages 1 à free_floors gratuits ; une défaite rend l'énergie). Monnaies : eclat_de_voeu, pieces, fragments_etage.",
+  "_comment": "Nouveau joueur, conversion des doublons, coût et recyclage des reliques, énergie (fiche, partie 5 : généreuse, se recharge pendant l'absence ; étages 1 à free_floors gratuits ; une défaite rend l'énergie). Monnaies : eclat_de_voeu, pieces, fragments_etage. Départ : Eiríkr seul, puis le prologue (data/prologue.json) ; les cadeaux ('grants') sont versés à la fin du prologue.",
   "starter_characters": [
-    "nidhogg",
-    "espion_lumiere",
-    "issa"
+    "eirikr"
   ],
   "starter_currencies": {
-    "eclat_de_voeu": 20,
+    "eclat_de_voeu": 0,
     "pieces": 2000,
     "fragments_etage": 0
   },

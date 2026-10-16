@@ -26,7 +26,11 @@ static func floor_info(number: int) -> Dictionary:
 
 ## Constellations qui entament la Ténacité des ennemis d'un étage (mode tactique), sans doublon.
 static func floor_weaknesses(number: int) -> Array[String]:
-	var f := floor_info(number)
+	return weaknesses_of(floor_info(number))
+
+
+## Faiblesses d'un groupe d'ennemis {enemies | boss_unit} (étage ou niveau du prologue).
+static func weaknesses_of(f: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	var beats: Dictionary = GameData.rules()["triangle"]["beats"]
 	var cons: Array[String] = []
@@ -60,7 +64,11 @@ static func tactics_rank(number: int) -> String:
 
 ## Ennemis d'un étage. Étage de boss : le boss (data/bosses.json), renforcé selon le palier de difficulté.
 static func enemy_units(number: int, difficulty := "facile") -> Array[BattleUnit]:
-	var f := floor_info(number)
+	return make_enemies(floor_info(number), difficulty)
+
+
+## Ennemis d'un groupe {enemies | boss_unit, power} (étage ou niveau du prologue).
+static func make_enemies(f: Dictionary, difficulty := "facile") -> Array[BattleUnit]:
 	var power := float(f["power"])
 	var out: Array[BattleUnit] = []
 	if f.has("boss_unit"):

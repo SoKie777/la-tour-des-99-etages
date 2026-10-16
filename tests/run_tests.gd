@@ -24,9 +24,11 @@ func _init() -> void:
 	test_profile()
 	test_battle_stats()
 	test_tactics()
-	simulate_balance(sims)
-	simulate_rarity(maxi(40, sims / 2))
-	simulate_tower(maxi(20, sims / 4))
+	test_prologue()
+	if not "--quick" in OS.get_cmdline_user_args():  # --quick : règles seulement, sans les longues simulations
+		simulate_balance(sims)
+		simulate_rarity(maxi(40, sims / 2))
+		simulate_tower(maxi(20, sims / 4))
 	print("\n%d vérifications, %d échec(s)." % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -634,10 +636,11 @@ func test_profile() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 3
 	var p := Profile.new_game()
-	check(p.owned_ids().size() == 3 and p.team.size() == 3, "Nouveau joueur : 3 personnages dans l'équipe")
-	check(p.amount("eclat_de_voeu") == 20, "Nouveau joueur : 20 Éclats de Vœu")
-	check(p.add_pull({"id": "eirikr", "rarity": 5})["new"], "Nouveau 5★ ajouté à la collection")
-	check(p.add_pull({"id": "eirikr", "rarity": 5})["fragments"] == 40 and p.amount("fragments_etage") == 40, "Doublon 5★ → 40 Fragments")
+	check(p.owned_ids() == ["eirikr"] and p.team == ["eirikr"], "Nouveau joueur : Eiríkr seul")
+	check(p.amount("eclat_de_voeu") == 0 and p.in_prologue(), "Nouveau joueur : 0 Éclat, prologue à jouer")
+	p.owned["issa"] = 1
+	check(p.add_pull({"id": "mello", "rarity": 5})["new"], "Nouveau 5★ ajouté à la collection")
+	check(p.add_pull({"id": "mello", "rarity": 5})["fragments"] == 40 and p.amount("fragments_etage") == 40, "Doublon 5★ → 40 Fragments")
 	p.add_pull({"id": "recrue_orion", "rarity": 3})
 	check(p.amount("fragments_etage") == 41 and not "recrue_orion" in p.owned_ids(), "Recrue 3★ → 1 Fragment")
 	check(not p.set_team(["eirikr", "ymir"]), "Équipe refusée avec un personnage non possédé")
@@ -645,8 +648,8 @@ func test_profile() -> void:
 	check(p.can_enter_floor(1) and not p.can_enter_floor(2), "Seul l'étage 1 est ouvert au départ")
 	var rw := p.win_floor(1, rng)
 	check(rw["first_clear"] and p.tower_cleared == 1 and p.can_enter_floor(2), "Victoire à l'étage 1 : étage 2 ouvert")
-	check(p.amount("eclat_de_voeu") == 23 and p.relics.size() == 1, "Récompenses : 3 Éclats + 1 relique")
-	check(not p.win_floor(1, rng)["first_clear"] and p.amount("eclat_de_voeu") == 23, "Rejouer : pas de nouveaux Éclats")
+	check(p.amount("eclat_de_voeu") == 3 and p.relics.size() == 1, "Récompenses : 3 Éclats + 1 relique")
+	check(not p.win_floor(1, rng)["first_clear"] and p.amount("eclat_de_voeu") == 3, "Rejouer : pas de nouveaux Éclats")
 	var r: Dictionary = p.relics[0]
 	var uid := int(r["uid"])
 	check(p.equip("eirikr", uid) and p.owner_of(uid) == "eirikr", "Relique équipée")
@@ -686,6 +689,7 @@ func test_profile() -> void:
 	check(q.relic(u2).is_empty() and q.equipped_relics("ghost").is_empty(), "Recyclage : relique retirée et déséquipée")
 	# Formations : équipe et reliques réappliquées, reliques déplacées si besoin
 	q.owned["mello"] = 1
+	q.owned["issa"] = 1
 	var ra := int(q.relics[0]["uid"])
 	q.set_team(["ghost", "issa"])
 	q.equip("ghost", ra)
@@ -693,12 +697,80 @@ func test_profile() -> void:
 	q.set_team(["mello"])
 	q.equip("mello", ra)
 	check(q.apply_formation(0) and q.team == ["ghost", "issa"] and q.owner_of(ra) == "ghost", "Formation : équipe et relique réappliquées")
+	check(q.apply_grants().is_empty(), "Cadeau de test : pas pendant le prologue")
+	q.prologue_cleared = Prologue.level_count()
 	var eclats := q.amount("eclat_de_voeu")
 	check(q.apply_grants().size() == 1 and q.amount("eclat_de_voeu") == eclats + 3000, "Cadeau de test : 3 000 Éclats versés")
 	check(q.apply_grants().is_empty() and q.amount("eclat_de_voeu") == eclats + 3000, "Cadeau de test : une seule fois")
 	var q2 := Profile.from_dict(JSON.parse_string(JSON.stringify(q.to_dict())))
 	check(q2.apply_grants().is_empty(), "Cadeau de test : mémorisé dans la sauvegarde")
 	check(q2.energy == q.energy and q2.formations.size() == q.formations.size() and q2.apply_formation(0), "Énergie et formations sauvegardées")
+
+
+func test_prologue() -> void:
+	print("Prologue")
+	check(Prologue.level_count() == 8, "Prologue : 8 niveaux")
+	var old := Profile.from_dict({"owned": {"montana": 1}, "team": ["montana"], "tower_cleared": 3})
+	check(not old.in_prologue() and not old.free_multi_due(), "Ancienne sauvegarde : prologue considéré comme fait")
+	var p := Profile.new_game()
+	var g := Gacha.new("featured_montana", 5)
+	g.set_state({})
+	check(p.prologue_next() == 1 and not p.free_multi_due(), "Prologue : on commence au niveau 1")
+	p.win_prologue(1)
+	p.win_prologue(1)
+	check(p.prologue_cleared == 1 and p.amount("eclat_de_voeu") == 10, "Chaque niveau : 10 Éclats (une x10), une seule fois")
+	p.win_prologue(2)
+	check(p.free_multi_due() and p.prologue_next() == 0, "Après le niveau 2 : invocation offerte avant le niveau 3")
+	var d := Gacha.new(str(Prologue.cfg()["banner"]), 11)
+	d.set_state(g.get_state())
+	var first := d.pull_many(10)
+	check(first.all(func(r: Dictionary) -> bool: return int(r["rarity"]) <= 4), "1re x10 offerte : rien au-dessus d'Épique")
+	check(first[9]["id"] == "yass", "1re x10 : Yass (arme contre la Géode)")
+	p.prologue_pulls = 1
+	check(not p.free_multi_due() and p.prologue_next() == 3, "Puis le niveau 3")
+	p.win_prologue(3)
+	check(p.free_multi_due(), "Après le niveau 3 : 2e invocation offerte")
+	var second := d.pull_many(10)
+	check(second[9]["id"] == "mello" and second.slice(0, 9).all(func(r: Dictionary) -> bool: return int(r["rarity"]) <= 4),
+		"2e x10 : garantie à 20, Mello (arme contre la Géode)")
+	check(d.pity_5 == 0, "Garantie Légendaire remise à zéro après la bannière de départ")
+	p.prologue_pulls = 2
+	var last := {}
+	for n in range(4, 9):
+		last = p.win_prologue(n)
+	var gift := 0
+	for gr: Dictionary in GameData.progression()["grants"]:
+		gift += int(gr["currencies"].get("eclat_de_voeu", 0))
+	check(not p.in_prologue() and last["done"] and p.amount("eclat_de_voeu") - gift == 80, "Fin du prologue : 80 Éclats gagnés, soit 8 invocations x10")
+	check(last["grants"].size() == GameData.progression()["grants"].size(), "Fin du prologue : cadeaux de test versés")
+	# niveaux 1 à 3 : impossibles à perdre, même avec Eiríkr seul
+	for n in [1, 2]:
+		var safe := 0
+		for k in 20:
+			var e := BattleEngine.new([BattleUnit.new(GameData.character("eirikr"), 0, 0)], Prologue.enemy_units(n), 300 + k)
+			e.enable_tactics(Prologue.tactics_rank(n))
+			e.unlosable = Prologue.level(n).get("safe", false)
+			if e.run_auto() == 0:
+				safe += 1
+		check(safe == 20, "Prologue %d : Eiríkr seul gagne toujours (%d / 20)" % [n, safe])
+	var s3 := 0
+	for k in 20:
+		var e := BattleEngine.new(["eirikr", "yass", "issa"], Prologue.enemy_units(3), 400 + k)
+		e.enable_tactics(Prologue.tactics_rank(3))
+		e.unlosable = true
+		if e.run_auto() == 0:
+			s3 += 1
+	check(s3 == 20, "Prologue 3 : impossible à perdre (%d / 20)" % s3)
+	var line: Array[String] = []
+	for n in range(4, 9):
+		var w := 0
+		for k in 40:
+			var e := BattleEngine.new(["mello", "yass", "eirikr"], Prologue.enemy_units(n), 500 + k)
+			e.enable_tactics(Prologue.tactics_rank(n))
+			if e.run_auto() == 0:
+				w += 1
+		line.append("%d:%d%%" % [n, roundi(100.0 * w / 40)])
+	print("  Prologue 4-8 avec Mello, Yass, Eiríkr (sans reliques) : ", " ".join(line))
 
 
 ## Une équipe de Légendaires doit battre largement une équipe de Rares (et les Épiques aussi).

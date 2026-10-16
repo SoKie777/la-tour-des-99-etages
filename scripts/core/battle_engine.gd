@@ -37,6 +37,7 @@ var sp := 0            # Sceaux de l'équipe du joueur (réserve commune)
 var sp_max := 0
 var team_actions := 0  # actions de l'équipe du joueur (étoile « victoire rapide »)
 var ult_cut := false   # ultimes hors tour (énergie) : seulement contre un boss
+var unlosable := false  # début du prologue : les héros du joueur ne descendent pas sous 1 PV
 
 
 ## team_a / team_b : listes d'ids de personnages, ou de BattleUnit déjà construits (reliques).
@@ -886,6 +887,8 @@ func _apply_damage(tgt: BattleUnit, dmg: float, source: BattleUnit, info: Dictio
 	if not bastion.is_empty():
 		bastion["stored"] = float(bastion.get("stored", 0.0)) + dmg
 	tgt.hp -= dmg
+	if unlosable and tgt.team == 0:
+		tgt.hp = maxf(tgt.hp, 1.0)
 	if tgt.hp <= 0.0:
 		var saver := _zero_loss_saver(tgt)
 		if saver != null:

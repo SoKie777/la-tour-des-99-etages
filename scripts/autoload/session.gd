@@ -8,7 +8,8 @@ var profile: Profile
 var gacha: Gacha
 var auto_battle := false
 var battle_speed := 1.0
-## Combat à lancer : {"mode": "tower", "floor": n} ou {"mode": "test", "player": [ids], "enemy": [ids]}
+## Combat à lancer : {"mode": "tower", "floor": n}, {"mode": "prologue", "level": n}
+## ou {"mode": "test", "player": [ids], "enemy": [ids]}
 var battle: Dictionary = {}
 var rng := RandomNumberGenerator.new()
 ## Résultats de la dernière invocation (cinématique puis écran d'invocation).
@@ -40,6 +41,15 @@ func _ready() -> void:
 				profile.owned[id] = 1
 			profile.set_team(["montana", "ghost", "mikhaila"])
 			battle = {"mode": "loot", "boss": "wyrm", "diff": 0}
+		for a in OS.get_cmdline_user_args():  # niveau du prologue : -- --smoke --prologue=<n>
+			if a.begins_with("--prologue="):
+				var lv := int(a.trim_prefix("--prologue="))
+				if lv >= 3:
+					for id in ["yass", "mello"]:
+						profile.owned[id] = 1
+					profile.set_team(["mello", "yass", "eirikr"])
+				profile.prologue_cleared = lv - 1
+				battle = {"mode": "prologue", "level": lv}
 		if "--v2" in OS.get_cmdline_user_args():  # combat du roster v2 : -- --smoke --v2
 			battle = {"mode": "test", "player": GameData.nation_team("A"), "enemy": GameData.nation_team("C")}
 		get_tree().create_timer(120.0).timeout.connect(func() -> void:
@@ -104,6 +114,28 @@ func now() -> int:
 	return int(Time.get_unix_time_from_system())
 
 
+## Invocation x10 gratuite du prologue sur la bannière de départ (les garanties restent partagées).
+func free_multi() -> Array[Dictionary]:
+	if not profile.free_multi_due():
+		return []
+	var g := Gacha.new(str(Prologue.cfg()["banner"]))
+	g.set_state(gacha.get_state())
+	var results := g.pull_many(10)
+	gacha.set_state(g.get_state())
+	for r in results:
+		r.merge(profile.add_pull(r))
+	profile.prologue_pulls += 1
+	save()
+	last_pulls = results
+	return results
+
+
+## Lance un niveau du prologue (gratuit).
+func start_prologue(n: int) -> void:
+	battle = {"mode": "prologue", "level": n}
+	get_tree().change_scene_to_file("res://scenes/battle.tscn")
+
+
 ## Lance un étage si l'énergie suffit (elle est rendue en cas de défaite). Renvoie false sinon.
 func start_tower_floor(number: int) -> bool:
 	var cost := profile.floor_cost(number)
@@ -140,6 +172,8 @@ func battle_teams() -> Array:
 			players.append(profile.make_unit(id))
 		if battle.get("mode", "") == "loot":
 			enemies = LootBoss.enemy_units(battle["boss"], int(battle["diff"]))
+		elif battle.get("mode", "") == "prologue":
+			enemies = Prologue.enemy_units(int(battle["level"]))
 		else:
 			enemies = Tower.enemy_units(int(battle.get("floor", 1)))
 	return [players, enemies]

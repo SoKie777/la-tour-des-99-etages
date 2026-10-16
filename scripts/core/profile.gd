@@ -13,6 +13,8 @@ var next_relic_uid := 1
 var equipped: Dictionary = {}       # id du perso -> {"1".."6": uid}
 var team: Array[String] = []
 var tower_cleared := 0              # plus haut étage gagné
+var prologue_cleared := 0           # niveaux du prologue gagnés (la Tour s'ouvre après le dernier)
+var prologue_pulls := 0             # invocations gratuites du prologue déjà faites
 var seen_tips := {}                 # tutoriels déjà vus (id -> true)
 var tower_stars := {}               # étage -> étoiles obtenues (masque : 1 victoire, 2 aucun K.O., 4 victoire rapide)
 var gacha_state: Dictionary = {}
@@ -38,6 +40,40 @@ static func new_game(now: int = 0) -> Profile:
 	return p
 
 
+# --- Prologue ------------------------------------------------------------------
+
+func in_prologue() -> bool:
+	return prologue_cleared < Prologue.level_count()
+
+
+## Une invocation gratuite du prologue attend (après les niveaux 2 et 3).
+func free_multi_due() -> bool:
+	return in_prologue() and prologue_pulls < Prologue.free_multis_unlocked(prologue_cleared)
+
+
+## Prochain niveau jouable du prologue, 0 si une invocation gratuite passe avant (ou prologue fini).
+func prologue_next() -> int:
+	return 0 if not in_prologue() or free_multi_due() else prologue_cleared + 1
+
+
+## Victoire au niveau n du prologue : récompense (une x10) à la première victoire. À la fin du prologue,
+## les cadeaux en attente sont versés. Renvoie {currencies, done, grants}.
+func win_prologue(n: int) -> Dictionary:
+	var out := {"currencies": {}, "done": false, "grants": []}
+	if n != prologue_cleared + 1:
+		return out
+	prologue_cleared = n
+	var rw: Dictionary = Prologue.cfg()["reward"]
+	for k: String in rw:
+		add(k, int(rw[k]))
+		out["currencies"][k] = int(rw[k])
+	if not in_prologue():
+		out["done"] = true
+		seen_tips["tower_boss"] = true  # les pages des boss ont été vues pendant le prologue
+		out["grants"] = apply_grants()
+	return out
+
+
 # --- Monnaies ---------------------------------------------------------------
 
 func amount(currency: String) -> int:
@@ -58,6 +94,8 @@ func spend(currency: String, n: int) -> bool:
 ## Verse les cadeaux pas encore reçus (ressources de test, compensations). Renvoie leurs notes.
 func apply_grants() -> Array[String]:
 	var notes: Array[String] = []
+	if in_prologue():
+		return notes  # versés à la fin du prologue
 	for g: Dictionary in GameData.progression().get("grants", []):
 		if g["id"] in grants_received:
 			continue
@@ -389,7 +427,7 @@ func to_dict() -> Dictionary:
 	return {
 		"version": SAVE_VERSION, "owned": owned, "currencies": currencies, "relics": relics,
 		"next_relic_uid": next_relic_uid, "equipped": equipped, "team": team,
-		"tower_cleared": tower_cleared, "tower_stars": tower_stars, "seen_tips": seen_tips, "gacha_state": gacha_state,
+		"tower_cleared": tower_cleared, "prologue_cleared": prologue_cleared, "prologue_pulls": prologue_pulls, "tower_stars": tower_stars, "seen_tips": seen_tips, "gacha_state": gacha_state,
 		"energy": energy, "energy_time": energy_time, "formations": formations, "loot": loot,
 		"grants_received": grants_received, "unseen": unseen,
 	}
@@ -414,6 +452,9 @@ static func from_dict(d: Dictionary) -> Profile:
 			p.equipped[id][slot] = int(d["equipped"][id][slot])
 	p.team.assign(d.get("team", []))
 	p.tower_cleared = int(d.get("tower_cleared", 0))
+	# sauvegarde d'avant le prologue : considéré comme fait
+	p.prologue_cleared = int(d.get("prologue_cleared", Prologue.level_count()))
+	p.prologue_pulls = int(d.get("prologue_pulls", Prologue.cfg()["free_multis_after"].size()))
 	for k: String in d.get("seen_tips", {}):
 		p.seen_tips[k] = true
 	for k: String in d.get("tower_stars", {}):

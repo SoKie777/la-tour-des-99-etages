@@ -60,8 +60,12 @@ func _ready() -> void:
 	var teams := Session.battle_teams()
 	engine = BattleEngine.new(teams[0], teams[1])
 	engine.battle_event.connect(_on_battle_event)
-	if Session.battle.get("mode", "") == "tower":  # mode tactique : seulement dans l'Ascension
+	if Session.battle.get("mode", "") == "tower":  # mode tactique : seulement dans l'Ascension (et le prologue)
 		engine.enable_tactics(Tower.tactics_rank(int(Session.battle["floor"])))
+	var prologue_lv := int(Session.battle.get("level", 0)) if Session.battle.get("mode", "") == "prologue" else 0
+	if prologue_lv > 0:
+		engine.enable_tactics(Prologue.tactics_rank(prologue_lv))
+		engine.unlosable = Prologue.level(prologue_lv).get("safe", false)
 	_build_world()
 	_build_ui()
 	_refresh()
@@ -73,7 +77,16 @@ func _ready() -> void:
 		var prof := Session.profile
 		var pages: Array[Dictionary] = []
 		if forced >= 0:
-			await _open_tutorial(TowerTutorial.page_list(engine.ult_cut), forced)
+			await _open_tutorial(TowerTutorial.pick(Prologue.level(prologue_lv)["tips"]) if prologue_lv > 0 else TowerTutorial.page_list(engine.ult_cut), forced)
+		elif prologue_lv > 0:  # prologue : les pages du niveau, une seule fois
+			if not prof.seen_tips.has("prologue_%d" % prologue_lv):
+				pages = TowerTutorial.pick(Prologue.level(prologue_lv).get("tips", []))
+				prof.seen_tips["prologue_%d" % prologue_lv] = true
+				if engine.ult_cut:
+					prof.seen_tips["tower_boss"] = true
+		elif not prof.seen_tips.has("tower") and prof.seen_tips.has("prologue_1"):  # déjà vu au prologue
+			pages = TowerTutorial.pick(["tower", "stars"])
+			prof.seen_tips["tower"] = true
 		elif not prof.seen_tips.has("tower"):
 			pages = TowerTutorial.page_list(engine.ult_cut)
 			prof.seen_tips["tower"] = true
@@ -476,6 +489,8 @@ func _decor_id() -> String:
 			return Tower.floor_info(int(Session.battle["floor"])).get("decor", "dojo")
 		"loot":
 			return LootBoss.boss(Session.battle["boss"]).get("decor", "dojo")
+		"prologue":
+			return Prologue.level(int(Session.battle["level"])).get("decor", "dojo")
 	return "dojo"
 
 
@@ -1344,6 +1359,19 @@ func _show_result() -> void:
 	var floor_n := int(Session.battle.get("floor", 0))
 	var in_tower: bool = Session.battle.get("mode", "") == "tower"
 	var in_loot: bool = Session.battle.get("mode", "") == "loot"
+	var in_prologue: bool = Session.battle.get("mode", "") == "prologue"
+	if in_prologue and engine.winner == 0 and not Session.smoke_test:
+		var lv := int(Session.battle["level"])
+		var prw := Session.profile.win_prologue(lv)
+		Session.grant_notes.append_array(prw["grants"])
+		Session.save()
+		var pl: Array = [["%s" % Prologue.level(lv)["name"], true]]
+		for k: String in prw["currencies"]:
+			pl.append(["%s +%s" % [UiKit.bb(k, 22 if k == "eclat_de_voeu" else 20, UI_ACCENT if k == "eclat_de_voeu" else UiKit.PAPER),
+				UiKit.thousands(int(prw["currencies"][k]))], k == "eclat_de_voeu"])
+		if prw["done"]:
+			pl.append(["%s  La Tour s'ouvre !" % UiKit.bb("floor", 22, UI_ACCENT), true])
+		_reward_lines(v, pl)
 	if in_loot and engine.winner != 0 and not Session.smoke_test:
 		Session.profile.refund_energy(int(Session.battle.get("energy", 0)))
 		Session.save()
@@ -1396,6 +1424,15 @@ func _show_result() -> void:
 		nb.add_theme_color_override("font_color", Color("fff1c4"))
 		nb.disabled = Session.profile.energy < Session.profile.floor_cost(floor_n + 1)
 		row.add_child(nb)
+	if in_prologue:
+		var cont := UiKit.button("Continuer  ›" if engine.winner == 0 else "Réessayer", func() -> void:
+			if engine.winner == 0:
+				_back_to_menu()
+			else:
+				Session.start_prologue(int(Session.battle["level"])), Vector2(170, 52))
+		cont.add_theme_stylebox_override("normal", UiKit.panel_style(Color("4a3a12"), UI_ACCENT, 2, 10))  # action principale
+		cont.add_theme_color_override("font_color", Color("fff1c4"))
+		row.add_child(cont)
 	if in_loot:
 		var lb := UiKit.icon_button("auto", func() -> void: Session.start_loot(Session.battle["boss"], int(Session.battle["diff"])), 52)
 		lb.disabled = Session.profile.energy < int(LootBoss.cfg()["energy_cost"])
@@ -1513,5 +1550,5 @@ func _toggle_battle_stats() -> void:
 
 func _back_to_menu() -> void:
 	Engine.time_scale = 1.0
-	var back := {"tower": "res://scenes/tower.tscn", "loot": "res://scenes/loot.tscn"}
+	var back := {"tower": "res://scenes/tower.tscn", "loot": "res://scenes/loot.tscn", "prologue": "res://scenes/prologue.tscn"}
 	get_tree().change_scene_to_file(back.get(Session.battle.get("mode", ""), "res://scenes/main.tscn"))

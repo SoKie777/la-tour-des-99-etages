@@ -8,6 +8,7 @@ var banner: Dictionary
 var pity_5 := 0
 var pity_4 := 0
 var total_pulls := 0
+var banner_pulls := {}  # invocations faites sur chaque bannière (id -> n)
 var rng := RandomNumberGenerator.new()
 
 
@@ -22,19 +23,32 @@ func _init(id: String, seed_value: int = 0) -> void:
 
 ## Compteurs de garantie (sauvegardés dans le profil, partagés entre bannières).
 func get_state() -> Dictionary:
-	return {"pity_5": pity_5, "pity_4": pity_4, "total_pulls": total_pulls}
+	return {"pity_5": pity_5, "pity_4": pity_4, "total_pulls": total_pulls, "banner_pulls": banner_pulls.duplicate()}
 
 
 func set_state(s: Dictionary) -> void:
 	pity_5 = int(s.get("pity_5", 0))
 	pity_4 = int(s.get("pity_4", 0))
 	total_pulls = int(s.get("total_pulls", 0))
+	banner_pulls = {}
+	for k: String in s.get("banner_pulls", {}):
+		banner_pulls[k] = int(s["banner_pulls"][k])
 
 
 func pull() -> Dictionary:
 	pity_5 += 1
 	pity_4 += 1
 	total_pulls += 1
+	var nth := int(banner_pulls.get(banner_id, 0)) + 1
+	banner_pulls[banner_id] = nth
+	var scripted: Dictionary = banner.get("scripted", {})
+	if scripted.has(str(nth)):  # bannière de départ : la n-ième invocation donne ce personnage
+		var sid: String = scripted[str(nth)]
+		var srar := int(GameData.character(sid)["rarity"])
+		pity_4 = 0
+		if srar == 5:
+			pity_5 = 0
+		return {"rarity": srar, "id": sid, "pulls_since_5": pity_5}
 	var rates: Dictionary = banner["rates"]
 	var rarity := 3
 	var roll := rng.randf() * 100.0

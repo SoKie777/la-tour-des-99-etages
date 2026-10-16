@@ -11,6 +11,9 @@ Version actuelle : **v0.7.0** (fichier `VERSION`).
 
 ## Ce qu'on peut faire
 
+- **Prologue** (8 niveaux) dès le début, avec Eiríkr seul : les bases du jeu pas à pas, deux invocations
+  x10 offertes sur la bannière « Premier Appel » (Yass, puis Mello à la garantie de 20), et 8 x10 à
+  la sortie. La Tour s'ouvre ensuite.
 - **Ascension de la Tour** (25 étages) : univers 01, la Cité d'Acier (boss **Prométhée**), et univers 02,
   la Forêt des Gemmes (boss **l'Impératrice Géode**). Combats en **mode tactique** inspiré de Honkai: Star
   Rail : Sceaux d'équipe, ultimes qui coupent la ligne de temps, Ténacité et Rupture par faiblesse de
