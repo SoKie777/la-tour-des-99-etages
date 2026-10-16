@@ -1,6 +1,7 @@
 """Transforme les photos de buste (tools/portraits.gd) en icônes façon estampe ukiyo-e.
 
-Usage : python tools/ukiyoe_portraits.py <dossier_des_photos> [taille]
+Usage : python tools/ukiyoe_portraits.py <dossier_des_photos> [taille] [--soft]
+--soft : modèles VRoid (visages anime) : rendu gardé tel quel, seul le contour extérieur est encré.
 Écrit assets/portraits/<id>.png : aplats de couleurs (bois gravé), contour à l'encre, fond de papier
 washi, disque de soleil à la couleur de la constellation, sceau rouge (hanko) avec la rareté.
 """
@@ -9,7 +10,9 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageOps
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "assets", "portraits")
-SIZE = int(sys.argv[2]) if len(sys.argv) > 2 else 256
+ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
+SOFT = "--soft" in sys.argv
+SIZE = int(ARGS[1]) if len(ARGS) > 1 else 256
 # palette d'estampe (mêmes teintes que UiKit.CONST_COLORS) : bleu de Prusse, vermillon, glycine ; papier washi
 SUN = {"orion": (43, 79, 140), "grande_ourse": (196, 62, 40), "sirius": (130, 98, 172), "neutre": (40, 36, 44)}
 PAPER = (236, 224, 198)
@@ -68,8 +71,12 @@ def portrait(src, cid, constellation, rarity):
     big = 512
     rgba = Image.open(src).convert("RGBA").resize((big, big), Image.LANCZOS)
     alpha = rgba.split()[3].point(lambda v: 255 if v > 100 else 0)
-    flat = woodblock(rgba)
-    lines = ink_lines(flat, alpha)
+    if SOFT:  # visage anime : les aplats le déformeraient
+        flat = rgba.convert("RGB").filter(ImageFilter.MedianFilter(3))
+        lines = ImageChops.subtract(alpha.filter(ImageFilter.MaxFilter(7)), alpha.filter(ImageFilter.MinFilter(3)))
+    else:
+        flat = woodblock(rgba)
+        lines = ink_lines(flat, alpha)
     canvas = washi(big, hash(cid) & 0xFFFF)
     d = ImageDraw.Draw(canvas)
     sun = SUN.get(constellation, SUN["neutre"])
@@ -96,7 +103,7 @@ def portrait(src, cid, constellation, rarity):
 
 
 def main():
-    src_dir = sys.argv[1]
+    src_dir = ARGS[0]
     os.makedirs(OUT, exist_ok=True)
     info = roster()
     for f in sorted(os.listdir(src_dir)):
