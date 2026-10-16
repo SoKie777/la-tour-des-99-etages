@@ -13,6 +13,16 @@ extends RefCounted
 ##   gemmes : Forêt des Gemmes, arbres géants aux cristaux luminescents, lucioles (étages 13 à 24)
 ##   geode  : cœur de la Géode, parois d'améthyste, cristaux géants (étage 25, l'Impératrice Géode)
 
+## Liseré des personnages (rim light) selon l'arène : magma orange, givre cyan, torii or chaud,
+## acier indigo néon… (spécification visuelle v0.10).
+const RIM := {"dojo": "d1ad62", "acier": "8a2be2", "forge": "ff5500", "givre": "00e5ff", "orion": "6fa8ff",
+	"sirius": "b48aff", "gemmes": "d07aff", "geode": "ff6ad5"}
+
+
+static func rim_color(id: String) -> Color:
+	return Color(RIM.get(id, "d1ad62"))
+
+
 const THEMES := {
 	"dojo": {"sky": ["142342", "b8644a"], "ground": "2a1c22", "mist": "6a4450",
 		"ambient": "a89ab0", "key": "fff1dc", "key_energy": 1.15, "rim": "8fa6e8"},

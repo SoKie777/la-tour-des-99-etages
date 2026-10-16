@@ -11,6 +11,38 @@ OUT = os.path.join(ROOT, "assets", "models")
 
 from bl_ext.blender_org.mpfb.services.humanservice import HumanService
 from bl_ext.blender_org.mpfb.services.assetservice import AssetService
+from bl_ext.blender_org.mpfb.services.targetservice import TargetService
+
+# Style « gacha » des Légendaires (v0.10) : tête un peu plus grande, grands yeux, nez et bouche
+# plus fins, mâchoire en V, jambes plus longues. Valeurs des cibles MPFB (0 à 1) ; une fiche peut les
+# ajuster avec "targets" (une valeur à 0 retire la cible).
+STYLE = {
+    "head-scale-vert-incr": 0.6, "head-scale-horiz-incr": 0.45, "head-scale-depth-incr": 0.3, "head-age-decr": 1.0,
+    "head-oval": 0.5, "l-eye-scale-incr": 1.0, "r-eye-scale-incr": 1.0, "l-eye-height2-incr": 0.25, "r-eye-height2-incr": 0.25,
+    "l-eye-trans-down": 0.3, "r-eye-trans-down": 0.3, "l-eye-bag-decr": 0.8, "r-eye-bag-decr": 0.8,
+    "nose-scale-horiz-decr": 0.6, "nose-scale-vert-decr": 0.4, "nose-volume-decr": 0.8, "nose-point-width-decr": 0.5,
+    "mouth-scale-horiz-decr": 0.3, "chin-width-decr": 0.7, "chin-prominent-decr": 0.4, "chin-height-decr": 0.3,
+    "l-cheek-bones-decr": 0.5, "r-cheek-bones-decr": 0.5,
+    "neck-scale-horiz-decr": 0.35, "measure-upperleg-height-incr": 0.6, "lowerlegs-height-incr": 0.5,
+}
+
+
+def rarity(fid):
+    data = json.load(open(os.path.join(ROOT, "data", "characters.json"), encoding="utf-8"))
+    return next((int(c["rarity"]) for c in data["characters"] if c["id"] == fid), 0)
+
+
+def apply_style(basemesh, spec):
+    targets = dict(STYLE)
+    targets.update(spec.get("targets", {}))
+    for name, v in targets.items():
+        if not v:
+            continue
+        path = TargetService.target_full_path(name)
+        if not path:
+            print("CIBLE INCONNUE", name)
+            continue
+        TargetService.load_target(basemesh, path, weight=float(v), name=name)
 
 
 def asset(kind, name, ext):
@@ -390,6 +422,8 @@ def build(fid, spec, preview_path=None):
     macros["race"] = spec.get("race", {"african": 1.0, "asian": 0.0, "caucasian": 0.0})
     basemesh = HumanService.create_human(macro_detail_dict=macros, scale=0.1)
     basemesh.name = fid + "_body"
+    if not spec.get("realistic") and rarity(fid) == 5:  # style gacha : légendaires seulement
+        apply_style(basemesh, spec)
     # squelette AVANT les vêtements : ils sont alors attachés (et déformés) par le rig
     HumanService.add_builtin_rig(basemesh, "mixamo")
     HumanService.set_character_skin(asset("skins", spec.get("skin", "Young african male"), "mhmat"), basemesh,
@@ -397,6 +431,9 @@ def build(fid, spec, preview_path=None):
     HumanService.add_mhclo_asset(asset("eyes", "Low-poly", "mhclo"), basemesh, asset_type="Eyes", subdiv_levels=0)
     HumanService.add_mhclo_asset(asset("eyebrows", spec.get("eyebrows", "Eyebrow001"), "mhclo"), basemesh,
                                  asset_type="Eyebrows", subdiv_levels=0)
+    if spec.get("eyelashes", "Eyelashes01"):
+        HumanService.add_mhclo_asset(asset("eyelashes", spec.get("eyelashes", "Eyelashes01"), "mhclo"), basemesh,
+                                     asset_type="Eyelashes", subdiv_levels=0)
     if spec.get("hair"):
         HumanService.add_mhclo_asset(asset("hair", spec["hair"], "mhclo"), basemesh, asset_type="Hair", subdiv_levels=0)
     for c in spec.get("clothes", []):
@@ -427,6 +464,10 @@ def main():
         i = args.index("--preview")
         preview_dir = args[i + 1]
         args = args[:i] + args[i + 2:]
+    if "--realistic" in args:  # comparaison : sans le style gacha
+        args.remove("--realistic")
+        for sp in specs.values():
+            sp["realistic"] = True
     for fid in (args or specs.keys()):
         try:
             build(fid, specs[fid], os.path.join(preview_dir, fid + ".png") if preview_dir else None)

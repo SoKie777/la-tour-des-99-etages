@@ -480,6 +480,9 @@ func _build_world() -> void:
 		p.rotation_degrees.y = 180.0 if u.team == 0 else 0.0  # ton équipe de dos, les ennemis face à toi
 		add_child(p)
 		pawns[u] = p
+	var rim := BattleDecor.rim_color(_decor_id())  # liseré des personnages à la couleur de l'arène
+	for m: CharacterModel in models.values():
+		m.set_rim(rim)
 
 
 ## Décor du lieu (clé « decor » des données) ; argument « --decor=<id> » pour le forcer (captures, tests).

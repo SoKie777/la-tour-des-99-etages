@@ -49,6 +49,8 @@ const CHAR_MAP := {
 const HOLD_AT_END := ["ko"]
 ## Vêtements MPFB (peints en couleurs de sommets, sans texture) : mots-clés des noms d'objets.
 const TOON_SHADER := preload("res://assets/materials/shaders/toon_ukiyoe.gdshader")
+const HAIR_SHADER := preload("res://assets/materials/shaders/toon_ukiyoe_hair.gdshader")  # cartes double face
+const HAIR_WORDS := ["hair", "short", "afro", "bob", "braid", "long", "ponytail", "locs", "strand"]
 const INK := Color("332c29")  # contours (Bible D.A.)
 const CLOTH_WORDS := ["suit", "shoes", "robe", "ninja", "tunic", "jacket", "pants", "boots", "dress", "uniform", "coveralls"]
 
@@ -201,9 +203,11 @@ func _on_finished(anim_name: StringName) -> void:
 ## Matériau toon de la Bible D.A. (assets/materials/shaders/toon_ukiyoe.gdshader) : ombre bleu minéral,
 ## liseré d'or ; contour couleur encre en seconde passe.
 static func ukiyoe_material(c: Color, tex: Texture2D = null, vertex_color := false, scissor := 0.0,
-		outline := true) -> ShaderMaterial:
+		outline := true, hair := false) -> ShaderMaterial:
 	var m := ShaderMaterial.new()
-	m.shader = TOON_SHADER
+	m.shader = HAIR_SHADER if hair else TOON_SHADER
+	if hair:
+		m.set_shader_parameter("band_strength", 0.9)  # reflet net des cheveux
 	m.set_shader_parameter("albedo_color", c)
 	m.set_shader_parameter("use_texture", tex != null)
 	if tex != null:
@@ -238,8 +242,14 @@ func _toonify(mi: MeshInstance3D) -> void:
 		var scissor := 0.4 if ("brow" in name_l or (has_col and not is_cloth)) else 0.0
 		# pas de contour sur les yeux, les sourcils et les mèches générées (trop fines : le contour les noircirait)
 		var outline := not ("eye" in name_l or "brow" in name_l or "locs" in name_l)
-		var keep_std := "eye" in name_l or (std != null and (std.cull_mode == BaseMaterial3D.CULL_DISABLED
+		var is_hair: bool = HAIR_WORDS.any(func(w: String) -> bool: return w in name_l) and not "eye" in name_l
+		var keep_std := "eye" in name_l or (not is_hair and std != null and (std.cull_mode == BaseMaterial3D.CULL_DISABLED
 			or std.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA))
+		if is_hair:  # cheveux : shader toon double face, découpe nette et reflet en bande
+			var htex: Texture2D = std.albedo_texture if std != null and not has_col else null
+			var hcol := Color.WHITE if (has_col or std == null) else std.albedo_color
+			mi.set_surface_override_material(i, ukiyoe_material(hcol, htex, has_col, maxf(scissor, 0.35), false, true))
+			continue
 		if not keep_std:
 			var tex: Texture2D = null if (std == null or (has_col and is_cloth)) else std.albedo_texture
 			var col := Color.WHITE if (has_col or std == null) else std.albedo_color
@@ -273,3 +283,20 @@ func _fit_height(target_m: float) -> void:
 		hi = maxf(hi, bb.end.y)
 	if hi > lo:
 		model.scale = Vector3.ONE * (target_m / (hi - lo)) * model.scale.x
+	_set_param("figure_height", target_m)
+
+
+## Règle un paramètre de tous les matériaux toon du modèle.
+func _set_param(param: String, value: Variant) -> void:
+	for mi in meshes:
+		if mi.material_override is ShaderMaterial:  # mannequin teinté
+			(mi.material_override as ShaderMaterial).set_shader_parameter(param, value)
+		for i in mi.mesh.get_surface_count():
+			var m := mi.get_surface_override_material(i)
+			if m is ShaderMaterial:
+				(m as ShaderMaterial).set_shader_parameter(param, value)
+
+
+## Liseré (rim light) à la couleur de l'arène.
+func set_rim(c: Color) -> void:
+	_set_param("arena_rim_color", c)
