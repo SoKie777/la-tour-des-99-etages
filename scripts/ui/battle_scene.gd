@@ -266,7 +266,10 @@ func _on_ult_pressed(u: BattleUnit) -> void:
 		else:
 			_refresh()
 			_show_actions(actor)
-	var targets := engine.valid_targets(u, 2) if engine.needs_target(u, 2) else [] as Array[BattleUnit]
+	if not engine.needs_target(u, 2):  # ultime de zone (tous les ennemis, toute l'équipe) : pas de cible à choisir
+		go.call(null)
+		return
+	var targets := engine.valid_targets(u, 2)
 	if targets.size() <= 1:
 		go.call(targets[0] if not targets.is_empty() else null)
 		return

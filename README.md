@@ -11,6 +11,9 @@ Version actuelle : **v0.7.0** (fichier `VERSION`).
 
 ## Ce qu'on peut faire
 
+- **Accueil** en 3D : l'équipe, de dos au pied de la Tour des 99 Étages, lève les yeux vers une tour qui
+  se perd dans les nuages ; les modes (Ascension, Invocation, Boss de butin) sont écrits en grand sur la
+  tour, Équipe et Collection dans la barre du bas.
 - **Prologue** (8 niveaux) dès le début, avec Eiríkr seul : les bases du jeu pas à pas, deux invocations
   x10 offertes sur la bannière « Premier Appel » (Yass, puis Mello à la garantie de 20), et 8 x10 à
   la sortie. La Tour s'ouvre ensuite.
