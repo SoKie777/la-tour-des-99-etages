@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://duwkm6whotik5"
+uid="uid://dlck6mjvs3gi6"
 path.s3tc="res://.godot/imported/promethee_5.png-ef6d1558b8f389ae9977ffd370ef38e9.s3tc.ctex"
 path.etc2="res://.godot/imported/promethee_5.png-ef6d1558b8f389ae9977ffd370ef38e9.etc2.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "1f255b01262ff8740038d4f303a2c419"
+"md5": "ca9b5ffbed88a837bde3d2c0264a0771"
 }
 
 [deps]

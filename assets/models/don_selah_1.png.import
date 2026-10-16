@@ -2,7 +2,7 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ceskojcn18dmg"
+uid="uid://bfo1flxaeylul"
 path.s3tc="res://.godot/imported/don_selah_1.png-387cff14dbbb198bf928444e0162185d.s3tc.ctex"
 path.etc2="res://.godot/imported/don_selah_1.png-387cff14dbbb198bf928444e0162185d.etc2.ctex"
 metadata={
@@ -10,7 +10,7 @@ metadata={
 "vram_texture": true
 }
 generator_parameters={
-"md5": "4702e8d0a0dadacb2c58ed369086f3a4"
+"md5": "6551419a7f9f0bc1d0d2d646ff2bd713"
 }
 
 [deps]

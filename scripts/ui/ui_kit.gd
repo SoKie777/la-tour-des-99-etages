@@ -14,6 +14,10 @@ const PAPER := Color("e8dec5")
 const VERMILION := Color("b83a35")
 const MINERAL := Color("263c4a")
 const INK := Color("332c29")
+## Texte du jeu : Fredoka arrondie et grasse (titres : LilitaOne), tailles agrandies de 25 %.
+const BODY_FONT := preload("res://assets/fonts/Fredoka-Variable.ttf")
+const TITLE_FONT := preload("res://assets/fonts/LilitaOne-Regular.ttf")
+const FONT_SCALE := 1.25
 const ICON_DIR := "res://assets/icons/"
 const CONST_COLORS := {"orion": Color("4a7ab8"), "grande_ourse": Color("c94f35"), "sirius": Color("8e6bb8")}
 const CONST_NAMES := {"orion": "Orion", "grande_ourse": "Grande Ourse", "sirius": "Sirius"}
@@ -198,11 +202,25 @@ static func rich(text: String, size := 16, color := PAPER, wrap := false) -> Ric
 	r.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if wrap else TextServer.AUTOWRAP_OFF
 	if wrap:
 		r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	r.add_theme_font_size_override("normal_font_size", size)
+	r.add_theme_font_size_override("normal_font_size", fs(size))
+	r.add_theme_font_size_override("bold_font_size", fs(size))
 	r.add_theme_color_override("default_color", color)
 	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	r.text = text
+	r.text = _scale_bbcode(text)
 	return r
+
+
+## Les tailles écrites dans le BBCode ([font_size=N]) suivent aussi FONT_SCALE.
+static func _scale_bbcode(text: String) -> String:
+	if not "[font_size=" in text:
+		return text
+	var re := RegEx.create_from_string("\\[font_size=(\\d+)\\]")
+	var out := ""
+	var at := 0
+	for m in re.search_all(text):
+		out += text.substr(at, m.get_start() - at) + "[font_size=%d]" % fs(int(m.get_string(1)))
+		at = m.get_end()
+	return out + text.substr(at)
 
 
 ## Remplace les jetons {id} d'un texte par les icônes correspondantes (textes venus du cœur du jeu).
@@ -221,7 +239,7 @@ static func rich_button(text: String, cb: Callable, min_size := Vector2(150, 52)
 	r.set_anchors_preset(Control.PRESET_FULL_RECT)
 	r.autowrap_mode = TextServer.AUTOWRAP_OFF
 	r.fit_content = false
-	r.offset_top = (min_size.y - size * 1.5) / 2.0
+	r.offset_top = (min_size.y - fs(size) * 1.5) / 2.0
 	b.add_child(r)
 	return b
 
@@ -261,9 +279,22 @@ static func panel(border := Color.TRANSPARENT) -> PanelContainer:
 static func label(text: String, size := 16, color := PAPER) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_font_size_override("font_size", fs(size))
 	l.add_theme_color_override("font_color", color)
 	return l
+
+
+## Taille de police à l'écran (tailles du code × FONT_SCALE).
+static func fs(size: int) -> int:
+	return roundi(size * FONT_SCALE)
+
+
+## Police du jeu à une graisse donnée (400 normal, 600 demi-gras, 700 gras).
+static func body_font(weight := 600) -> FontVariation:
+	var f := FontVariation.new()
+	f.base_font = BODY_FONT
+	f.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): weight}
+	return f
 
 
 static func button(text: String, cb: Callable, min_size := Vector2(150, 52)) -> Button:
@@ -379,6 +410,10 @@ static func theme() -> Theme:
 	if _theme != null:
 		return _theme
 	var t := Theme.new()
+	t.default_font = body_font(600)
+	t.default_font_size = fs(16)
+	t.set_font("normal_font", "RichTextLabel", body_font(600))
+	t.set_font("bold_font", "RichTextLabel", body_font(700))
 	var normal := panel_style(PANEL, Color(ACCENT, 0.55), 1, 8)
 	var hover := panel_style(PANEL.lightened(0.08), ACCENT, 2, 8)
 	var pressed := panel_style(PANEL.lightened(0.16), ACCENT.lightened(0.2), 2, 8)
@@ -492,7 +527,8 @@ static func char_card(id: String, cb: Callable, selected := false, locked := fal
 		b.add_theme_constant_override("icon_max_width", 64)
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.clip_text = true  # un nom long ne doit pas écraser l'icône
-		b.add_theme_font_size_override("font_size", 14)
+		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		b.add_theme_font_size_override("font_size", fs(13))
 	b.pressed.connect(cb)
 	return b
 

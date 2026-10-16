@@ -159,5 +159,7 @@ VRoid Studio (MCP « vroid-studio ») → l'utilisateur clique « Exporter VRM �
 `blender --background --python tools/vroid/vrm_to_fbx.py -- <id> <fichier.vrm> [--locs] [--gold] [--preview <dossier>]`
 → `assets/models/<id>.fbx` → `python tools/set_retarget.py` → `godot --headless --import`.
 - Montana : `-- montana D:/Claude/t99/vroid/Montana.vrm --locs --gold` (locks vanille noires générées, rouge repeint en or).
-  Source : `D:/Claude/t99/vroid/montana.vroid`. Ne plus le régénérer avec `make_characters.py` (écraserait le modèle VRoid).
+  Source : `D:/Claude/t99/vroid/montana.vroid`.
+- Don Selah : `-- don_selah D:/Claude/t99/vroid/domselah.vrm` ; Prométhée : `-- promethee D:/Claude/t99/vroid/Promethée.vrm` ;
+  Géode : `-- geode D:/Claude/t99/vroid/Geode.vrm --amethyst` (boss : `"model": "geode"` dans bosses.json). Ne plus le régénérer avec `make_characters.py` (écraserait le modèle VRoid).
 - Les VRM gratuits trouvés en ligne ont tous « redistribution interdite » : jamais dans le dépôt ni l'APK.

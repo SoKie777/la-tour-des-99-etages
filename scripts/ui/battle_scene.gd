@@ -854,7 +854,7 @@ func _build_ui() -> void:
 	log_label = RichTextLabel.new()
 	log_label.bbcode_enabled = true
 	log_label.scroll_following = true
-	log_label.add_theme_font_size_override("normal_font_size", 13)
+	log_label.add_theme_font_size_override("normal_font_size", UiKit.fs(13))
 	log_panel.add_child(log_label)
 
 	action_box = HBoxContainer.new()

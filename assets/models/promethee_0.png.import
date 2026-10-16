@@ -2,12 +2,15 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dr7j2tuvrjn1e"
+uid="uid://cey2ro1uk8s00"
 path.s3tc="res://.godot/imported/promethee_0.png-a5ef7724129b5c8858c1526394b7d603.s3tc.ctex"
 path.etc2="res://.godot/imported/promethee_0.png-a5ef7724129b5c8858c1526394b7d603.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
+}
+generator_parameters={
+"md5": "2ac70eb13fd9f5a863a40071e6a4947d"
 }
 
 [deps]
@@ -25,7 +28,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

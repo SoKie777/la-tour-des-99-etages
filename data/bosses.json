@@ -119,7 +119,7 @@
       "rarity": 0,
       "voie": "Gardienne de la Forêt des Gemmes",
       "height_m": 3.0,
-      "model": "saraya",
+      "model": "geode",
       "stats": {
         "hp": 60000,
         "atk": 1300,

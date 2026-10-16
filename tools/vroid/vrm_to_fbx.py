@@ -6,6 +6,7 @@
 - un objet par matériau, nommé d'après son rôle (body, face, eye_*, brow, hair…) pour character_model.gd ;
 - --locs : remplace les cheveux VRoid par des locks torsadées noires (vanilla twists), générées ici ;
 - --gold : repeint en or (#D1AD62) le rouge des textures de vêtements ;
+- --amethyst : repeint en violet le bleu des vêtements ;
 - --preview : rendus de contrôle au lieu de l'export.
 Il faut l'extension « VRM Add-on for Blender » (blender --command extension install vrm --enable).
 Réservé aux Légendaires (style gacha).
@@ -127,7 +128,18 @@ def gold_recolor(img):
     print("OR", img.name, int(red.sum()), "pixels")
 
 
-def simplify_materials(gold):
+def amethyst_recolor(img):
+    """Bleu -> violet améthyste (robe de Géode), en gardant la luminosité."""
+    px = np.array(img.pixels[:], dtype=np.float32).reshape(-1, 4)
+    r, g, b = px[:, 0], px[:, 1], px[:, 2]
+    blue = (b > r * 1.25) & (b > g * 1.15)
+    px[blue, 0] = np.clip(b[blue] * 0.78, 0, 1)
+    px[blue, 1] = np.clip(g[blue] * 0.6, 0, 1)
+    img.pixels[:] = px.ravel()
+    print("AMETHYSTE", img.name, int(blue.sum()), "pixels")
+
+
+def simplify_materials(gold, amethyst=False):
     done = {}
     tmp = os.path.join(tempfile.gettempdir(), "t99_vroid_textures")
     os.makedirs(tmp, exist_ok=True)
@@ -145,6 +157,8 @@ def simplify_materials(gold):
                 side = next((v for k, v in SIDE.items() if r.startswith(k)), 1024)
                 if gold and r.split(".")[0] in ("jacket", "pants", "shoes"):
                     gold_recolor(img)
+                if amethyst and r.split(".")[0] in ("jacket", "pants", "shoes", "part", "accessory"):
+                    amethyst_recolor(img)
                 if img.size[0] > side:
                     img.scale(side, side)
                 path = os.path.join(tmp, re.sub(r"[^A-Za-z0-9_.-]", "_", ob.name) + ".png")
@@ -384,12 +398,13 @@ def main():
         del args[i:i + 2]
     locs = "--locs" in args
     gold = "--gold" in args
+    amethyst = "--amethyst" in args
     args = [a for a in args if not a.startswith("--")]
     fid, vrm = args[0], args[1]
     arm = import_vrm(vrm)
     rename_bones(arm, fid)
     split_by_material(fid)
-    simplify_materials(gold)
+    simplify_materials(gold, amethyst)
     if locs:
         make_locs(arm, fid)
     if preview_dir:
