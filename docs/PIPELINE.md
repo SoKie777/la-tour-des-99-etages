@@ -153,3 +153,11 @@ accessoires 3D et particules. Le décor vient des données : `decor` / `boss_dec
   contour couleur encre `#332C29` (`CharacterModel.ukiyoe_material`).
 - Effets : tranchant d'encre à défilement d'UV (`ink_slash.gdshader`, `BattleFx.ink_slash`), sceau doré sous
   chaque unité (`unit_seal.gdshader`), frame d'impact noir et blanc sur les ultimes (`impact_flash.gdshader`).
+
+## Légendaires VRoid (v0.11)
+VRoid Studio (MCP « vroid-studio ») → l'utilisateur clique « Exporter VRM » (**VRM 0.0**) →
+`blender --background --python tools/vroid/vrm_to_fbx.py -- <id> <fichier.vrm> [--locs] [--gold] [--preview <dossier>]`
+→ `assets/models/<id>.fbx` → `python tools/set_retarget.py` → `godot --headless --import`.
+- Montana : `-- montana D:/Claude/t99/vroid/Montana.vrm --locs --gold` (locks vanille noires générées, rouge repeint en or).
+  Source : `D:/Claude/t99/vroid/montana.vroid`. Ne plus le régénérer avec `make_characters.py` (écraserait le modèle VRoid).
+- Les VRM gratuits trouvés en ligne ont tous « redistribution interdite » : jamais dans le dépôt ni l'APK.
