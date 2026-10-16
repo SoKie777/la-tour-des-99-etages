@@ -2,7 +2,9 @@ extends Node
 ## Etat partagé entre les écrans : profil du joueur (sauvegarde locale), bannière, combat en cours.
 ## Plus tard : synchronisation serveur.
 
-var save_path := "user://profil.json"  # -- --save=user://autre.json pour un profil de test
+const MAIN_SAVE := "user://profil.json"
+const TRIAL_SAVE := "user://essai_prologue.json"  # partie d'essai du prologue (la vraie sauvegarde n'est pas touchée)
+var save_path := MAIN_SAVE  # -- --save=user://autre.json pour un profil de test
 
 var profile: Profile
 var gacha: Gacha
@@ -70,6 +72,8 @@ func load_profile() -> void:
 	if profile == null:
 		profile = Profile.new_game()
 	grant_notes = profile.apply_grants()
+	if gacha != null:  # changement de sauvegarde : garanties de ce profil
+		gacha.set_state(profile.gacha_state)
 	save()
 
 
@@ -81,6 +85,23 @@ func save() -> void:
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	if f != null:
 		f.store_string(JSON.stringify(profile.to_dict()))
+
+
+## Essai du prologue sur une partie à part ; la vraie sauvegarde reste intacte.
+func start_trial() -> void:
+	save()
+	save_path = TRIAL_SAVE
+	reset_profile()
+
+
+## Fin de l'essai : retour à la vraie sauvegarde.
+func end_trial() -> void:
+	save_path = MAIN_SAVE
+	load_profile()
+
+
+func in_trial() -> bool:
+	return save_path == TRIAL_SAVE
 
 
 func reset_profile() -> void:

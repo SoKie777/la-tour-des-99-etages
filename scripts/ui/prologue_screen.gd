@@ -13,6 +13,13 @@ func _ready() -> void:
 		_offer()
 	else:
 		_path()
+	if Session.in_trial():  # essai du prologue : retour à la vraie partie à tout moment
+		var back := UiKit.button("Revenir à ma partie", func() -> void:
+			Session.end_trial()
+			get_tree().change_scene_to_file("res://scenes/main.tscn"), Vector2(220, 40))
+		back.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		back.position = Vector2(-560, 14)
+		add_child(back)
 
 
 func _big(text: String, size: int, color := UiKit.PAPER) -> Label:
@@ -233,7 +240,10 @@ func _finale() -> void:
 	var won := Prologue.level_count() * int(Prologue.cfg()["reward"]["eclat_de_voeu"])  # gagnés pendant le prologue
 	v.add_child(UiKit.rich("[center]%s %d   =   %s ×10 ×%d[/center]" % [UiKit.bb("eclat_de_voeu", 26, UiKit.ACCENT),
 		won, UiKit.bb("summon", 26, UiKit.ACCENT), won / (10 * int(GameData.progression()["pull_cost"]))], 24, UiKit.ACCENT))
-	var go := UiKit.button("Entrer dans la Tour  ›", func() -> void: get_tree().change_scene_to_file("res://scenes/main.tscn"), Vector2(340, 64))
+	var go := UiKit.button("Entrer dans la Tour  ›", func() -> void:
+		if Session.in_trial():
+			Session.end_trial()
+		get_tree().change_scene_to_file("res://scenes/main.tscn"), Vector2(340, 64))
 	_gold(go)
 	var c2 := CenterContainer.new()
 	c2.add_child(go)

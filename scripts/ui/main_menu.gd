@@ -74,6 +74,9 @@ func _ready() -> void:
 	right.add_child(row)
 	for m in TEST_MATCHUPS:
 		row.add_child(UiKit.button(m[0], _test_battle.bind(m[1], m[2]), Vector2(128, 34)))
+	right.add_child(UiKit.button("Essayer le prologue (sans toucher à ta partie)", func() -> void:
+		Session.start_trial()
+		get_tree().change_scene_to_file("res://scenes/prologue.tscn"), Vector2(400, 36)))
 	var reset := UiKit.button("Recommencer le profil", func() -> void: pass, Vector2(400, 32))
 	reset.pressed.connect(func() -> void:
 		if not reset_armed:
