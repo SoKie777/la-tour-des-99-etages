@@ -98,16 +98,18 @@ static func _environment(parent: Node3D, t: Dictionary) -> void:
 	e.sky = sky
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	e.ambient_light_color = Color(t["ambient"]).lerp(SHADOW_BLUE, 0.2)  # ombres teintées de bleu minéral
-	e.ambient_light_energy = 0.6
+	e.ambient_light_energy = 0.4  # ombres plus marquées sous les pieds
 	# réglages de la Bible D.A. : halo doux sur l'or et les runes, contraste et saturation relevés
 	e.glow_enabled = true
-	e.glow_intensity = 0.7
+	e.glow_intensity = 0.8
 	e.glow_strength = 1.0
 	e.glow_bloom = 0.03
+	e.glow_hdr_threshold = 1.0  # seuls les VFX et les néons brillent
 	e.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
-	e.adjustment_enabled = true
-	e.adjustment_contrast = 1.18
-	e.adjustment_saturation = 1.2
+	e.adjustment_enabled = true  # étalonnage : un peu plus sombre, noirs renforcés
+	e.adjustment_brightness = 0.95
+	e.adjustment_contrast = 1.25
+	e.adjustment_saturation = 1.15
 	# brume de profondeur : l'arène reste nette, le lointain se fond dans la brume (bokashi)
 	e.fog_enabled = true
 	e.fog_mode = Environment.FOG_MODE_DEPTH
@@ -125,6 +127,9 @@ static func _environment(parent: Node3D, t: Dictionary) -> void:
 	key.light_energy = float(t["key_energy"])
 	key.light_color = Color(t["key"])
 	key.shadow_enabled = true
+	key.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS  # ombres fines près de l'arène
+	key.directional_shadow_max_distance = 40.0
+	key.shadow_blur = 0.6
 	key.sky_mode = DirectionalLight3D.SKY_MODE_LIGHT_ONLY  # chaque décor peint son propre astre
 	parent.add_child(key)
 	var rim := DirectionalLight3D.new()  # contre-jour : détache les silhouettes
@@ -139,8 +144,8 @@ static func _environment(parent: Node3D, t: Dictionary) -> void:
 static func camera_blur() -> CameraAttributesPractical:
 	var a := CameraAttributesPractical.new()
 	a.dof_blur_far_enabled = true
-	a.dof_blur_far_distance = 24.0
-	a.dof_blur_far_transition = 20.0
+	a.dof_blur_far_distance = 25.0
+	a.dof_blur_far_transition = 10.0
 	a.dof_blur_amount = 0.05
 	return a
 

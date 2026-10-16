@@ -12,9 +12,10 @@ const UI_BG := UiKit.BG  # palette de la Bible D.A.
 const UI_ACCENT := UiKit.ACCENT
 const STACK_NAMES := {"spark": "Étincelle", "fury": "Fureur", "rage": "Rage", "visage": "Visage", "dette": "Dette",
 	"clone": "Clones", "inertia": "Inertie"}
-const CAM_FOV := 40.0  # focale serrée (Bible D.A.) : caméra reculée d'autant, les héros ressortent du décor
-const CAM_POS := Vector3(0, 3.69, 10.37)
-const CAM_LOOK := Vector3(0, 1.0, -0.9)
+const CAM_FOV := 38.0  # focale serrée, façon gacha 3D cinématique
+## Vue 3/4 par-dessus l'épaule des héros, en légère contre-plongée vers les ennemis (le boss paraît massif).
+const CAM_POS := Vector3(2.3, 2.35, 9.6)
+const CAM_LOOK := Vector3(-0.35, 1.75, -2.6)
 const RANGED := ["cast", "heal", "roar", "taunt", "block"]  # animations jouées sur place
 const GAME_FONT := preload("res://assets/fonts/LilitaOne-Regular.ttf")  # police libre (OFL), chiffres et titres
 
@@ -1271,14 +1272,14 @@ func _skill_button(text: String, border: Color, cb: Callable, disabled := false,
 	b.text = text
 	b.custom_minimum_size = Vector2(210, 66)
 	b.autowrap_mode = TextServer.AUTOWRAP_WORD
-	var bg := Color(UiKit.VERMILION.darkened(0.45), 0.92) if ultimate else Color(UI_BG, 0.9)
+	var bg := Color(UiKit.VERMILION.darkened(0.45), 0.3) if ultimate else Color(UI_BG, 0.18)  # presque transparent : on voit le combat derrière
 	b.add_theme_stylebox_override("normal", UiKit.panel_style(bg, border, 2 if ultimate else 1, 6))
 	var glow := UiKit.panel_style(bg.lightened(0.15), border.lightened(0.3), 3, 6)  # surbrillance à la sélection
 	glow.shadow_color = Color(border, 0.55)
 	glow.shadow_size = 8
 	b.add_theme_stylebox_override("hover", glow)
 	b.add_theme_stylebox_override("pressed", glow)
-	b.add_theme_stylebox_override("disabled", UiKit.panel_style(Color(UI_BG, 0.7), Color(border, 0.25), 1, 6))
+	b.add_theme_stylebox_override("disabled", UiKit.panel_style(Color(UI_BG, 0.12), Color(border, 0.25), 1, 6))
 	b.add_theme_color_override("font_color", UiKit.PAPER)
 	b.disabled = disabled
 	b.pressed.connect(cb)
@@ -1311,7 +1312,7 @@ func _show_actions(actor: BattleUnit) -> void:
 		b.custom_minimum_size = Vector2(92, 92)
 		b.pivot_offset = b.custom_minimum_size / 2.0
 		if not usable:  # aspect grisé, mais l'appui long reste possible pour lire la compétence
-			b.add_theme_stylebox_override("normal", UiKit.panel_style(Color(UI_BG, 0.7), Color(UI_ACCENT, 0.25), 1, 6))
+			b.add_theme_stylebox_override("normal", UiKit.panel_style(Color(UI_BG, 0.12), Color(UI_ACCENT, 0.25), 1, 6))
 		var ic := UiKit.icon(UiKit.skill_icon_id(sk), 50, UiKit.PAPER if usable else Color(UiKit.PAPER, 0.35))
 		ic.set_anchors_preset(Control.PRESET_CENTER)
 		ic.offset_left = -25
