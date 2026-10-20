@@ -400,6 +400,8 @@ UI = {
     # ensembles de reliques
     "set_attaque": sword, "set_vitesse": chevrons, "set_taux_critique": crosshair, "set_defense": shield,
     "set_immunite": shield_plus, "set_vampirisme": fang, "set_vie": heart, "set_precision": eye, "set_gel": snowflake,
+    "set_ocean": drop, "set_astralis": sparkle, "set_calamite": skull, "set_egide": tower,
+    "resonance": star5,
     # cumuls signature
     "stack_spark": spark, "stack_fury": flame, "stack_rage": burst, "stack_visage": mask, "stack_dette": debt,
     "stack_clone": two_squares, "stack_inertia": rings,

@@ -12,9 +12,19 @@ const SEAL_SHADER := preload("res://assets/materials/shaders/unit_seal.gdshader"
 const TRAIL_SHADER := preload("res://assets/materials/shaders/vfx_scrolling.gdshader")
 const TORNADO_SHADER := preload("res://assets/materials/shaders/vfx_tornado.gdshader")
 const AURA_SHADER := preload("res://assets/materials/shaders/vfx_aura.gdshader")
-## Couleur signature des pouvoirs (sinon la couleur de la constellation).
-const SIGNATURE := {"montana": Color("ffc94a"), "ghost": Color("5ab4ff"), "yass": Color("b06aff"),
-	"promethee": Color("ff6a2a"), "geode": Color("d07aff"), "don_selah": Color("e8e0d0")}
+## Couleur signature des pouvoirs de chaque héros et boss (sinon la couleur de la constellation).
+const SIGNATURE := {
+	"montana": Color("ffc94a"), "mikhaila": Color("ffe08a"), "ghost": Color("5ab4ff"),
+	"nyssa": Color("9b6bff"), "selene": Color("8fa8c8"), "adrian": Color("ff6230"),
+	"mello": Color("38b6ff"), "tarkhan": Color("ff3d2e"), "yass": Color("b06aff"),
+	"saraya": Color("58e08a"), "noor_el": Color("ffd85a"), "jo_prince": Color("6a5aff"),
+	"ezra": Color("c84aff"), "flint": Color("ff7aa8"), "don_selah": Color("e8e0d0"),
+	"eirikr": Color("5ac8ff"), "ymir": Color("4aa0ff"), "nidhogg": Color("ffd46a"),
+	"don_diego": Color("f0c45a"), "general_metal": Color("c0cad8"), "espion_lumiere": Color("80f0b0"),
+	"moussa": Color("e09048"), "issa": Color("7fe8c8"), "mohamed": Color("9a58ff"),
+	"promethee": Color("ff6a2a"), "geode": Color("d07aff"), "chronophage": Color("f0c860"),
+	"wyrm": Color("7fd8ff"), "serpent": Color("ffb040"),
+}
 
 static var _disc_tex: GradientTexture2D
 static var _crescent: ArrayMesh
@@ -529,3 +539,113 @@ static func aura(c: Color, radius := 0.6) -> MeshInstance3D:
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.position.y = 0.03
 	return mi
+
+
+## Colonne céleste / jugement solaire (Noor-El, Don Selah, Mikhaïla, Chronophage, Serpent) :
+## faisceau vertical + anneaux runiques ascendants + gerbe dorée.
+static func solar_pillar(parent: Node3D, pos: Vector3, c: Color, duration := 0.85, radius := 0.85) -> void:
+	var beam := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = radius * 0.75
+	cyl.bottom_radius = radius
+	cyl.height = 6.5
+	cyl.radial_segments = 20
+	cyl.cap_top = false
+	cyl.cap_bottom = false
+	beam.mesh = cyl
+	var mat := glow_material(c.lightened(0.3), 3.4)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color.a = 0.65
+	beam.material_override = mat
+	beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	beam.position = pos + Vector3(0, 3.25, 0)
+	beam.scale = Vector3(0.1, 1.0, 0.1)
+	parent.add_child(beam)
+	var tw := beam.create_tween().set_parallel()
+	tw.tween_property(beam, "scale", Vector3(1.15, 1.0, 1.15), duration * 0.35).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	tw.tween_property(mat, "albedo_color:a", 0.0, duration * 0.55).set_delay(duration * 0.35)
+	tw.chain().tween_callback(beam.queue_free)
+	for i in 2:
+		var ring := flat_ring(c.lightened(0.35), radius * (1.15 + i * 0.25), 0.08, 3.0)
+		ring.position = pos + Vector3(0, 0.15 + i * 0.4, 0)
+		var rm: StandardMaterial3D = ring.material_override
+		rm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		parent.add_child(ring)
+		var rt := ring.create_tween().set_parallel()
+		rt.tween_property(ring, "position:y", pos.y + 2.8 + i * 0.9, duration * 0.8).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		rt.tween_property(rm, "albedo_color:a", 0.0, duration * 0.8)
+		rt.chain().tween_callback(ring.queue_free)
+	burst(parent, pos + Vector3(0, 0.4, 0), c.lightened(0.25), 22, 4.2, 0.08, duration * 0.9, true)
+
+
+## Éruption cristalline / glaciale / tellurique (Ghost, Selene, Moussa, Wyrm, Géode) :
+## pointes prismatiques qui jaillissent du sol en couronne autour de la cible.
+static func crystal_eruption(parent: Node3D, pos: Vector3, c: Color, duration := 0.8) -> void:
+	var root := Node3D.new()
+	root.position = pos
+	parent.add_child(root)
+	var mat := glow_material(c.lightened(0.2), 2.6)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	for i in 6:
+		var a := TAU * i / 6.0 + randf_range(-0.2, 0.2)
+		var spike := MeshInstance3D.new()
+		var cyl := CylinderMesh.new()
+		cyl.top_radius = 0.0
+		cyl.bottom_radius = 0.22
+		cyl.height = 1.65
+		cyl.radial_segments = 6
+		spike.mesh = cyl
+		spike.material_override = mat
+		spike.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		spike.position = Vector3(cos(a) * 0.55, -0.6, sin(a) * 0.55)
+		spike.rotation = Vector3(sin(a) * 0.32, 0.0, -cos(a) * 0.32)
+		root.add_child(spike)
+		var st := spike.create_tween()
+		st.tween_property(spike, "position:y", 0.65, duration * 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	var fade := root.create_tween()
+	fade.tween_property(mat, "albedo_color:a", 0.0, duration * 0.45).set_delay(duration * 0.45)
+	fade.tween_callback(root.queue_free)
+	burst(parent, pos + Vector3(0, 0.6, 0), c.lightened(0.3), 20, 4.5, 0.08, duration * 0.8)
+
+
+## Vortex gravitationnel / temporel / néant (Montana, Ezra, Jo Prince, Nyssa, Mohamed) :
+## noyau d'encre noire entouré d'un halo qui se contracte avant d'imploser.
+static func void_vortex(parent: Node3D, pos: Vector3, c: Color, duration := 0.8) -> void:
+	var center := pos + Vector3(0, 1.0, 0)
+	var core := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 0.55
+	sm.height = 1.1
+	core.mesh = sm
+	var cm := flat_material(INK)
+	core.material_override = cm
+	core.position = center
+	core.scale = Vector3.ONE * 0.1
+	parent.add_child(core)
+	var shell := MeshInstance3D.new()
+	shell.mesh = sm
+	var smat := glow_material(c, 3.2)
+	smat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	smat.albedo_color.a = 0.45
+	shell.material_override = smat
+	shell.position = center
+	shell.scale = Vector3.ONE * 1.9
+	parent.add_child(shell)
+	var tw := core.create_tween().set_parallel()
+	tw.tween_property(core, "scale", Vector3.ONE * 1.1, duration * 0.55).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(shell, "scale", Vector3.ONE * 0.2, duration * 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_property(cm, "albedo_color:a", 0.0, duration * 0.35).set_delay(duration * 0.55)
+	tw.tween_property(smat, "albedo_color:a", 0.0, duration * 0.35).set_delay(duration * 0.55)
+	tw.chain().tween_callback(func() -> void:
+		if is_instance_valid(core):
+			core.queue_free()
+		if is_instance_valid(shell):
+			shell.queue_free())
+	shockwave(parent, pos, c, 2.6, duration * 0.75)
+
+
+## Sillage d'élan au corps-à-corps : souffle de vitesse au sol et étincelles dans le dos de l'attaquant.
+static func dash_trail(parent: Node3D, from: Vector3, to: Vector3, c: Color, duration := 0.25) -> void:
+	shockwave(parent, from, c.lightened(0.25), 1.35, duration * 1.2)
+	var mid := from.lerp(to, 0.45) + Vector3(0, 0.85, 0)
+	burst(parent, mid, c.lightened(0.3), 10, 3.2, 0.06, duration * 1.1)

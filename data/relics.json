@@ -186,6 +186,41 @@
       "bonus": {
         "acc": 20
       }
+    },
+    "ocean": {
+      "boss": "orion",
+      "size": 4,
+      "bonus2": {
+        "spd_pct": 8
+      },
+      "bonus4": {},
+      "special": "cd_reduce_turn_25"
+    },
+    "astralis": {
+      "boss": "orion",
+      "size": 4,
+      "bonus2": {
+        "spd_pct": 8
+      },
+      "bonus4": {},
+      "special": "extra_turn_15"
+    },
+    "calamite": {
+      "boss": "grande_ourse",
+      "size": 4,
+      "bonus2": {
+        "acc": 12
+      },
+      "bonus4": {},
+      "special": "dmg_per_debuff_10"
+    },
+    "egide": {
+      "boss": "sirius",
+      "size": 2,
+      "bonus": {
+        "def_pct": 10
+      },
+      "special": "start_shield_15"
     }
   }
 }

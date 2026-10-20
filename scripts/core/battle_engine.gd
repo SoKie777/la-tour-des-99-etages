@@ -60,6 +60,8 @@ func _init(team_a: Array, team_b: Array, seed_value: int = 0) -> void:
 	for u in units:
 		if u.set_specials.has("start_immunity_1"):
 			u.effects.append(_make_effect("immunity", 1, 0.0, u, true))
+		if u.set_specials.has("start_shield_15"):
+			u.effects.append(_make_effect("shield", 2, roundf(u.max_hp() * 0.15), u, true))
 		if u.get_trait("start_ap") != null:
 			u.ap = float(u.get_trait("start_ap")) / 100.0
 		if u.get_trait("enemy_spd_aura") != null:
@@ -284,6 +286,9 @@ func compute_damage(att: BattleUnit, tgt: BattleUnit, raw: float, opts: Dictiona
 		dmg *= 1.0 + float(att.flags["dmg_bonus_pct"]) / 100.0
 	if opts.has("low_hp_bonus") and tgt.hp_ratio() < 0.5:
 		dmg *= 1.0 + float(opts["low_hp_bonus"])
+	if att.set_specials.has("dmg_per_debuff_10"):  # Set Calamité : +10 % par malus sur la cible (max +30 %)
+		var debuffs := tgt.count_kind("debuff") + tgt.count_kind("cc") + tgt.count_kind("mark")
+		dmg *= 1.0 + minf(0.30, 0.10 * debuffs)
 	return dmg * _taken_mult(tgt)
 
 
@@ -718,6 +723,10 @@ func _start_turn(u: BattleUnit) -> void:
 			return
 	if u.get_trait("clone_per_turn", false):  # Clones temporels (Nyssa)
 		_try_apply(u, u, {"id": "clone"})
+	if u.set_specials.has("cd_reduce_turn_25") and rng.randf() < 0.25:  # Set Océan : 25 % recharge -1 au début du tour
+		for i in 3:
+			u.cooldowns[i] = maxi(0, u.cooldowns[i] - 1)
+		_emit({"type": "set_proc", "actor": u, "set": "ocean"})
 	for e in u.effects.duplicate():
 		var d: Dictionary = rules["effects"][e["id"]]
 		if not u.is_alive():
@@ -754,6 +763,9 @@ func _end_turn(u: BattleUnit) -> void:
 			_remove_effect(u, e["id"], true)
 	for i in 3:
 		u.cooldowns[i] = maxi(0, u.cooldowns[i] - 1)
+	if u.is_alive() and u.set_specials.has("extra_turn_15") and rng.randf() < 0.15:  # Set Astralis : 15 % +50 % PA
+		u.ap = minf(1.0, u.ap + 0.50)
+		_emit({"type": "set_proc", "actor": u, "set": "astralis"})
 	_emit({"type": "turn_end", "actor": u})
 	_check_end()
 

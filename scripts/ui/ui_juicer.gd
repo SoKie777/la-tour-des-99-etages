@@ -15,6 +15,9 @@ void fragment() {
 """
 
 var _click: AudioStreamPlayer
+var _sfx_pool: Array[AudioStreamPlayer] = []
+var _sfx_idx := 0
+var _sfx_lib: Dictionary = {}
 var _blur: Shader
 
 
@@ -23,7 +26,25 @@ func _ready() -> void:
 	_click.stream = _make_click()
 	_click.volume_db = -14.0
 	add_child(_click)
+	for i in 6:
+		var p := AudioStreamPlayer.new()
+		p.volume_db = -10.0
+		add_child(p)
+		_sfx_pool.append(p)
 	get_tree().node_added.connect(_on_node_added)
+
+
+## Joue un effet sonore procédural (slash, hit, crit, ult, break, heal, buff, debuff, victory, defeat).
+func play_sfx(kind: String, pitch := 1.0) -> void:
+	if DisplayServer.get_name() == "headless" or _sfx_pool.is_empty():
+		return
+	if not _sfx_lib.has(kind):
+		_sfx_lib[kind] = _synth(kind)
+	var p: AudioStreamPlayer = _sfx_pool[_sfx_idx]
+	_sfx_idx = (_sfx_idx + 1) % _sfx_pool.size()
+	p.stream = _sfx_lib[kind]
+	p.pitch_scale = pitch * randf_range(0.95, 1.05)
+	p.play()
 
 
 func _on_node_added(n: Node) -> void:
@@ -108,6 +129,82 @@ func _make_click() -> AudioStreamWAV:
 		lp = lerpf(lp, rng.randf_range(-1.0, 1.0), 0.35)
 		var v := (lp * 0.6 + sin(TAU * 1400.0 * t) * 0.4) * env
 		data.encode_s16(i * 2, int(clampf(v, -1.0, 1.0) * 20000.0))
+	var w := AudioStreamWAV.new()
+	w.format = AudioStreamWAV.FORMAT_16_BITS
+	w.mix_rate = rate
+	w.data = data
+	return w
+
+
+## Synthèse procédurale d'effets sonores de combat et d'interface (tambour taiko, lame, cristal, koto).
+func _synth(kind: String) -> AudioStreamWAV:
+	var rate := 22050
+	var dur := 0.22
+	match kind:
+		"ult", "victory", "defeat":
+			dur = 0.55
+		"break", "heal":
+			dur = 0.38
+		"crit":
+			dur = 0.28
+	var n := int(rate * dur)
+	var data := PackedByteArray()
+	data.resize(n * 2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = kind.hash()
+	var lp := 0.0
+	for i in n:
+		var t := float(i) / rate
+		var v := 0.0
+		match kind:
+			"slash":
+				var env := sin(minf(1.0, t / 0.16) * PI) * exp(-t * 14.0)
+				lp = lerpf(lp, rng.randf_range(-1.0, 1.0), 0.28)
+				var f := lerpf(920.0, 240.0, minf(1.0, t / 0.16))
+				v = (lp * 0.65 + sin(TAU * f * t) * 0.35) * env
+			"hit":
+				var env := exp(-t * 26.0)
+				lp = lerpf(lp, rng.randf_range(-1.0, 1.0), 0.4)
+				var f := lerpf(190.0, 58.0, minf(1.0, t / 0.12))
+				v = (sin(TAU * f * t) * 0.75 + lp * 0.35 * exp(-t * 45.0)) * env
+			"crit":
+				var env := exp(-t * 16.0)
+				lp = lerpf(lp, rng.randf_range(-1.0, 1.0), 0.5)
+				var sub := sin(TAU * lerpf(240.0, 52.0, minf(1.0, t / 0.15)) * t)
+				var ring := sin(TAU * 1320.0 * t) * 0.35 + sin(TAU * 1980.0 * t) * 0.25
+				v = (sub * 0.7 + ring * exp(-t * 12.0) + lp * 0.3 * exp(-t * 40.0)) * env
+			"break":
+				var env := exp(-t * 10.0)
+				var chime := sin(TAU * 1568.0 * t) * 0.4 + sin(TAU * 2349.0 * t) * 0.3 + sin(TAU * 3136.0 * t) * 0.25
+				var boom := sin(TAU * lerpf(160.0, 42.0, minf(1.0, t / 0.25)) * t) * 0.65
+				lp = lerpf(lp, rng.randf_range(-1.0, 1.0), 0.6)
+				v = (chime + boom + lp * 0.35 * exp(-t * 25.0)) * env
+			"ult":
+				var env := minf(1.0, t / 0.04) * exp(-t * 4.8)
+				var f0 := 220.0 + 110.0 * smoothstep(0.0, 0.35, t)
+				v = (sin(TAU * f0 * t) * 0.45 + sin(TAU * f0 * 1.5 * t) * 0.35 + sin(TAU * 82.0 * t) * 0.4) * env
+			"heal":
+				var notes := [523.25, 659.25, 783.99, 1046.5]
+				var idx := clampi(int(t / 0.085), 0, 3)
+				var nt := fmod(t, 0.085)
+				v = sin(TAU * notes[idx] * t) * exp(-nt * 18.0) * 0.65
+			"buff":
+				var f := 523.25 if t < 0.09 else 783.99
+				v = (sin(TAU * f * t) * 0.6 + sin(TAU * f * 2.0 * t) * 0.2) * exp(-fmod(t, 0.09) * 16.0)
+			"debuff":
+				var f := 349.23 if t < 0.1 else 233.08
+				v = (sin(TAU * f * t) * 0.6 + sin(TAU * f * 1.414 * t) * 0.25) * exp(-t * 9.0)
+			"victory":
+				var notes := [523.25, 659.25, 783.99, 1046.5]
+				var idx := clampi(int(t / 0.11), 0, 3)
+				v = (sin(TAU * notes[idx] * t) * 0.55 + sin(TAU * notes[idx] * 0.5 * t) * 0.3) * exp(-fmod(t, 0.11) * 8.0)
+			"defeat":
+				var notes := [329.63, 293.66, 220.0]
+				var idx := clampi(int(t / 0.17), 0, 2)
+				v = sin(TAU * notes[idx] * t) * exp(-fmod(t, 0.17) * 6.0) * 0.6
+			_:
+				v = sin(TAU * 440.0 * t) * exp(-t * 20.0) * 0.5
+		data.encode_s16(i * 2, int(clampf(v, -1.0, 1.0) * 22000.0))
 	var w := AudioStreamWAV.new()
 	w.format = AudioStreamWAV.FORMAT_16_BITS
 	w.mix_rate = rate

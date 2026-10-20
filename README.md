@@ -2,7 +2,7 @@
 
 Gacha RPG mobile au tour par tour (3 contre 3, barre d'action), inspiré de Dislyte, dans un univers
 d'estampe japonaise : anime 3D, encre ukiyo-e et symbolique des échecs. Moteur : **Godot 4.7**.
-Version actuelle : **v0.15.0** (fichier `VERSION`).
+Version actuelle : **v0.16.0** (fichier `VERSION`).
 
 - **Jouer sur Android :** Releases → **[`apk-latest`](../../releases/tag/apk-latest)** (toujours la dernière version).
   L'APK est signé avec une clé fixe : on installe chaque nouvelle version **par-dessus** l'ancienne et la
@@ -48,6 +48,11 @@ Version actuelle : **v0.15.0** (fichier `VERSION`).
 
 ## Nouveautés récentes
 
+- **v0.16.0** — **Mise en scène, audio et systèmes façon Dislyte (analyse REA de `XGame`)** :
+  - **Caméra et chorégraphie de combat (`SkillConfig`)** : cadrage dynamique d'impact après le gros plan des ultimes et sur les S2, rotation des attaquants au corps-à-corps vers leur cible (`FaceTargetsCenter`) avec sillage d'élan (`dash_trail`), compteur de **Combo & Dégâts cumulés** en direct et indicateur d'affinité élémentaire (`▲` / `▼` / `★` Rupture) sur le choix des cibles.
+  - **Synthétiseur audio procédural (`UiJuicer`)** : effets sonores synthétisés sans fichier externe (coups de lame, impacts taiko, critiques métalliques, bris de cristal de Rupture, ultimes, soins, bonus/malus, fanfare de victoire et cinématique d'invocation).
+  - **VFX, décors et shaders enrichis** : couleurs signature pour les 24 héros et les 5 boss, nouveaux VFX 3D de zone (`solar_pillar`, `crystal_eruption`, `void_vortex`), habillage intermédiaire (`_rich` + brouillard au sol) étendu aux 8 arènes (`acier`, `orion`, `sirius`, `gemmes`, `geode`), et frange chaude subsurface + double reflet anisotrope dans `toon_ukiyoe.gdshaderinc`.
+  - **Reliques avancées, Résonance d'Étage et Voies** : 4 nouveaux sets de reliques (*Océan*, *Astralis*, *Calamité*, *Égide*), système de **Résonance d'Étage (R1 à R6)** en Collection pour investir les Fragments d'étage des doublons (+4 % PV/ATK/DEF de base par rang), et attribution des 12 Voies et affinités à l'ensemble des 24 personnages.
 - **v0.15.0** — **Tout le roster est en VRoid** : les 18 derniers personnages (Mikhaïla, Ghost, Tarkhan, Yass, Saraya,
   Noor-El, Jo Prince, Ezra, Flint et les 9 Rares : Eiríkr, Ymir, Nidhogg, Don Diego, Général de Métal, Espion de
   Lumière, Moussa, Issa, Mohamed) ont leur modèle anime et un nouveau portrait en estampe. Les Rares, aussi

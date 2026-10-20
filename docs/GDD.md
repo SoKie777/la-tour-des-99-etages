@@ -1,4 +1,4 @@
-# T99 — Game Design Document (à jour v0.15.0)
+# T99 — Game Design Document (à jour v0.16.0)
 
 Synthèse de la *Bible d'univers* et du document *MVP : triangle des nations et roster* (14/10/2026),
 complétée par les systèmes de **Dislyte** que l'on reprend. La direction musicale de Dislyte
@@ -114,12 +114,15 @@ Espion de Lumière, Moussa, Issa, Mohamed). Ils sont nettement plus faibles que 
   VI ATK%/DEF%/PV%/VIT.
 - Niveaux 0 à 15 ; 3 secondaires au départ ; aux paliers +3/6/9/12/15, une 4e secondaire est ajoutée
   puis une secondaire existante est renforcée.
-- Sets validés (fiche, partie 4), par boss de butin : 2 sets de 4 pièces et 1 set de 2.
+- Sets validés (fiche, partie 4), par boss de butin :
   Orion → Attaque (4 : +15 % ATK à 2 pièces, +30 DC à 4), Vitesse (4 : +12 % VIT, puis +13 %),
-  Taux critique (2 : +12 TC) · Sirius → Vampirisme (4 : +10 % PV, vol de vie 20 % à 4), Défense (4 :
-  +15 % DEF, puis +15 %), Immunité (2 : Immunité au 1er tour) · Grande Ourse → Gel (4 : +15 RÉS, 10 % de
-  geler l'attaquant à 4), Vie (2 : +15 % PV), Précision (2 : +20 PRÉ).
-- Plus tard (fiche, parties 4 et 5) : sets type Ocean, Astralis, Calamity, Aegis ; Poursuite, Bain de sang,
+  Taux critique (2 : +12 TC), Océan (4 : +8 % VIT, 25 % de chance de réduire les recharges de 1 tour au début du tour),
+  Astralis (4 : +8 % VIT, 15 % de chance de gagner +50 % de PA en fin de tour) ·
+  Sirius → Vampirisme (4 : +10 % PV, vol de vie 20 % à 4), Défense (4 : +15 % DEF, puis +15 %),
+  Immunité (2 : Immunité au 1er tour), Égide (2 : +10 % DEF, bouclier de 15 % des PV max pendant 2 tours au départ) ·
+  Grande Ourse → Gel (4 : +15 RÉS, 10 % de geler l'attaquant à 4), Vie (2 : +15 % PV), Précision (2 : +20 PRÉ),
+  Calamité (4 : +12 PRÉ, +10 % de dégâts par malus sur la cible jusqu'à +30 %).
+- Plus tard (fiche, parties 4 et 5) : sets Poursuite, Bain de sang,
   Effort, Tissage du temps ; qualité des reliques (6 niveaux), recyclage intégral, pitié de relique.
 
 ## 8 bis. Cinématique d'invocation (fiche, partie 3) — codée
@@ -357,3 +360,7 @@ Ymir. Ces chiffres sont des tendances ; il faut les refaire après chaque régla
 6. **v0.11 à v0.15 (fait)** : direction artistique anime : les 24 personnages et les boss Prométhée et
    Géode en VRoid, portraits en estampe, police Fredoka, décors enrichis (dojo, forge, toundra), VFX
    par shaders, caméra cinématique et post-traitement, refonte de l'interface (or, cartes, « juice »).
+7. **v0.16 (fait)** : mise en scène et systèmes inspirés de l'analyse REA de Dislyte (`SkillConfig` : caméra
+   dynamique d'impact, rotation vers la cible et sillage d'élan, compteur de combo et indicateur d'affinité ;
+   synthétiseur audio procédural dans `UiJuicer` ; 4 sets de reliques avancés Océan, Astralis, Calamité, Égide ;
+   Résonance d'Étage R1–R6 en Collection ; habillage intermédiaire des 8 arènes et nouveaux VFX 3D de zone).

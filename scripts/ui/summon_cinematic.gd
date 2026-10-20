@@ -366,6 +366,7 @@ func _promote(i: int, rar: int, single: bool) -> void:
 	lt.tween_property(o, "light_energy", (1.2 if rar == 5 else 0.0) * power, 0.8 + rar * 0.2)
 	BattleFx.shockwave(self, piece.position, col, 1.6 + rar * 0.5, 0.6)
 	BattleFx.burst(self, piece.position + Vector3(0, 0.6, 0), col, 18 + rar * 8 if single else 10, 3.0 + rar * 0.4, 0.08, 0.7)
+	UiJuicer.play_sfx("ult" if rar == 5 else ("crit" if rar == 4 else "buff"))
 	trauma = minf(1.0, trauma + (0.25 + 0.15 * (rar - 3)) * (1.0 if single else 0.5))
 	piece.scale = Vector3.ONE * 0.4
 	var tw := create_tween()
@@ -434,6 +435,7 @@ func _reveal(r: Dictionary, piece: Node3D) -> void:
 	tw.tween_property(m, "rotation_degrees:y", 0.0, 0.9).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	BattleFx.burst(self, piece.position + Vector3(0, 0.4, 0), RARITY_GLOW[rar], 30, 3.0, 0.08, 1.0, true)
 	BattleFx.shockwave(self, piece.position, RARITY_GLOW[rar], 3.0, 0.8)
+	UiJuicer.play_sfx("victory" if rar == 5 else "heal")
 	if rar == 5:
 		_light_beam()
 	m.flash(Color(RARITY_GLOW[rar], 0.8), 0.7)

@@ -62,20 +62,25 @@ static func build(parent: Node3D, id: String) -> void:
 	match id:
 		"acier":
 			_acier(parent)
+			_acier_rich(parent)
 		"forge":
 			_forge(parent)
 			_forge_rich(parent)
 		"orion":
 			_orion(parent)
+			_orion_rich(parent)
 		"givre":
 			_givre(parent)
 			_givre_rich(parent)
 		"sirius":
 			_sirius(parent)
+			_sirius_rich(parent)
 		"gemmes":
 			_gemmes(parent)
+			_gemmes_rich(parent)
 		"geode":
 			_geode(parent)
+			_geode_rich(parent)
 		_:
 			_dojo(parent)
 			_dojo_rich(parent)
@@ -1362,3 +1367,92 @@ static func _givre_rich(p: Node3D) -> void:
 	var fog: Array[Vector3] = [Vector3(-9, 0.15, 2), Vector3(9, 0.18, 1), Vector3(-12, 0.2, -9), Vector3(12, 0.22, -10),
 		Vector3(0, 0.25, -14), Vector3(-6, 0.2, -18), Vector3(7, 0.2, -19)]
 	_ground_mist(p, Color(0.92, 0.96, 1.0, 0.55), fog)
+
+
+## Cité d'Acier enrichie : pylônes industriels, conduites luminescentes au sol et nappes de vapeur.
+static func _acier_rich(p: Node3D) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 61
+	var steel := _toon(Color("282c36"), 0.0, 0.45)
+	for at: Vector3 in [Vector3(-11.5, 0, -12), Vector3(11.5, 0, -12), Vector3(-15, 0, -20), Vector3(15, 0, -20)]:
+		_mesh(p, _box(Vector3(0.9, 3.8, 0.9)), steel, at + Vector3(0, 1.9, 0))
+		_mesh(p, _box(Vector3(1.1, 0.25, 1.1)), _pulse_mat(Color("ff9a3d"), 2.2, 1.8), at + Vector3(0, 2.8, 0))
+	var pipes: Array[Transform3D] = []
+	for i in 18:
+		var a := deg_to_rad(rng.randf_range(190, 350))
+		var r := rng.randf_range(8.0, 16.0)
+		var p0 := Vector2(cos(a), sin(a)) * r
+		var p1 := p0 + Vector2.from_angle(a + PI * 0.5) * rng.randf_range(1.2, 2.6)
+		pipes.append(_seg_xform(p0, p1, -0.38, 0.08))
+	_multi(p, _box(Vector3(1, 0.04, 1)), _pulse_mat(Color("ff8a3a"), 2.0, 1.5), pipes)
+	var smog: Array[Vector3] = [Vector3(-8, 0.15, -8), Vector3(8, 0.15, -8), Vector3(0, 0.2, -15), Vector3(-11, 0.2, -18), Vector3(11, 0.2, -18)]
+	_ground_mist(p, Color(0.75, 0.65, 0.72, 0.42), smog)
+
+
+## Sanctuaire d'Orion enrichi : anneaux d'astrolabe en lévitation, monolithes stellaires et brume astrale.
+static func _orion_rich(p: Node3D) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 73
+	var astro := _pivot(p, Vector3(0, 0.2, 0))
+	var ring := BattleFx.flat_ring(GOLD, 8.2, 0.05, 1.8)
+	astro.add_child(ring)
+	_spin(astro, 90.0, "rotation:y")
+	var stone := _toon(Color("1c224a"), 0.1, 0.5)
+	for at: Vector3 in [Vector3(-11, 0, -11), Vector3(11, 0, -11), Vector3(-7, 0, -18), Vector3(7, 0, -18)]:
+		var piv := _pivot(p, at)
+		_mesh(piv, _box(Vector3(0.65, 2.8, 0.35)), stone, Vector3(0, 1.4, 0))
+		_mesh(piv, _sphere(0.18), BattleFx.glow_material(GOLD, 2.5), Vector3(0, 3.1, 0))
+		_bob(piv, 0.35, rng.randf_range(4.5, 6.5))
+	var mist: Array[Vector3] = [Vector3(-8, 0.15, -6), Vector3(8, 0.15, -6), Vector3(0, 0.2, -13), Vector3(-9, 0.2, -17), Vector3(9, 0.2, -17)]
+	_ground_mist(p, Color(0.45, 0.52, 0.95, 0.42), mist)
+
+
+## Désert de Sirius enrichi : vestiges ensablés, braseros solaires et brume de sable doré.
+static func _sirius_rich(p: Node3D) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 83
+	var sandstone := _toon(Color("b8844e"), 0.0, 0.35)
+	for at: Vector3 in [Vector3(-12, 0, -10), Vector3(12, 0, -10), Vector3(-15, 0, -19), Vector3(15, 0, -19)]:
+		_rock(p, at, rng.randf_range(0.9, 1.5), Color("9e6e3e"), rng)
+		_mesh(p, _box(Vector3(1.1, 1.8, 1.1)), sandstone, at + Vector3(0, 0.6, -1.2), Vector3(8, rng.randf_range(-25, 25), -12))
+	for at: Vector3 in [Vector3(-7.8, 0, -4.2), Vector3(7.8, 0, -4.2)]:
+		_brazier(p, at)
+	var sand_mist: Array[Vector3] = [Vector3(-9, 0.15, -5), Vector3(9, 0.15, -5), Vector3(0, 0.2, -12), Vector3(-10, 0.2, -17), Vector3(10, 0.2, -17)]
+	_ground_mist(p, Color(0.96, 0.78, 0.48, 0.45), sand_mist)
+
+
+## Forêt des Gemmes enrichie : herbes bioluminescentes, rochers moussus et brume d'émeraude.
+static func _gemmes_rich(p: Node3D) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 89
+	var tufts: Array[Vector3] = []
+	for i in 42:
+		var a := deg_to_rad(rng.randf_range(190, 350))
+		var r := rng.randf_range(7.8, 19.0)
+		tufts.append(Vector3(cos(a) * r, -0.05, sin(a) * r * 1.15))
+	_grass(p, tufts, Color("2e8a78"), rng)
+	for at: Vector3 in [Vector3(-10, 0, -9), Vector3(10, 0, -9), Vector3(-14, 0, -17), Vector3(14, 0, -17)]:
+		_rock(p, at, rng.randf_range(0.8, 1.3), Color("183834"), rng)
+		_fireflies(p, at, Color("7fffd4"))
+	var mist: Array[Vector3] = [Vector3(-8, 0.15, -6), Vector3(8, 0.15, -6), Vector3(0, 0.2, -13), Vector3(-10, 0.2, -18), Vector3(10, 0.2, -18)]
+	_ground_mist(p, Color(0.35, 0.88, 0.75, 0.42), mist)
+
+
+## Cœur de la Géode enrichi : veines d'améthyste pulsantes, éclats en lévitation et brume cristalline.
+static func _geode_rich(p: Node3D) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 97
+	var veins: Array[Transform3D] = []
+	for i in 24:
+		var a := deg_to_rad(rng.randf_range(0, 360))
+		var r := rng.randf_range(7.4, 15.0)
+		var p0 := Vector2(cos(a), sin(a)) * r
+		var p1 := p0 + Vector2.from_angle(rng.randf_range(0, TAU)) * rng.randf_range(0.9, 2.3)
+		veins.append(_seg_xform(p0, p1, -0.38, 0.07))
+	_multi(p, _box(Vector3(1, 0.04, 1)), _pulse_mat(Color("d07aff"), 2.5, 1.6), veins)
+	for at: Vector3 in [Vector3(-8.5, 2.2, -8), Vector3(8.5, 2.4, -8), Vector3(-11, 3.0, -15), Vector3(11, 3.2, -15)]:
+		var piv := _pivot(p, at)
+		_crystal(piv, Vector3.ZERO, 1.2, 0.24, Color("e0a0ff"), Vector3(15, 0, -12), 1.2)
+		_bob(piv, 0.45, rng.randf_range(3.8, 5.5))
+	var mist: Array[Vector3] = [Vector3(-8, 0.15, -6), Vector3(8, 0.15, -6), Vector3(0, 0.2, -12), Vector3(-9, 0.2, -17), Vector3(9, 0.2, -17)]
+	_ground_mist(p, Color(0.78, 0.48, 0.98, 0.45), mist)

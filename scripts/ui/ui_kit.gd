@@ -41,6 +41,12 @@ const PCT_STATS := ["hp_pct", "atk_pct", "def_pct", "spd_pct", "cr", "cd", "acc"
 const SET_NAMES := {
 	"attaque": "Attaque", "vitesse": "Vitesse", "taux_critique": "Taux critique", "defense": "Défense",
 	"immunite": "Immunité", "vampirisme": "Vampirisme", "vie": "Vie", "precision": "Précision", "gel": "Gel",
+	"ocean": "Océan", "astralis": "Astralis", "calamite": "Calamité", "egide": "Égide",
+}
+const SET_SPECIAL_NAMES := {
+	"lifesteal_20": "Vol de vie 20 %", "start_immunity_1": "Immunité 1 tour", "freeze_on_hit_10": "Gel 10 % en défense",
+	"cd_reduce_turn_25": "Océan (25 % recharge −1)", "extra_turn_15": "Astralis (15 % +50 % PA)",
+	"dmg_per_debuff_10": "Calamité (+10 % dégâts/malus)", "start_shield_15": "Égide (Bouclier 15 % PV)",
 }
 const CURRENCY_NAMES := {"eclat_de_voeu": "Éclats de Vœu", "pieces": "Pièces", "fragments_etage": "Fragments d'étage"}
 const RECRUIT_NAMES := {"recrue_orion": "Recrue d'Orion", "recrue_ourse": "Recrue de la Grande Ourse", "recrue_sirius": "Recrue de Sirius"}

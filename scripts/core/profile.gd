@@ -22,6 +22,7 @@ var energy := 0
 var energy_time := 0                # instant (secondes Unix) du dernier point d'énergie compté
 var formations: Array = []          # {"team": [ids], "relics": {id: {"1".."6": uid}}} ou {} si vide
 var loot: Dictionary = {}           # boss de butin : id -> {unlocked, wins, pity, pity_set}
+var resonances: Dictionary = {}     # id du perso -> rang de Résonance d'Étage (0..6)
 var grants_received: Array[String] = []
 var unseen: Array[String] = []      # personnages obtenus mais pas encore vus dans la collection  # cadeaux déjà versés (data/progression.json, « grants »)
 
@@ -318,9 +319,47 @@ func apply_formation(i: int) -> bool:
 	return true
 
 
-## Personnage du joueur prêt pour le combat (reliques appliquées).
+## Personnage du joueur prêt pour le combat (Résonance et reliques appliquées).
 func make_unit(char_id: String) -> BattleUnit:
-	return Relics.make_unit(char_id, equipped_relics(char_id))
+	return Relics.make_unit(char_id, equipped_relics(char_id), resonance(char_id))
+
+
+# --- Résonance d'Étage (Ascension R1..R6 par Fragments d'étage) --------------
+
+func resonance(char_id: String) -> int:
+	return int(resonances.get(char_id, 0))
+
+
+func resonance_max() -> int:
+	return int(GameData.progression().get("resonance", {}).get("max_rank", 6))
+
+
+func resonance_cost(char_id: String) -> Dictionary:
+	var cfg: Dictionary = GameData.progression().get("resonance", {})
+	var rarity := str(int(GameData.character(char_id)["rarity"])) if GameData.characters().has(char_id) else "3"
+	var r := resonance(char_id)
+	return {
+		"fragments_etage": int(cfg.get("fragment_cost", {}).get(rarity, 10)),
+		"pieces": int(cfg.get("pieces_cost", {}).get(rarity, 1000)) * (r + 1),
+	}
+
+
+func can_ascend(char_id: String) -> bool:
+	if not owns(char_id) or resonance(char_id) >= resonance_max():
+		return false
+	var cost := resonance_cost(char_id)
+	return amount("fragments_etage") >= int(cost["fragments_etage"]) and amount("pieces") >= int(cost["pieces"])
+
+
+## Monte la Résonance d'Étage d'un personnage (+4 % PV/ATK/DEF de base par rang, jusqu'à R6).
+func ascend(char_id: String) -> bool:
+	if not can_ascend(char_id):
+		return false
+	var cost := resonance_cost(char_id)
+	spend("fragments_etage", int(cost["fragments_etage"]))
+	spend("pieces", int(cost["pieces"]))
+	resonances[char_id] = resonance(char_id) + 1
+	return true
 
 
 # --- Tour --------------------------------------------------------------------
@@ -429,7 +468,7 @@ func to_dict() -> Dictionary:
 		"next_relic_uid": next_relic_uid, "equipped": equipped, "team": team,
 		"tower_cleared": tower_cleared, "prologue_cleared": prologue_cleared, "prologue_pulls": prologue_pulls, "tower_stars": tower_stars, "seen_tips": seen_tips, "gacha_state": gacha_state,
 		"energy": energy, "energy_time": energy_time, "formations": formations, "loot": loot,
-		"grants_received": grants_received, "unseen": unseen,
+		"resonances": resonances, "grants_received": grants_received, "unseen": unseen,
 	}
 
 
@@ -466,6 +505,8 @@ static func from_dict(d: Dictionary) -> Profile:
 			"pity_set": str(ls.get("pity_set", ""))}
 	p.grants_received.assign(d.get("grants_received", []))
 	p.unseen.assign(d.get("unseen", []))
+	for id: String in d.get("resonances", {}):
+		p.resonances[id] = int(d["resonances"][id])
 	p.energy = int(d.get("energy", GameData.progression()["energy"]["max"]))
 	p.energy_time = int(d.get("energy_time", Time.get_unix_time_from_system()))
 	for f: Variant in d.get("formations", []):

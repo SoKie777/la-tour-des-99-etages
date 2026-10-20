@@ -60,6 +60,13 @@ var ult_queue: Array[BattleUnit] = []
 var sp_row: HBoxContainer
 var enemy_col_ref: Control  # fiches (cibles du tutoriel de la Tour)
 var ally_col_ref: Control
+## Compteur de combo et de dégâts cumulés par action (façon Dislyte).
+var combo_panel: PanelContainer
+var combo_count_lbl: Label
+var combo_dmg_lbl: Label
+var combo_hits := 0
+var combo_dmg := 0
+var combo_tween: Tween
 
 
 func _ready() -> void:
@@ -186,25 +193,37 @@ func _advance() -> void:
 func _perform(actor: BattleUnit, skill_idx: int, target: BattleUnit, cut := false) -> void:
 	_clear_actions()
 	hitstop_used = false
+	_reset_combo()
 	var sk := actor.skill(skill_idx)
 	var action: String = ["attack", "skill", "ultimate"][skill_idx]
-	if skill_idx == 2:
-		await _ultimate_intro(actor, sk["name"])
-		_reset_camera()  # retour en vue générale pendant l'élan : on voit l'impact
 	var pawn: Node3D = pawns[actor]
 	var home := _home(actor)
+	var base_yaw := 180.0 if actor.team == 0 else 0.0
 	var focus: BattleUnit = target
 	if focus == null:
 		focus = engine.enemies_of(actor)[0] if sk.get("target", "") == "all_enemies" and not engine.enemies_of(actor).is_empty() else actor
+	if skill_idx == 2:
+		UiJuicer.play_sfx("ult")
+		await _ultimate_intro(actor, sk["name"])
+		_cam_action(actor, focus, 2)  # CameraEnterState -> cadrage dynamique sur l'impact avant le retour
+	elif skill_idx == 1:
+		_cam_action(actor, focus, 1)
 	var anim := _anim_name(actor, action)
 	_play_anim(actor, action)
 	var melee := focus.team != actor.team and not RANGED.any(func(r: String) -> bool: return anim.begins_with(r))
 	if melee:
-		var dest := home.lerp(_home(focus), 0.62)
+		var fpos := _home(focus)
+		var dest := home.lerp(fpos, 0.62)
+		var dir := fpos - home
+		if dir.length_squared() > 0.01:  # ESkillCasterRotType::FaceTargetsCenter
+			pawn.rotation_degrees.y = rad_to_deg(atan2(dir.x, dir.z))
+		BattleFx.dash_trail(self, home, dest, _sig(actor), 0.22 / Session.battle_speed)
+		UiJuicer.play_sfx("slash")
 		var tw := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 		tw.tween_property(pawn, "position", dest, 0.2 / Session.battle_speed)
 		await tw.finished
 	else:
+		UiJuicer.play_sfx("slash" if sk.has("hits") else "buff")
 		await _pause(0.12)
 		await _skill_vfx(actor, sk, focus)
 	if melee and sk.get("target", "") == "all_enemies":
@@ -221,6 +240,10 @@ func _perform(actor: BattleUnit, skill_idx: int, target: BattleUnit, cut := fals
 		var back := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		back.tween_property(pawn, "position", home, 0.25 / Session.battle_speed)
 		await back.finished
+		pawn.rotation_degrees.y = base_yaw
+	if skill_idx >= 1:
+		_reset_camera()
+	_fade_combo()
 	await _pause(0.3)
 
 
@@ -304,10 +327,7 @@ func _on_ult_pressed(u: BattleUnit) -> void:
 		go.call(targets[0] if not targets.is_empty() else null)
 		return
 	for t in targets:
-		var b := _skill_button(t.display_name, _col(t), go.bind(t))
-		b.custom_minimum_size = Vector2(170, 64)
-		_corner(b, UiKit.amount("hp", "%d %%" % int(t.hp_ratio() * 100), 12))
-		action_box.add_child(b)
+		action_box.add_child(_target_button(u, t, go.bind(t)))
 	action_box.add_child(UiKit.icon_button("back", _show_actions.bind(actor), 64))
 
 
@@ -359,9 +379,15 @@ func _skill_vfx(actor: BattleUnit, sk: Dictionary, focus: BattleUnit) -> void:
 		for t in engine.enemies_of(actor):
 			BattleFx.projectile(self, from, _home(t) + Vector3(0, 1.1, 0), col, dur)
 		await get_tree().create_timer(dur).timeout
-		for t in engine.enemies_of(actor):  # tornade de Yass Ming, orbes de pouvoir pour les autres
-			if actor.id == "yass":
+		for t in engine.enemies_of(actor):  # VFX de zone selon l'affinité et le style du lanceur
+			if actor.id in ["yass", "issa", "flint", "saraya"]:
 				BattleFx.tornado(self, _home(t), sig, 1.0 / Session.battle_speed)
+			elif actor.id in ["noor_el", "mikhaila", "nidhogg", "don_selah", "chronophage", "serpent"]:
+				BattleFx.solar_pillar(self, _home(t), sig, 0.85 / Session.battle_speed)
+			elif actor.id in ["ghost", "selene", "moussa", "wyrm", "geode"]:
+				BattleFx.crystal_eruption(self, _home(t), sig, 0.8 / Session.battle_speed)
+			elif actor.id in ["montana", "ezra", "jo_prince", "nyssa", "mohamed"]:
+				BattleFx.void_vortex(self, _home(t), sig, 0.8 / Session.battle_speed)
 			else:
 				BattleFx.orb(self, _home(t) + Vector3(0, 1.0, 0), sig, 0.5 / Session.battle_speed)
 		BattleFx.shockwave(self, Vector3(0, 0, line_z), col, 4.5, 0.5 / Session.battle_speed)
@@ -370,6 +396,20 @@ func _skill_vfx(actor: BattleUnit, sk: Dictionary, focus: BattleUnit) -> void:
 		var line_z := 2.3 if actor.team == 0 else -3.0
 		BattleFx.shockwave(self, Vector3(0, 0, line_z), col.lightened(0.4), 4.0, 0.6 / Session.battle_speed)
 		await _pause(0.2)
+
+
+## Cadrage dynamique d'impact (inspiré du CameraEnterState de Dislyte) : rapproche la caméra de la cible.
+func _cam_action(actor: BattleUnit, focus: BattleUnit, skill_idx: int) -> void:
+	if focus == null:
+		focus = actor
+	var fpos := _home(focus)
+	if skill_idx == 2:
+		var side := 1.8 if focus.slot >= 1 else -1.8
+		_cam_to(Vector3(fpos.x * 0.45 + side, 2.0, 6.8 if focus.team == 1 else 8.8),
+			fpos + Vector3(0, 1.25, 0), 0.25)
+	else:
+		_cam_to(CAM_POS.lerp(Vector3(fpos.x * 0.35 + 1.8, 2.2, 8.2), 0.45),
+			CAM_LOOK.lerp(fpos + Vector3(0, 1.3, 0), 0.5), 0.22)
 
 
 func _cam_to(pos: Vector3, look: Vector3, t: float) -> void:
@@ -422,6 +462,8 @@ func _on_battle_event(ev: Dictionary) -> void:
 			var col := Color("ff9a3d") if crit else (Color("c9b8ff") if dot else Color.WHITE)
 			_float_text(t, str(int(ev["amount"])) + (" !" if crit else ""), col, 1.3 if crit else 1.0)
 			if not dot:
+				_add_combo(int(ev["amount"]))
+				UiJuicer.play_sfx("crit" if crit else "hit")
 				_play_anim(t, "crit_hit" if crit else "hit")
 				if models.has(t):
 					models[t].flash(Color(1, 1, 1, 0.7) if not crit else Color(1, 0.7, 0.45, 0.9), 0.18)
@@ -438,6 +480,7 @@ func _on_battle_event(ev: Dictionary) -> void:
 				models[t].flash(Color(0.55, 0.25, 0.8, 0.6), 0.25)
 		"heal":
 			var t: BattleUnit = ev["target"]
+			UiJuicer.play_sfx("heal")
 			_float_text(t, "+" + str(int(ev["amount"])), Color("6bdc8a"))
 			if models.has(t):
 				models[t].flash(Color(0.36, 1.0, 0.6, 0.6), 0.35)
@@ -469,6 +512,7 @@ func _on_battle_event(ev: Dictionary) -> void:
 			_float_icon(ev["target"], UiKit.status_texture(ev["effect"]))
 		"break":  # Rupture : gros éclat d'encre, la cible recule sur la ligne de temps
 			var bt: BattleUnit = ev["target"]
+			UiJuicer.play_sfx("break")
 			_float_text(bt, "RUPTURE", UiKit.PAPER, 1.5)
 			if pawns.has(bt):
 				BattleFx.ink_splash(self, pawns[bt].position + Vector3(0, 1.2, 0.3), UiKit.PAPER, true)
@@ -810,6 +854,27 @@ func _build_ui() -> void:
 	banner_sub.position = Vector2(46, 228)
 	banner_sub.modulate.a = 0.0
 	root.add_child(banner_sub)
+
+	combo_panel = PanelContainer.new()  # compteur de combo et dégâts cumulés (façon Dislyte)
+	combo_panel.add_theme_stylebox_override("panel", UiKit.panel_style(Color(UI_BG, 0.88), UI_ACCENT, 2, 10))
+	combo_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	combo_panel.offset_left = -210
+	combo_panel.offset_right = -18
+	combo_panel.offset_top = -46
+	combo_panel.offset_bottom = 36
+	combo_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	combo_panel.visible = false
+	var cv := VBoxContainer.new()
+	cv.add_theme_constant_override("separation", 0)
+	combo_panel.add_child(cv)
+	combo_count_lbl = UiKit.label("COMBO ×2", 24, UI_ACCENT)
+	combo_count_lbl.add_theme_font_override("font", GAME_FONT)
+	combo_count_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	cv.add_child(combo_count_lbl)
+	combo_dmg_lbl = UiKit.label("0", 15, UiKit.PAPER)
+	combo_dmg_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	cv.add_child(combo_dmg_lbl)
+	root.add_child(combo_panel)
 
 	var top := HBoxContainer.new()
 	top.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -1404,21 +1469,79 @@ func _on_skill_chosen(actor: BattleUnit, idx: int) -> void:
 		return
 	_clear_actions()
 	for t in engine.valid_targets(actor, idx):
-		var b := _skill_button(t.display_name, _col(t), func() -> void:
+		action_box.add_child(_target_button(actor, t, func() -> void:
 			waiting_input = false
 			await _perform(actor, idx, t)
-			_advance())
-		b.custom_minimum_size = Vector2(170, 64)
-		_corner(b, UiKit.amount("hp", "%d %%" % int(t.hp_ratio() * 100), 12))
-		action_box.add_child(b)
+			_advance()))
 	var back := UiKit.icon_button("back", _show_actions.bind(actor), 64)
 	action_box.add_child(back)
+
+
+## Bouton de sélection de cible avec indicateur d'affinité élémentaire (▲ avantage / ▼ désavantage / ★ Rupture).
+func _target_button(actor: BattleUnit, t: BattleUnit, cb: Callable) -> Button:
+	var b := _skill_button(t.display_name, _col(t), cb)
+	b.custom_minimum_size = Vector2(180, 66)
+	_corner(b, UiKit.amount("hp", "%d %%" % int(t.hp_ratio() * 100), 12))
+	if t.team != actor.team:
+		var adv := engine.dominates(actor.constellation, t.constellation)
+		var weak := not engine.tactics.is_empty() and actor.constellation in t.weakness and not t.broken
+		var dis := engine.dominates(t.constellation, actor.constellation)
+		if adv or weak or dis:
+			var tag := Label.new()
+			tag.text = ("▲★" if (adv and weak) else ("★" if weak else "▲")) if (adv or weak) else "▼"
+			tag.add_theme_font_size_override("font_size", UiKit.fs(12))
+			tag.add_theme_color_override("font_color", Color("6bdc8a") if (adv or weak) else UiKit.VERMILION.lightened(0.3))
+			tag.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+			tag.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+			tag.grow_vertical = Control.GROW_DIRECTION_BEGIN
+			tag.offset_right = -8
+			tag.offset_bottom = -4
+			b.add_child(tag)
+	return b
+
+
+func _reset_combo() -> void:
+	combo_hits = 0
+	combo_dmg = 0
+	if combo_tween != null and combo_tween.is_valid():
+		combo_tween.kill()
+	if combo_panel != null:
+		combo_panel.visible = false
+
+
+func _add_combo(dmg: int) -> void:
+	combo_hits += 1
+	combo_dmg += maxi(0, dmg)
+	if combo_panel == null or combo_hits < 2:
+		return
+	if combo_tween != null and combo_tween.is_valid():
+		combo_tween.kill()
+	combo_panel.visible = true
+	combo_panel.modulate.a = 1.0
+	combo_count_lbl.text = "COMBO ×%d" % combo_hits
+	combo_dmg_lbl.text = "Total  %s" % UiKit.thousands(combo_dmg)
+	combo_panel.pivot_offset = combo_panel.size / 2.0
+	combo_panel.scale = Vector2(1.18, 1.18)
+	combo_tween = create_tween()
+	combo_tween.tween_property(combo_panel, "scale", Vector2.ONE, 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+func _fade_combo() -> void:
+	if combo_panel == null or not combo_panel.visible:
+		return
+	if combo_tween != null and combo_tween.is_valid():
+		combo_tween.kill()
+	combo_tween = create_tween()
+	combo_tween.tween_interval(0.35)
+	combo_tween.tween_property(combo_panel, "modulate:a", 0.0, 0.25)
+	combo_tween.tween_callback(func() -> void: combo_panel.visible = false)
 
 
 func _show_result() -> void:
 	if done:
 		return
 	done = true
+	UiJuicer.play_sfx("victory" if engine.winner == 0 else "defeat")
 	_clear_actions()
 	active_ring.visible = false
 	var v := VBoxContainer.new()

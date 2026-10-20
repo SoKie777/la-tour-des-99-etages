@@ -11,6 +11,8 @@ uniform bool use_vertex_color = false;  // vêtements MPFB peints en couleurs de
 uniform float alpha_scissor : hint_range(0.0, 1.0) = 0.0;  // sourcils, mèches : découpe nette
 uniform vec4 shadow_color : source_color = vec4(0.149, 0.235, 0.290, 1.0);  // bleu minéral #263C4A
 uniform float shadow_brightness : hint_range(0.0, 1.0) = 0.62;  // clarté de l'aplat d'ombre
+uniform vec4 terminator_color : source_color = vec4(0.86, 0.36, 0.26, 1.0);  // frange chaude (subsurface) à la frontière de l'ombre
+uniform float terminator_strength : hint_range(0.0, 1.0) = 0.20;
 uniform vec4 arena_rim_color : source_color = vec4(0.819, 0.678, 0.384, 1.0);  // or ancien #D1AD62 par défaut
 uniform float rim_thickness : hint_range(0.0, 1.0) = 0.32;
 uniform float rim_smoothness : hint_range(0.0, 1.0) = 0.05;
@@ -56,17 +58,20 @@ void light() {
 	float band = smoothstep(0.0, 0.05, ndl);
 	if (LIGHT_IS_DIRECTIONAL) {
 		float lit = band * smoothstep(0.25, 0.6, ATTENUATION);  // ombres portées en aplat
+		float term = smoothstep(-0.04, 0.02, ndl) * (1.0 - smoothstep(0.02, 0.11, ndl)) * smoothstep(0.2, 0.6, ATTENUATION);
 		vec3 tone = shadow_color.rgb / max(shadow_color.b, max(shadow_color.r, shadow_color.g)) * shadow_brightness;
-		DIFFUSE_LIGHT += LIGHT_COLOR / PI * mix(tone, vec3(1.0), lit);
+		vec3 base_diff = mix(tone, vec3(1.0), lit) + terminator_color.rgb * term * terminator_strength;
+		DIFFUSE_LIGHT += LIGHT_COLOR / PI * base_diff;
 	} else {
 		DIFFUSE_LIGHT += LIGHT_COLOR / PI * band * ATTENUATION;
 	}
 	float rim = smoothstep(1.0 - rim_thickness, 1.0 - rim_thickness + rim_smoothness, 1.0 - dot(NORMAL, VIEW));
 	SPECULAR_LIGHT += rim * max(ndl, 0.0) * arena_rim_color.rgb * LIGHT_COLOR / PI * ATTENUATION * rim_strength;
 	if (band_strength > 0.0 && LIGHT_IS_DIRECTIONAL) {
-		// reflet découpé : un anneau net autour du point le plus brillant (style « anneau d'ange » des cheveux)
+		// reflet découpé à double frange (style « anneau d'ange » anisotrope des cheveux et dorures)
 		float ndh = dot(NORMAL, normalize(LIGHT + VIEW));
 		float ring = smoothstep(0.80, 0.82, ndh) * (1.0 - smoothstep(0.90, 0.92, ndh));
-		SPECULAR_LIGHT += ring * band_color.rgb * LIGHT_COLOR / PI * ATTENUATION * band_strength * smoothstep(0.0, 0.1, ndl);
+		float ring2 = smoothstep(0.66, 0.69, ndh) * (1.0 - smoothstep(0.73, 0.76, ndh)) * 0.45;
+		SPECULAR_LIGHT += (ring + ring2) * band_color.rgb * LIGHT_COLOR / PI * ATTENUATION * band_strength * smoothstep(0.0, 0.1, ndl);
 	}
 }

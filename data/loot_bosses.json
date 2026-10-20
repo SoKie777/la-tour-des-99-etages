@@ -56,7 +56,9 @@
       "sets": [
         "attaque",
         "vitesse",
-        "taux_critique"
+        "taux_critique",
+        "ocean",
+        "astralis"
       ],
       "mechanic": "Gagne 5 % de jauge à chaque tour d'un héros ; ses dégâts augmentent de 6 % à chacun de ses tours.",
       "stats": {
@@ -130,7 +132,8 @@
       "sets": [
         "gel",
         "vie",
-        "precision"
+        "precision",
+        "calamite"
       ],
       "mechanic": "3 barres de PV. À chaque barre perdue, il se couvre d'un bouclier (15 % de ses PV) ; s'il tient jusqu'à son tour, il gèle le héros le plus fort et l'écrase.",
       "stats": {
@@ -215,7 +218,8 @@
       "sets": [
         "vampirisme",
         "defense",
-        "immunite"
+        "immunite",
+        "egide"
       ],
       "mechanic": "Pose du Venin solaire : au bout de 3 tours, il explose (20 % des PV max) sauf si on le purge.",
       "stats": {

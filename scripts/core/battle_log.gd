@@ -95,6 +95,8 @@ static func describe(ev: Dictionary) -> String:
 			return "%s déclenche l'Oblitération !" % ev["actor"].display_name
 		"ult_cut":
 			return "%s coupe la ligne de temps (ultime)." % ev["actor"].display_name
+		"set_proc":
+			return "%s : relique %s activée !" % [ev["actor"].display_name, str(ev["set"]).capitalize()]
 		"battle_end":
 			return {0: "VICTOIRE", 1: "DÉFAITE", 2: "ÉGALITÉ"}.get(ev["winner"], "")
 	return ""

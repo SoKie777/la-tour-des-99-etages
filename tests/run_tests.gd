@@ -554,7 +554,7 @@ func test_loot() -> void:
 	# Récompenses, paliers, pitié
 	var p := Profile.new_game()
 	var rw := p.win_loot("wyrm", 0, rng)
-	check(rw["relics"].size() == 2 and rw["relics"].all(func(r: Dictionary) -> bool: return r["set"] in ["gel", "vie", "precision"]), "Wyrm : 2 reliques de la Grande Ourse")
+	check(rw["relics"].size() == 2 and rw["relics"].all(func(r: Dictionary) -> bool: return r["set"] in ["gel", "vie", "precision", "calamite"]), "Wyrm : 2 reliques de la Grande Ourse")
 	check(p.loot_state("wyrm")["unlocked"] == 1, "Victoire en Facile : Difficile débloqué")
 	var rw3 := LootBoss.rewards("wyrm", 3, rng)
 	check(rw3["relics"].size() == 3 and rw3["relics"].all(func(r: Dictionary) -> bool: return int(r["level"]) == 9), "Enfer : 3 reliques déjà à +9")
@@ -629,6 +629,40 @@ func test_relics() -> void:
 	var with4: Dictionary = Relics.apply(GameData.character("mohamed")["stats"], atk4)["stats"]
 	var with2: Dictionary = Relics.apply(GameData.character("mohamed")["stats"], atk4.slice(0, 2))["stats"]
 	check(with4["cd"] - with2["cd"] >= 30.0, "Set Attaque (4 pièces) : +30 DC en plus du bonus à 2 pièces")
+	# Nouveaux sets avancés (Océan, Astralis, Calamité, Égide)
+	var egide2: Array = [Relics.generate(rng, "egide", 1), Relics.generate(rng, "egide", 2)]
+	var cal4: Array = []
+	for slot in range(1, 5):
+		cal4.append(Relics.generate(rng, "calamite", slot))
+	var u_eg := Relics.make_unit("moussa", egide2)
+	var u_cal := Relics.make_unit("mohamed", cal4)
+	var eb := BattleEngine.new([u_cal], [u_eg], 12)
+	check(u_eg.shield_value() > 0.0, "Set Égide (2 pièces) : bouclier de 15 % PV max dès le début du combat")
+	var d0 := eb.compute_damage(u_cal, u_eg, 1000.0, {}, false, 1.0)
+	eb._try_apply(u_cal, u_eg, {"id": "atk_down", "value": 20, "turns": 2, "no_roll": true})
+	eb._try_apply(u_cal, u_eg, {"id": "spd_down", "value": 20, "turns": 2, "no_roll": true})
+	var d2 := eb.compute_damage(u_cal, u_eg, 1000.0, {}, false, 1.0)
+	approx(d2 / d0, 1.2, "Set Calamité (4 pièces) : +10 % de dégâts par malus sur la cible (+20 %)")
+	var oce4: Array = []
+	var ast4: Array = []
+	for slot in range(1, 5):
+		oce4.append(Relics.generate(rng, "ocean", slot))
+		ast4.append(Relics.generate(rng, "astralis", slot))
+	var u_oce := Relics.make_unit("issa", oce4)
+	var u_ast := Relics.make_unit("eirikr", ast4)
+	var eb2 := BattleEngine.new([u_oce, u_ast], ["moussa"], 15)
+	var oce_procs := 0
+	var ast_procs := 0
+	for k in 80:
+		u_oce.cooldowns[2] = 4
+		eb2._start_turn(u_oce)
+		if u_oce.cooldowns[2] == 3:
+			oce_procs += 1
+		u_ast.ap = 0.0
+		eb2._end_turn(u_ast)
+		if u_ast.ap >= 0.49:
+			ast_procs += 1
+	check(oce_procs > 5 and ast_procs > 3, "Sets Océan (recharge -1) et Astralis (+50 % PA) actifs en combat")
 
 
 func test_profile() -> void:
@@ -705,6 +739,17 @@ func test_profile() -> void:
 	var q2 := Profile.from_dict(JSON.parse_string(JSON.stringify(q.to_dict())))
 	check(q2.apply_grants().is_empty(), "Cadeau de test : mémorisé dans la sauvegarde")
 	check(q2.energy == q.energy and q2.formations.size() == q.formations.size() and q2.apply_formation(0), "Énergie et formations sauvegardées")
+	# Résonance d'Étage (R1..R6) et complétude des Voies du roster
+	check(GameData.characters().values().all(func(c: Dictionary) -> bool:
+		return str(c.get("voie", "")) != "" and str(c.get("voie", "")) != "À définir" and str(c.get("affinity", "")) != ""),
+		"Roster : les 24 personnages ont une Voie et une affinité définies")
+	q.add("fragments_etage", 100)
+	q.add("pieces", 50000)
+	var base_atk := float(GameData.character("mello")["stats"]["atk"])
+	check(q.ascend("mello") and q.ascend("mello") and q.resonance("mello") == 2, "Résonance d'Étage : montée R2 avec Fragments et Pièces")
+	approx(q.make_unit("mello").base["atk"], roundf(base_atk * 1.08), "Résonance R2 : +8 % ATK de base")
+	var q3 := Profile.from_dict(JSON.parse_string(JSON.stringify(q.to_dict())))
+	check(q3.resonance("mello") == 2, "Résonance d'Étage sauvegardée")
 
 
 func test_prologue() -> void:

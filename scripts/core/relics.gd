@@ -92,11 +92,18 @@ static func apply(base_stats: Dictionary, equipped: Array) -> Dictionary:
 
 
 ## Construit un BattleUnit équipé, prêt pour BattleEngine.new([...], [...]).
-static func make_unit(char_id: String, equipped: Array) -> BattleUnit:
+static func make_unit(char_id: String, equipped: Array, resonance_rank: int = 0) -> BattleUnit:
 	var data := GameData.character(char_id)
-	var result := apply(data["stats"], equipped)
+	var base_stats: Dictionary = data["stats"].duplicate()
+	if resonance_rank > 0:
+		var pct := float(GameData.progression().get("resonance", {}).get("stat_pct_per_rank", 4)) * resonance_rank
+		for k in ["hp", "atk", "def"]:
+			base_stats[k] = roundf(float(base_stats[k]) * (1.0 + pct / 100.0))
+	var result := apply(base_stats, equipped)
 	var u := BattleUnit.new(data, 0, 0, result["stats"])
 	u.set_specials = result["specials"]
+	if resonance_rank > 0:
+		u.flags["resonance"] = resonance_rank
 	return u
 
 

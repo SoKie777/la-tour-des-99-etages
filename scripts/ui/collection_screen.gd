@@ -111,8 +111,32 @@ func _build_stats() -> void:
 			txt = "%d → %s" % [int(base), txt]
 		grid.add_child(UiKit.label(txt, 15, UiKit.ACCENT if int(final) != int(base) else UiKit.PAPER))
 	if not unit.set_specials.is_empty():
-		var sp := UiKit.rich("%s  %s" % [UiKit.bb("relique", 16, UiKit.ACCENT), ", ".join(unit.set_specials)], 13, UiKit.DIM, true)
+		var sp_names: Array[String] = []
+		for s_id: String in unit.set_specials:
+			sp_names.append(UiKit.SET_SPECIAL_NAMES.get(s_id, s_id))
+		var sp := UiKit.rich("%s  %s" % [UiKit.bb("relique", 16, UiKit.ACCENT), ", ".join(sp_names)], 13, UiKit.DIM, true)
 		stats_box.add_child(sp)
+	var p := Session.profile
+	var res_rank := p.resonance(selected)
+	var res_max := p.resonance_max()
+	var res_row := HBoxContainer.new()
+	res_row.add_theme_constant_override("separation", 10)
+	var diamonds := "◆".repeat(res_rank) + "◇".repeat(res_max - res_rank)
+	var res_lbl := UiKit.rich("%s [color=#%s]%s[/color]  R%d (+%d %%)" % [
+		UiKit.bb("resonance", 18, UiKit.HIGHLIGHT), UiKit.HIGHLIGHT.to_html(false), diamonds, res_rank, res_rank * 4], 14, UiKit.PAPER)
+	res_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	res_row.add_child(res_lbl)
+	if res_rank < res_max:
+		var rcost := p.resonance_cost(selected)
+		var rbtn := UiKit.rich_button("R%d  %s %d   %s %s" % [
+			res_rank + 1, UiKit.bb("fragments_etage", 14), int(rcost["fragments_etage"]),
+			UiKit.bb("pieces", 14), UiKit.thousands(int(rcost["pieces"]))], func() -> void:
+			if p.ascend(selected):
+				UiJuicer.play_sfx("buff")
+				_changed(), Vector2(210, 42), 13)
+		rbtn.disabled = not p.can_ascend(selected)
+		res_row.add_child(rbtn)
+	stats_box.add_child(res_row)
 	if d.has("boss_bane"):  # arme du kit contre un boss
 		var bane: Dictionary = d["boss_bane"]
 		stats_box.add_child(UiKit.rich("[color=#%s]★[/color] %s  [b]%s[/b]" % [UiKit.ACCENT.to_html(false),
