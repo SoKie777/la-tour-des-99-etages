@@ -32,6 +32,9 @@ var unseen: Array[String] = []
 var grants_received: Array[String] = []
 var reset_week := 0
 var resets_used := 0
+var codex: Dictionary = {}           # id -> meilleure étoile jamais atteinte (Codex des héros)
+var challenges: Dictionary = {}      # Défis : id -> {best, kills, day, used}
+var dispatch: Dictionary = {}        # Missions : {day, missions: [{..., heroes, start, claimed}]}
 
 
 static func cfg() -> Dictionary:
@@ -114,6 +117,7 @@ func add_hero(id: String, star: int = -1) -> int:
 	heroes.append(inst)
 	if not levels.has(id):
 		levels[id] = 1
+	codex_update(id)
 	return int(inst["uid"])
 
 
@@ -425,6 +429,7 @@ func star_up(uid: int, main_uids: Array = [], class_uids: Array = [], dolls := -
 		main["consumed"].append({"id": "", "star": int(req["class_star"]), "at": at, "kind": "doll"})
 	spend("poupee_" + cls, dolls)
 	main["star"] = at + 1
+	codex_update(str(main["id"]))
 	return true
 
 
@@ -492,6 +497,156 @@ func star_reset(uid: int, now: int) -> bool:
 	return true
 
 
+# --- Codex des héros -------------------------------------------------------------
+
+## Enregistre la meilleure étoile d'un héros ; chaque nouvelle étoile rapporte des Éclats. Renvoie
+## le nombre d'étoiles nouvelles.
+func codex_update(id: String) -> int:
+	if HeroDb.hero(id).get("substitute", false):
+		return 0
+	var before := int(codex.get(id, 0))
+	var now_star := best_star(id)
+	if now_star <= before:
+		return 0
+	codex[id] = now_star
+	add("eclat_de_voeu", (now_star - before) * int(cfg()["codex"]["eclats_per_star"]))
+	return now_star - before
+
+
+func codex_stars() -> int:
+	var n := 0
+	for id: String in codex:
+		n += int(codex[id])
+	return n
+
+
+## Bonus de compte appliqué à tous les héros en combat (Codex).
+func account_bonus() -> Dictionary:
+	var pct := codex_stars() * float(cfg()["codex"]["pct_per_star"])
+	return {"atk_pct": pct, "hp_pct": pct}
+
+
+# --- Défis (Conquête des mythes) ---------------------------------------------------
+
+func challenge_state(id: String) -> Dictionary:
+	if not challenges.has(id):
+		challenges[id] = {"best": 0, "kills": 0, "day": 0, "used": 0}
+	return challenges[id]
+
+
+func challenge_attempts(id: String, now: int) -> int:
+	var st := challenge_state(id)
+	var day := now / 86400
+	if int(st["day"]) != day:
+		st["day"] = day
+		st["used"] = 0
+	return maxi(0, int(Challenges.cfg()["daily"]) - int(st["used"]))
+
+
+## Victoire à un palier : la première victoire d'un palier donne sa récompense (sans essai consommé,
+## comme dans DT). Ralliement : récompense selon le score, record gardé, un essai consommé.
+func win_challenge(id: String, tier: int, kills: int, now: int) -> Dictionary:
+	var st := challenge_state(id)
+	var c := Challenges.info(id)
+	if c.has("reward_per_kill"):
+		if challenge_attempts(id, now) <= 0:
+			return {}
+		st["used"] = int(st["used"]) + 1
+		st["kills"] = maxi(int(st["kills"]), kills)
+		st["best"] = 1
+		var rw := Challenges.reward(id, 1, kills)
+		add_all(rw)
+		return rw
+	if tier != int(st["best"]) + 1:
+		return {}
+	st["best"] = tier
+	var out := Challenges.reward(id, tier, 0, now)
+	add_all(out)
+	return out
+
+
+## Balayage : récompense du meilleur palier (ou du meilleur score), un essai consommé.
+func sweep_challenge(id: String, now: int) -> Dictionary:
+	var st := challenge_state(id)
+	if int(st["best"]) <= 0 or challenge_attempts(id, now) <= 0:
+		return {}
+	st["used"] = int(st["used"]) + 1
+	var rw := Challenges.reward(id, int(st["best"]), int(st["kills"]), now)
+	add_all(rw)
+	return rw
+
+
+# --- Missions (Dispatch) --------------------------------------------------------------
+
+## Missions du jour ; les missions en cours d'un jour passé restent jusqu'à leur récolte.
+func dispatch_missions(now: int) -> Array:
+	var day := now / 86400
+	if int(dispatch.get("day", -1)) != day:
+		var keep := []
+		for m: Dictionary in dispatch.get("missions", []):
+			if int(m.get("start", 0)) > 0 and not m.get("claimed", false):
+				keep.append(m)
+		for m: Dictionary in Dispatch.missions_of_day(day):
+			m["heroes"] = []
+			m["start"] = 0
+			m["claimed"] = false
+			keep.append(m)
+		dispatch = {"day": day, "missions": keep}
+	return dispatch["missions"]
+
+
+func dispatch_busy() -> Dictionary:
+	var busy := {}
+	for m: Dictionary in dispatch.get("missions", []):
+		if int(m.get("start", 0)) > 0 and not m.get("claimed", false):
+			for h: String in m["heroes"]:
+				busy[h] = true
+	return busy
+
+
+## Héros proposés pour une mission : les moins puissants qui remplissent la condition (les meilleurs
+## restent libres), [] s'il n'y en a pas assez.
+func dispatch_pick(m: Dictionary) -> Array[String]:
+	var busy := dispatch_busy()
+	var pool: Array[String] = []
+	for id in owned_ids():
+		if not busy.has(id) and Dispatch.fits(m, id, best_star(id)):
+			pool.append(id)
+	pool.sort_custom(func(a: String, b: String) -> bool: return hero_power(a) < hero_power(b))
+	if pool.size() < int(m["count"]):
+		return []
+	return pool.slice(0, int(m["count"]))
+
+
+func dispatch_start(i: int, now: int) -> bool:
+	var ms := dispatch_missions(now)
+	if i >= ms.size() or int(ms[i]["start"]) > 0:
+		return false
+	var team := dispatch_pick(ms[i])
+	if team.is_empty():
+		return false
+	ms[i]["heroes"] = team
+	ms[i]["start"] = now
+	return true
+
+
+## Secondes avant la fin d'une mission (-1 si elle n'est pas lancée).
+func dispatch_left(m: Dictionary, now: int) -> int:
+	if int(m.get("start", 0)) <= 0:
+		return -1
+	return maxi(0, int(m["start"]) + int(float(m["hours"]) * 3600.0) - now)
+
+
+func dispatch_claim(i: int, now: int) -> Dictionary:
+	var ms := dispatch_missions(now)
+	if i >= ms.size() or ms[i].get("claimed", false) or dispatch_left(ms[i], now) != 0:
+		return {}
+	ms[i]["claimed"] = true
+	var rw: Dictionary = ms[i]["reward"]
+	add_all(rw)
+	return rw
+
+
 # --- Formation (grille 3 × 3) ------------------------------------------------------
 
 func deploy_max() -> int:
@@ -543,7 +698,11 @@ func auto_formation() -> void:
 
 
 func hero_stats(id: String) -> Dictionary:
-	return HeroDb.stats(id, effective_level(id), best_star(id), equipped_relics(id))
+	var s := HeroDb.stats(id, effective_level(id), best_star(id), equipped_relics(id))
+	var b := account_bonus()
+	s["atk"] *= 1.0 + float(b["atk_pct"]) / 100.0
+	s["hp"] *= 1.0 + float(b["hp_pct"]) / 100.0
+	return s
 
 
 func hero_power(id: String) -> int:
@@ -564,7 +723,8 @@ func battle_specs() -> Array:
 		var key := str(s)
 		if formation.has(key):
 			var id: String = formation[key]
-			out.append({"id": id, "level": effective_level(id), "star": best_star(id), "gear": equipped_relics(id), "slot": s})
+			out.append({"id": id, "level": effective_level(id), "star": best_star(id), "gear": equipped_relics(id), "slot": s,
+				"bonus": account_bonus()})
 	return out
 
 
@@ -825,7 +985,8 @@ func to_dict() -> Dictionary:
 		"patrol_time": patrol_time, "quick_day": quick_day, "quick_used": quick_used, "tower_cleared": tower_cleared,
 		"tower_stars": tower_stars, "loot": loot, "energy": energy, "energy_time": energy_time,
 		"gacha_state": gacha_state, "seen_tips": seen_tips, "unseen": unseen, "grants_received": grants_received,
-		"reset_week": reset_week, "resets_used": resets_used,
+		"reset_week": reset_week, "resets_used": resets_used, "codex": codex, "challenges": challenges,
+		"dispatch": dispatch,
 	}
 
 
@@ -882,4 +1043,26 @@ static func from_dict(d: Dictionary) -> Profile:
 	p.grants_received.assign(d.get("grants_received", []))
 	p.reset_week = int(d.get("reset_week", 0))
 	p.resets_used = int(d.get("resets_used", 0))
+	for k: String in d.get("codex", {}):
+		p.codex[k] = int(d["codex"][k])
+	for k: String in d.get("challenges", {}):
+		var c: Dictionary = d["challenges"][k]
+		p.challenges[k] = {"best": int(c.get("best", 0)), "kills": int(c.get("kills", 0)), "day": int(c.get("day", 0)), "used": int(c.get("used", 0))}
+	var dsp: Dictionary = d.get("dispatch", {})
+	if not dsp.is_empty():
+		var ms := []
+		for m: Dictionary in dsp.get("missions", []):
+			var heroes_out: Array = []
+			for h in m.get("heroes", []):
+				heroes_out.append(str(h))
+			var rw := {}
+			for k: String in m.get("reward", {}):
+				rw[k] = int(m["reward"][k])
+			ms.append({"tid": str(m["tid"]), "name": str(m["name"]), "hours": float(m["hours"]), "count": int(m["count"]),
+				"min_star": int(m["min_star"]), "kind": str(m["kind"]), "key": str(m["key"]), "reward": rw, "heroes": heroes_out,
+				"start": int(m.get("start", 0)), "claimed": bool(m.get("claimed", false))})
+		p.dispatch = {"day": int(dsp.get("day", 0)), "missions": ms}
+	for id in p.owned_ids():
+		if not p.codex.has(id):
+			p.codex[id] = p.best_star(id)
 	return p

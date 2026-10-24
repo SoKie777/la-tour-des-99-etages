@@ -1,4 +1,4 @@
-# T99 — Game Design Document (à jour v0.17.0, refonte Dragon Traveler)
+# T99 — Game Design Document (à jour v0.18.0, refonte Dragon Traveler)
 
 Depuis la v0.17, T99 reprend la boucle de jeu de **Dragon Traveler** (analyse complète :
 `docs/ANALYSE_DRAGON_TRAVELER.md`, faite avec REA sur l'APK 1.19.0) : combat automatique en
@@ -140,6 +140,21 @@ Boss : Prométhée, l'Impératrice Géode, le Chronophage, le Wyrm de givre, le 
 - **Expédition** (`data/loot_bosses.json`) : Chronophage, Wyrm de givre, Serpent solaire ; 4 paliers
   (niveau 30 à 100) ; reliques des sets de chaque boss, pitié toutes les 8 victoires ; 12 d'énergie
   (rendue en cas de défaite).
+- **Défis** (`data/challenges.json`, « Conquête des mythes » de DT), 2 essais par jour ; tenter un
+  nouveau palier est gratuit, le **balayage** du meilleur palier consomme un essai :
+  - **Défense de la forêt** (étape 10) : Archers, Mages et Prêtres seulement, 3 vagues de mêlée,
+    20 paliers → Pièces ;
+  - **Casse du trésor** (étape 16) : Gardiens, Guerriers et Assassins seulement, 3 vagues de tireurs → Encre ;
+  - **Épreuve de la déesse** (étape 20) : deux classes par jour (toutes le samedi), 15 paliers →
+    Essence et **Poupées** de la classe du jour ;
+  - **Ralliement sauvage** (étape 24) : un héros par classe, vagues sans fin pendant 60 s, récompense
+    selon le nombre d'ennemis achevés (record balayable).
+  L'équipe envoyée est faite automatiquement des héros autorisés les plus puissants.
+- **Missions** (`data/dispatch.json`, « Dispatch » de DT, étape 8) : 4 missions par jour (1 à 8 h),
+  2 à 4 héros d'une classe ou d'une faction à un minimum d'étoiles ; les héros envoyés peuvent toujours
+  combattre ; récompenses : Pièces, Encre, Essence, Gelée, Sceaux, Éclats, Poupées.
+- **Codex** : chaque étoile atteinte pour la première fois par un héros donne 5 Éclats et +0,12 %
+  d'ATK et de PV à toute l'équipe (bonus de compte, appliqué en combat).
 
 ## 8. Équilibrage mesuré (`tests/run_tests.gd`, 100 combats par duel)
 
@@ -158,11 +173,8 @@ jauge d'énergie cyan, icônes des 6 factions en pièces d'échecs (`tools/refon
 
 ## 10. Ce qu'il reste à reprendre de Dragon Traveler
 
-- **Codex** (bonus global à chaque nouvelle étoile), **Éveil divin** (après l'arc-en-ciel),
-  **Serment** (bonus de classe/faction), **Affection**, **Expéditions de héros** (Dispatch).
-- Modes : **Conquête des mythes** (Défense de la forêt : distance seule ; Casse du trésor : mêlée
-  seule ; Ralliement sauvage et Duel de slimes : un héros par classe), **Épreuve de la déesse** (une
-  classe par jour), **Colisée** (1 contre 1 enchaîné), **Faille** roguelite (PV et énergie conservés),
-  **Évasions** (labyrinthe), **Arène** et ligues (PvP asynchrone), guilde.
+- **Éveil divin** (après l'arc-en-ciel), **Serment** (bonus de classe/faction), **Affection**.
+- Modes : **Duel de slimes**, **Colisée** (1 contre 1 enchaîné), **Faille** roguelite (PV et énergie
+  conservés), **Évasions** (labyrinthe), **Arène** et ligues (PvP asynchrone), guilde.
 - Protagoniste et **Dragon** (case Dragon de la grille, sorts de Wyrm).
 - Équilibrage fin des kits (Tour et Roi un peu faibles en équipe pure) et portraits des Pions d'encre.

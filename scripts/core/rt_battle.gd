@@ -27,9 +27,14 @@ var faction_bonus_pct: Array[int] = [0, 0]
 var faction_bonus_id: Array[String] = ["", ""]
 var berserk_done := 0
 var opts: Dictionary
+var wave := 0                          # vagues d'ennemis déjà arrivées après la première
+var kills: Array[int] = [0, 0]         # ennemis achevés par chaque équipe (score des Défis)
 
 
-## team_a / team_b : listes de {id, level, star, gear, slot, power}.
+## team_a / team_b : listes de {id, level, star, gear, slot, power, bonus}.
+## Options : time_limit, timeout_winner, timeout_by_hp, berserk, energy_start,
+## waves (listes de specs ennemies qui arrivent quand la précédente est vaincue),
+## endless ({growth} : les vagues recommencent, plus fortes à chaque tour, jusqu'à la fin du temps).
 func _init(team_a: Array, team_b: Array, seed_value := 0, options := {}) -> void:
 	opts = options
 	rules = HeroDb.rules()
@@ -57,24 +62,48 @@ func _init(team_a: Array, team_b: Array, seed_value := 0, options := {}) -> void
 # --- Mise en place ---------------------------------------------------------
 
 func _place() -> void:
-	var g: Dictionary = rules["grid"]
 	for t in 2:
-		var side := -1.0 if t == 0 else 1.0
-		var team_units := alive_of(t)
-		for u in team_units:
-			if u.boss and team_units.size() == 1:
-				u.home = Vector2(side * float(g["boss_x"]), 0.0)
-			else:
-				var col := clampi(u.slot / 3, 0, 2)
-				var row := clampi(u.slot % 3, 0, 2)
-				u.home = Vector2(side * float(g["columns"][col]), float(g["rows"][row]))
-			u.pos = u.home
-			u.facing = -side
+		_place_units(alive_of(t))
 
 
-func _apply_faction_bonus(t: int) -> void:
+func _place_units(team_units: Array[RtUnit]) -> void:
+	var g: Dictionary = rules["grid"]
+	for u in team_units:
+		var side := -1.0 if u.team == 0 else 1.0
+		if u.boss and team_units.size() == 1:
+			u.home = Vector2(side * float(g["boss_x"]), 0.0)
+		else:
+			var col := clampi(u.slot / 3, 0, 2)
+			var row := clampi(u.slot % 3, 0, 2)
+			u.home = Vector2(side * float(g["columns"][col]), float(g["rows"][row]))
+		u.pos = u.home
+		u.facing = -side
+
+
+## Vague suivante (Défis) : nouvelles unités ennemies, placées et préparées comme au début.
+func _spawn_wave(specs: Array, power_mult := 1.0) -> void:
+	var fresh: Array[RtUnit] = []
+	for spec: Dictionary in specs:
+		var sp := spec.duplicate()
+		sp["power"] = float(sp.get("power", 1.0)) * power_mult
+		var u := RtUnit.new(sp, 1)
+		units.append(u)
+		fresh.append(u)
+	_place_units(fresh)
+	for u in fresh:
+		u.pos.x += 3.0  # elles arrivent du bord du terrain
+	_apply_faction_bonus(1, fresh)
+	for u in fresh:
+		_init_unit(u)
+	for u in fresh:
+		_run_passive(u, "battle_start", {})
+	_emit({"type": "wave", "n": wave, "units": fresh})
+
+
+func _apply_faction_bonus(t: int, only: Array[RtUnit] = []) -> void:
+	var members: Array[RtUnit] = only if not only.is_empty() else alive_of(t)
 	var counts := {}
-	for u in alive_of(t):
+	for u in members:
 		for f in u.factions:
 			counts[f] = int(counts.get(f, 0)) + 1
 	var best := 0
@@ -91,7 +120,7 @@ func _apply_faction_bonus(t: int) -> void:
 	faction_bonus_pct[t] = pct
 	faction_bonus_id[t] = best_id if pct > 0 else ""
 	if pct > 0:
-		for u in alive_of(t):
+		for u in members:
 			u.max_hp *= 1.0 + pct / 100.0
 			u.hp = u.max_hp
 			u.mods["atk_pct"] = float(u.mods.get("atk_pct", 0.0)) + pct
@@ -207,6 +236,13 @@ func _check_end() -> void:
 		return
 	var a := alive_of(0).size()
 	var b := alive_of(1).size()
+	if b == 0 and a > 0 and time < time_limit:
+		var waves: Array = opts.get("waves", [])
+		if wave < waves.size() or (opts.has("endless") and not waves.is_empty()):
+			var cycle := wave / waves.size()
+			_spawn_wave(waves[wave % waves.size()], 1.0 + float(opts.get("endless", {}).get("growth", 0.15)) * cycle)
+			wave += 1
+			return
 	if a == 0 or b == 0:
 		winner = 0 if b == 0 and a > 0 else 1
 	elif time >= time_limit:
@@ -752,6 +788,7 @@ func _kill(src: RtUnit, x: RtUnit) -> void:
 	x.statuses.clear()
 	x.shields.clear()
 	queue[x.team].erase(x)
+	kills[1 - x.team] += 1
 	_emit({"type": "death", "dst": x, "src": src})
 	energy[1 - x.team] = minf(float(rules["energy"]["max"]), energy[1 - x.team] + float(rules["kill_energy"]))
 	for u in units:

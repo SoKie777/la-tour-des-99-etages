@@ -239,3 +239,20 @@ Aucun texte, nom, image, modèle ni son de Dragon Traveler n'entre dans T99 : on
 et des structures** (les mécaniques ne sont pas protégées), avec l'univers, les personnages et la
 direction artistique de T99. Les systèmes purement commerciaux (packs, cartes mensuelles, enchères)
 sont écartés.
+
+## 9. Ce qui est repris dans T99
+
+| Système DT | Dans T99 | Version |
+|---|---|---|
+| Combat temps réel, grille 3 × 3, énergie d'Overdrive | `scripts/core/rt_battle.gd` | v0.17 |
+| 6 classes, 6 factions et leurs mécaniques, bonus de faction | `data/classes.json`, `data/factions.json` | v0.17 |
+| Niveaux, étoiles par doublons, Slimes (Pions d'encre), Poupées, réinitialisation, montée rapide | `scripts/core/profile.gd`, `data/stars.json`, `data/levels.json` | v0.17 |
+| Résonance de classe | `profile.gd` | v0.17 |
+| Invocation (taux, garanties, liste de souhaits, bannière limitée) | `scripts/core/gacha.gd`, `data/gacha.json` | v0.17 |
+| Histoire + Patrouille idle + Patrouille rapide | `scripts/core/campaign.gd`, `data/campaign.json` | v0.17 |
+| Ruines d'os de Wyrm (tour à étages) | `scripts/core/tower.gd` | v0.17 |
+| Expédition des champions (boss d'équipement) | `scripts/core/loot_boss.gd` | v0.17 |
+| Conquête des mythes (Défense, Casse, Ralliement) et Épreuve de la déesse | `scripts/core/challenges.gd` | v0.18 |
+| Dispatch (missions) | `scripts/core/dispatch.gd` | v0.18 |
+| Codex | `profile.gd` | v0.18 |
+| Éveil divin, Serment, Affection, Colisée, Faille, Évasions, Arène, guilde, Dragon | à faire | — |

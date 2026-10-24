@@ -1,0 +1,196 @@
+{
+ "_comment": "Défis (« Conquête des mythes » de Dragon Traveler, docs/ANALYSE_DRAGON_TRAVELER.md §6). Chaque défi a ses classes autorisées ('classes', ou 'one_per_class'), des niveaux de difficulté (level = level_base + level_step × palier, power = power_base + power_step × palier, waves vagues de wave_size ennemis tirés dans 'pool'). Comme dans DT : tenter un palier supérieur ne coûte rien ; 'Balayer' redonne la récompense du meilleur palier et consomme un essai (daily essais par jour). Ralliement : vagues sans fin pendant 'duration' s, récompense selon le nombre d'ennemis achevés (reward_per_kill). unlock = étapes de campagne gagnées. Épreuve de la déesse : classes du jour (by_weekday, 0 = dimanche ; le samedi toutes), récompense en Essence et Poupées de la 1re classe du jour.",
+ "daily": 2,
+ "challenges": {
+  "foret": {
+   "name": "Défense de la forêt",
+   "desc": "Seuls les héros à distance (Archers, Mages, Prêtres) défendent la forêt contre des vagues de mêlée.",
+   "classes": [
+    "archer",
+    "mage",
+    "pretre"
+   ],
+   "unlock": 10,
+   "decor": "gemmes",
+   "tiers": 20,
+   "level_base": 8,
+   "level_step": 5,
+   "power_base": 0.8,
+   "power_step": 0.03,
+   "waves": 3,
+   "wave_size": [
+    3,
+    6
+   ],
+   "pool": [
+    "pion_gardien",
+    "pion_guerrier",
+    "pion_assassin",
+    "eirikr",
+    "mohamed",
+    "don_diego",
+    "moussa",
+    "general_metal",
+    "ghost",
+    "jo_prince",
+    "selene",
+    "mello",
+    "adrian",
+    "don_selah"
+   ],
+   "reward": {
+    "pieces": 6000,
+    "pieces_per_tier": 4500
+   }
+  },
+  "casse": {
+   "name": "Casse du trésor",
+   "desc": "Seuls les héros de mêlée (Gardiens, Guerriers, Assassins) forcent la salle du trésor gardée par des tireurs.",
+   "classes": [
+    "gardien",
+    "guerrier",
+    "assassin"
+   ],
+   "unlock": 16,
+   "decor": "sirius",
+   "tiers": 20,
+   "level_base": 10,
+   "level_step": 5,
+   "power_base": 0.8,
+   "power_step": 0.03,
+   "waves": 3,
+   "wave_size": [
+    3,
+    6
+   ],
+   "pool": [
+    "pion_archer",
+    "pion_mage",
+    "pion_pretre",
+    "ymir",
+    "nidhogg",
+    "issa",
+    "espion_lumiere",
+    "tarkhan",
+    "nyssa",
+    "yass",
+    "saraya",
+    "flint",
+    "noor_el",
+    "ezra",
+    "montana"
+   ],
+   "reward": {
+    "encre": 5000,
+    "encre_per_tier": 3800
+   }
+  },
+  "ralliement": {
+   "name": "Ralliement sauvage",
+   "desc": "Un héros par classe. Achève le plus d'ennemis possible en 60 secondes : la récompense suit le score.",
+   "one_per_class": true,
+   "unlock": 24,
+   "decor": "givre",
+   "tiers": 1,
+   "duration": 60,
+   "level_base": 30,
+   "level_step": 0,
+   "power_base": 0.55,
+   "power_step": 0.0,
+   "waves": 1,
+   "wave_size": [
+    4,
+    4
+   ],
+   "growth": 0.18,
+   "pool": [
+    "pion_gardien",
+    "pion_guerrier",
+    "pion_assassin",
+    "pion_archer",
+    "pion_mage",
+    "pion_pretre"
+   ],
+   "reward_per_kill": {
+    "essence": 6,
+    "pieces": 400
+   }
+  },
+  "deesse": {
+   "name": "Épreuve de la déesse",
+   "desc": "Chaque jour, la déesse éprouve deux classes (toutes le samedi). Seuls leurs héros entrent ; la victoire donne des Poupées de la classe du jour.",
+   "by_weekday": {
+    "0": [
+     "gardien",
+     "pretre"
+    ],
+    "1": [
+     "gardien",
+     "guerrier"
+    ],
+    "2": [
+     "assassin",
+     "archer"
+    ],
+    "3": [
+     "mage",
+     "pretre"
+    ],
+    "4": [
+     "guerrier",
+     "assassin"
+    ],
+    "5": [
+     "archer",
+     "mage"
+    ],
+    "6": [
+     "gardien",
+     "guerrier",
+     "assassin",
+     "archer",
+     "mage",
+     "pretre"
+    ]
+   },
+   "unlock": 20,
+   "decor": "orion",
+   "tiers": 15,
+   "level_base": 20,
+   "level_step": 6,
+   "power_base": 0.85,
+   "power_step": 0.035,
+   "waves": 2,
+   "wave_size": [
+    4,
+    5
+   ],
+   "pool": [
+    "pion_gardien",
+    "pion_guerrier",
+    "pion_assassin",
+    "pion_archer",
+    "pion_mage",
+    "pion_pretre",
+    "selene",
+    "jo_prince",
+    "nyssa",
+    "ghost",
+    "tarkhan",
+    "saraya",
+    "yass",
+    "flint",
+    "adrian",
+    "mello",
+    "ezra",
+    "mikhaila"
+   ],
+   "reward": {
+    "essence": 80,
+    "essence_per_tier": 40,
+    "poupee": 1,
+    "poupee_per_tier": 0.34
+   }
+  }
+ }
+}

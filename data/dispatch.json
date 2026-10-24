@@ -1,0 +1,14 @@
+{
+  "_comment": "Missions (« Dispatch » de Dragon Traveler, docs/ANALYSE_DRAGON_TRAVELER.md §3.5) : chaque jour, 'per_day' missions tirées dans 'templates'. Une mission demande 'count' héros (d'une classe ou d'une faction tirée au sort, à 'min_star' étoiles au moins) ; un héros ne part que sur une mission à la fois (il peut toujours combattre). Au bout de 'hours' heures, on récolte 'reward'. unlock = étapes de campagne gagnées.",
+  "unlock": 8,
+  "per_day": 4,
+  "templates": [
+    {"name": "Escorte de caravane", "hours": 1, "count": 2, "kind": "class", "min_star": 3, "reward": {"pieces": 6000, "encre": 2500}},
+    {"name": "Ronde aux portes de la Tour", "hours": 2, "count": 2, "kind": "faction", "min_star": 3, "reward": {"pieces": 12000, "essence": 40}},
+    {"name": "Chasse aux Pions errants", "hours": 2, "count": 3, "kind": "class", "min_star": 4, "reward": {"gelee": 20, "encre": 6000}},
+    {"name": "Fouille des archives", "hours": 4, "count": 3, "kind": "faction", "min_star": 4, "reward": {"sceau": 1, "essence": 80}},
+    {"name": "Pèlerinage au sanctuaire", "hours": 4, "count": 2, "kind": "class", "min_star": 5, "reward": {"eclat_de_voeu": 60, "pieces": 15000}},
+    {"name": "Expédition au-delà des nuages", "hours": 8, "count": 4, "kind": "faction", "min_star": 5, "reward": {"sceau_destin": 1, "eclat_de_voeu": 80}},
+    {"name": "Garde de nuit", "hours": 8, "count": 3, "kind": "class", "min_star": 6, "reward": {"poupee": 1, "essence": 150}}
+  ]
+}

@@ -10,6 +10,7 @@
   "relic_level_cost": {"base": 100, "per_level": 100},
   "relic_recycle_base": 50,
   "formation_slots": 3,
+  "codex": {"_comment": "Codex des héros (DT) : chaque étoile atteinte pour la première fois par un héros donne pct_per_star % d'ATK et de PV à toute l'équipe et eclats_per_star Éclats de Vœu.", "pct_per_star": 0.12, "eclats_per_star": 5},
   "relic_drop_sets": ["attaque", "vitesse", "taux_critique", "vampirisme", "defense", "immunite", "gel", "vie", "precision"],
   "grants": [
     {"id": "refonte_2026_10", "note": "Version de test de la refonte : de quoi invoquer, monter et tester les étoiles.",

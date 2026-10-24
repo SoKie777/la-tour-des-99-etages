@@ -188,6 +188,8 @@ static func amount(id: String, text: String, size := 16, color := PAPER) -> HBox
 
 ## Icône dans un texte BBCode (rich()).
 static func bb(id: String, size := 16, tint := PAPER) -> String:
+	if id.begins_with("poupee_"):  # Poupée d'une classe : icône de Poupée + icône de la classe
+		return bb("poupee", size, tint) + bb(class_icon(id.trim_prefix("poupee_")), int(size * 0.8), tint)
 	var path := ICON_DIR + id + ".svg"
 	if not ResourceLoader.exists(path):
 		return STAT_NAMES.get(id, id)

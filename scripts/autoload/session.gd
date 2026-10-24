@@ -38,6 +38,12 @@ func _ready() -> void:
 		if "--loot" in args:  # Expédition (Wyrm, palier 1) : -- --smoke --loot
 			_smoke_team(["adrian", "mello", "noor_el", "montana", "mikhaila", "don_selah"], 40)
 			battle = {"mode": "loot", "boss": "wyrm", "diff": 0}
+		if "--defi" in args:  # Ralliement sauvage (vagues sans fin, 60 s) : -- --smoke --defi
+			_smoke_team(["adrian", "mello", "noor_el", "montana", "mikhaila", "don_selah"], 60)
+			battle = {"mode": "challenge", "id": "ralliement", "tier": 1}
+		if "--foret" in args:  # Défense de la forêt, palier 3 (3 vagues) : -- --smoke --foret
+			_smoke_team(["noor_el", "montana", "mikhaila", "tarkhan", "nyssa", "saraya"], 60)
+			battle = {"mode": "challenge", "id": "foret", "tier": 3}
 		if "--six" in args:  # 6 contre 6 : -- --smoke --six
 			_smoke_team(["adrian", "mello", "noor_el", "montana", "mikhaila", "don_selah"], 60)
 			battle = {"mode": "campaign", "stage": 60}
@@ -145,6 +151,10 @@ func start_tower_floor(number: int) -> void:
 	_go_battle({"mode": "tower", "floor": number})
 
 
+func start_challenge(id: String, tier: int) -> void:
+	_go_battle({"mode": "challenge", "id": id, "tier": tier})
+
+
 func start_loot(id: String, diff: int) -> bool:
 	var cost := int(GameData.progression()["energy"]["loot_cost"])
 	if not profile.spend_energy(cost, now()):
@@ -165,10 +175,24 @@ func battle_specs() -> Array:
 			enemies = Tower.enemy_specs(int(battle.get("floor", 1)))
 		"loot":
 			enemies = LootBoss.enemy_specs(str(battle["boss"]), int(battle["diff"]))
+		"challenge":
+			mine = Challenges.team_specs(str(battle["id"]), profile)
+			enemies = Challenges.waves(str(battle["id"]), int(battle["tier"]))[0]
 		"test":
 			mine = battle["player"]
 			enemies = battle["enemy"]
 	return [mine, enemies]
+
+
+## Options du moteur pour le combat en cours (vagues des Défis).
+func battle_options() -> Dictionary:
+	if str(battle.get("mode", "")) == "challenge":
+		var id := str(battle["id"])
+		var o := Challenges.battle_options(id)
+		if not Challenges.info(id).has("duration"):
+			o["waves"] = Challenges.waves(id, int(battle["tier"])).slice(1)
+		return o
+	return {}
 
 
 ## Décor du combat en cours.
@@ -180,6 +204,8 @@ func battle_decor() -> String:
 			return str(Tower.floor_info(int(battle.get("floor", 1))).get("decor", "dojo"))
 		"loot":
 			return str(LootBoss.boss(str(battle["boss"])).get("decor", "dojo"))
+		"challenge":
+			return str(Challenges.info(str(battle["id"])).get("decor", "dojo"))
 	return "dojo"
 
 
@@ -192,4 +218,7 @@ func battle_title() -> String:
 			return "Tour  ·  Étage %d" % int(battle.get("floor", 1))
 		"loot":
 			return "%s  ·  %s" % [LootBoss.boss(str(battle["boss"]))["name"], LootBoss.difficulty(int(battle["diff"]))["name"]]
+		"challenge":
+			var c := Challenges.info(str(battle["id"]))
+			return str(c["name"]) if c.has("duration") else "%s  ·  palier %d" % [c["name"], int(battle["tier"])]
 	return "Combat"

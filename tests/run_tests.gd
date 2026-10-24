@@ -23,6 +23,8 @@ func _init() -> void:
 	test_profile_misc()
 	test_gacha()
 	test_campaign_and_tower()
+	test_codex_and_challenges()
+	test_dispatch_and_trial()
 	if not "--quick" in OS.get_cmdline_user_args():
 		simulate_factions(maxi(10, sims / 5))
 		simulate_campaign(maxi(6, sims / 10))
@@ -490,3 +492,85 @@ Simulation : campagne avec une équipe type (2 SSR, 2 SR, 2 R, niveau de l'étap
 				wins += 1
 			dur += e.time
 		print("  étape %s (niv. %d%s) : %d %%, %.0f s" % [info["number"], int(info["level"]), ", boss" if info["boss"] else "", int(100.0 * wins / n), dur / n])
+
+
+func test_codex_and_challenges() -> void:
+	print("Codex et Défis")
+	var p := Profile.new_game(1000)
+	var e0 := p.amount("eclat_de_voeu")
+	var stars0 := p.codex_stars()
+	p.add_hero("adrian", 5)
+	check(p.codex_stars() == stars0 + 5 and p.amount("eclat_de_voeu") == e0 + 5 * int(GameData.progression()["codex"]["eclats_per_star"]), "Codex : 5 étoiles et des Éclats")
+	check(float(p.account_bonus()["atk_pct"]) > 0.0, "Codex : bonus de compte")
+	var sp := p.battle_specs()
+	check(sp[0].has("bonus"), "le bonus de compte part au combat")
+	# Défis : équipes à classes imposées
+	for id in ["noor_el", "montana", "issa", "nyssa"]:
+		p.add_hero(id)
+	var ft := Challenges.team_specs("foret", p)
+	check(ft.all(func(s: Dictionary) -> bool: return HeroDb.hero(s["id"])["class"] in ["archer", "mage", "pretre"]), "Forêt : distance seule")
+	var ct := Challenges.team_specs("casse", p)
+	check(ct.all(func(s: Dictionary) -> bool: return HeroDb.hero(s["id"])["class"] in ["gardien", "guerrier", "assassin"]), "Casse : mêlée seule")
+	var rt := Challenges.team_specs("ralliement", p)
+	var seen := {}
+	for s: Dictionary in rt:
+		check(not seen.has(HeroDb.hero(s["id"])["class"]), "Ralliement : un héros par classe")
+		seen[HeroDb.hero(s["id"])["class"]] = true
+	check(Challenges.waves("foret", 5).size() == 3, "Forêt : 3 vagues")
+	# Vagues : le combat continue tant qu'il reste des vagues
+	var w := Challenges.waves("foret", 1)
+	var strong := [{"id": "noor_el", "level": 100, "star": 19, "slot": 4}, {"id": "montana", "level": 100, "star": 19, "slot": 7}]
+	var e := RtBattle.new(strong, w[0], 11, {"waves": w.slice(1)})
+	e.record_events = false
+	var win := e.run()
+	check(win == 0 and e.wave == 2, "3 vagues battues l'une après l'autre (vagues : %d)" % e.wave)
+	check(e.kills[0] == w[0].size() + w[1].size() + w[2].size(), "score : ennemis achevés")
+	# Ralliement : vagues sans fin jusqu'à la fin du temps
+	var o := Challenges.battle_options("ralliement")
+	var r := RtBattle.new(strong, Challenges.waves("ralliement", 1)[0], 12, o)
+	r.record_events = false
+	r.run()
+	check(r.winner == 0 and r.kills[0] > 8 and r.time >= float(Challenges.info("ralliement")["duration"]) - 0.1, "Ralliement : %d ennemis en 60 s" % r.kills[0])
+	# Récompenses et essais
+	var cl := Profile.new_game(1000)
+	check(not cl.win_challenge("foret", 2, 0, 5000).size() > 0, "on ne saute pas de palier")
+	check(cl.win_challenge("foret", 1, 0, 5000).has("pieces"), "palier 1 : récompense")
+	check(cl.challenge_attempts("foret", 5000) == 2, "tenter un palier ne consomme pas d'essai")
+	check(cl.sweep_challenge("foret", 5000).has("pieces") and cl.challenge_attempts("foret", 5000) == 1, "balayage : un essai")
+	cl.sweep_challenge("foret", 5000)
+	check(cl.sweep_challenge("foret", 5000).is_empty(), "plus d'essai aujourd'hui")
+	check(cl.challenge_attempts("foret", 5000 + 86400) == 2, "essais rendus le lendemain")
+
+
+func test_dispatch_and_trial() -> void:
+	print("Missions et Épreuve de la déesse")
+	var p := Profile.new_game(1000)
+	for id in ["adrian", "selene", "moussa", "don_selah", "mello", "ghost", "noor_el", "nyssa", "yass", "mikhaila", "issa", "flint", "montana", "ezra", "tarkhan", "ymir", "eirikr", "jo_prince", "general_metal", "mohamed", "espion_lumiere", "saraya", "nidhogg"]:
+		p.add_hero(id, 6)
+	var now := 86400 * 100 + 10
+	var ms := p.dispatch_missions(now)
+	check(ms.size() == int(Dispatch.cfg()["per_day"]), "missions du jour")
+	check(p.dispatch_missions(now) == ms, "mêmes missions le même jour")
+	var started := -1
+	for i in ms.size():
+		if p.dispatch_start(i, now):
+			started = i
+			break
+	check(started >= 0, "une mission lancée")
+	var m: Dictionary = ms[started]
+	check(m["heroes"].size() == int(m["count"]), "nombre de héros envoyés")
+	check(m["heroes"].all(func(h: String) -> bool: return Dispatch.fits(m, h, p.best_star(h))), "héros conformes à la condition")
+	check(p.dispatch_claim(started, now + 10).is_empty(), "pas de récolte avant la fin")
+	var pieces := p.amount("pieces")
+	var rw := p.dispatch_claim(started, now + int(float(m["hours"]) * 3600.0))
+	check(not rw.is_empty(), "récolte à la fin")
+	check(p.dispatch_claim(started, now + 999999).is_empty(), "une seule récolte")
+	var ms2 := p.dispatch_missions(now + 86400)
+	check(ms2.size() == int(Dispatch.cfg()["per_day"]), "nouvelles missions le lendemain")
+	# Épreuve de la déesse : classes du jour
+	var sunday := 3 * 86400 + 12 * 3600  # 4 janvier 1970 : dimanche
+	check(Challenges.classes_for("deesse", sunday) == ["gardien", "pretre"], "dimanche : Gardiens et Prêtres")
+	var ts := Challenges.team_specs("deesse", p, sunday)
+	check(not ts.is_empty() and ts.all(func(s: Dictionary) -> bool: return HeroDb.hero(s["id"])["class"] in ["gardien", "pretre"]), "équipe de l'Épreuve conforme")
+	var trw := Challenges.reward("deesse", 1, 0, sunday)
+	check(trw.has("poupee_gardien") and trw.has("essence"), "récompense : Poupée de la classe du jour")

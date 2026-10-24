@@ -4,7 +4,7 @@ Gacha RPG mobile **en temps réel** dans un univers d'estampe japonaise (anime 3
 des échecs). Depuis la v0.17, la boucle de jeu reprend celle de **Dragon Traveler** (analyse REA de l'APK :
 `docs/ANALYSE_DRAGON_TRAVELER.md`) : 6 héros sur une grille 3 × 3, Overdrive lancés avec une jauge d'énergie
 commune, progression par doublons, campagne avec Patrouille hors ligne. Moteur : **Godot 4.7**.
-Version actuelle : **v0.17.0** (fichier `VERSION`).
+Version actuelle : **v0.18.0** (fichier `VERSION`).
 
 - **Jouer sur Android :** Releases → **[`apk-latest`](../../releases/tag/apk-latest)** (toujours la dernière version).
   L'APK est signé avec une clé fixe : on installe chaque nouvelle version **par-dessus** l'ancienne.
@@ -38,6 +38,8 @@ Version actuelle : **v0.17.0** (fichier `VERSION`).
 - **Campagne** : 8 chapitres, 240 étapes, boss de fin de chapitre ; la **Patrouille** rapporte Pièces,
   Encre et Essence même jeu fermé (12 h max), Patrouille rapide une fois par jour.
 - **La Tour des 99 Étages** (Élites, boss par univers) et l'**Expédition** (boss qui donnent des reliques).
+- **Défis** (Défense de la forêt, Casse du trésor, Épreuve de la déesse, Ralliement sauvage) avec vagues
+  d'ennemis, classes imposées et balayage quotidien ; **Missions** (héros envoyés en mission) ; **Codex**.
 - **Héros** : niveaux 1 à 100 plafonnés par les étoiles, **19 paliers d'étoiles** par doublons (copies,
   héros de la même classe, Pions d'encre et Poupées en remplacement, montée rapide, réinitialisation),
   **Résonance de classe** au-delà du niveau 100, reliques (6 emplacements, sets).
@@ -47,6 +49,11 @@ Version actuelle : **v0.17.0** (fichier `VERSION`).
 
 ## Nouveautés récentes
 
+- **v0.18.0** — **Nouveaux modes de Dragon Traveler** : **Défis** de la « Conquête des mythes » (Défense de la
+  forêt à distance seule, Casse du trésor en mêlée seule, Ralliement sauvage au score avec vagues sans fin,
+  Épreuve de la déesse par classe du jour qui donne des Poupées), vagues d'ennemis dans le moteur, **Missions**
+  (Dispatch : 4 missions par jour de 1 à 8 h), **Codex** des héros (bonus d'ATK et de PV de compte et Éclats à
+  chaque nouvelle étoile).
 - **v0.17.0** — **Refonte complète sur le modèle de Dragon Traveler** (analyse REA de l'APK 1.19.0 : tables de
   design SQLite extraites des bundles, voir `docs/ANALYSE_DRAGON_TRAVELER.md`) :
   - **Combat en temps réel** (`scripts/core/rt_battle.gd`) : grille 3 × 3, 6 héros, déplacement et portée,

@@ -43,7 +43,7 @@ var telegraphs := {}   # RtUnit -> MeshInstance3D
 
 func _ready() -> void:
 	var specs := Session.battle_specs()
-	engine = RtBattle.new(specs[0], specs[1])
+	engine = RtBattle.new(specs[0], specs[1], 0, Session.battle_options())
 	engine.auto[0] = Session.auto_battle
 	_build_world()
 	_build_ui()
@@ -323,6 +323,19 @@ func _on_event(ev: Dictionary) -> void:
 		"energy":
 			if int(ev["team"]) == 0 and float(ev["delta"]) > 0.0:
 				_flash_energy()
+		"wave":
+			var rim := BattleDecor.rim_color(_decor_id())
+			for u: RtUnit in ev["units"]:
+				var p := _make_pawn(u)
+				p.position = _to3(u.pos)
+				p.rotation_degrees.y = -90.0
+				add_child(p)
+				pawns[u] = p
+				anim_state[u] = "idle"
+				action_until[u] = 0
+				if models.has(u):
+					(models[u] as CharacterModel).set_rim(rim)
+			_wave_banner(int(ev["n"]) + 2)
 
 
 func _skill_fx(src: RtUnit, ev: Dictionary, big: bool) -> void:
@@ -624,6 +637,8 @@ func _update_ui() -> void:
 		return
 	var left := maxf(0.0, engine.time_limit - engine.time)
 	timer_label.text = "%d:%02d" % [int(left) / 60, int(left) % 60]
+	if str(Session.battle.get("mode", "")) == "challenge":
+		timer_label.text += "    ☠ %d" % engine.kills[0]
 	timer_label.add_theme_color_override("font_color", UiKit.VERMILION.lightened(0.3) if left < 15.0 else UiKit.PAPER)
 	var e := engine.energy[0]
 	for i in energy_cells.size():
@@ -648,6 +663,23 @@ func _update_ui() -> void:
 		b.modulate = Color(0.45, 0.45, 0.45) if u.dead else (Color(1.15, 1.12, 1.0) if ready else Color(0.85, 0.85, 0.9))
 	if boss_bar != null:
 		boss_bar.value = lerpf(boss_bar.value, boss_unit.hp_ratio(), 0.2)
+
+
+func _wave_banner(n: int) -> void:
+	if Session.smoke_test:
+		return
+	var l := UiKit.label("Vague %d" % n, 40, UiKit.ACCENT)
+	l.add_theme_font_override("font", GAME_FONT)
+	l.add_theme_constant_override("outline_size", 10)
+	l.add_theme_color_override("font_outline_color", Color(0.06, 0.03, 0.1))
+	ui_root.add_child(l)
+	l.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	l.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	l.offset_top = 120
+	var tw := l.create_tween()
+	tw.tween_interval(1.0)
+	tw.tween_property(l, "modulate:a", 0.0, 0.4)
+	tw.tween_callback(l.queue_free)
 
 
 func _flash_energy() -> void:
@@ -752,6 +784,8 @@ func _show_result() -> void:
 	v.add_theme_constant_override("separation", 8)
 	var title := Label.new()
 	title.text = "VICTOIRE" if win else "DÉFAITE"
+	if str(Session.battle.get("mode", "")) == "challenge" and Challenges.info(str(Session.battle["id"])).has("reward_per_kill"):
+		title.text = "SCORE : %d" % engine.kills[0]
 	title.add_theme_font_override("font", GAME_FONT)
 	title.add_theme_font_size_override("font_size", 52)
 	title.add_theme_color_override("font_color", UiKit.ACCENT if win else UiKit.VERMILION.lightened(0.3))
@@ -786,6 +820,21 @@ func _show_result() -> void:
 					if f < Tower.floor_count():
 						next_text = "Étage %d  ›" % (f + 1)
 						next_cb = func() -> void: Session.start_tower_floor(f + 1)
+				Session.save()
+			"challenge":
+				var cid := str(Session.battle["id"])
+				var tier := int(Session.battle["tier"])
+				var scored := Challenges.info(cid).has("reward_per_kill")
+				if scored:
+					lines.append(["%d ennemis achevés" % engine.kills[0], true])
+				if win or scored:
+					var rw := Session.profile.win_challenge(cid, tier, engine.kills[0], now)
+					_currency_lines(lines, rw)
+					if rw.is_empty() and not scored:
+						lines.append(["Palier déjà franchi : balaye-le depuis les Défis.", false])
+					if not scored and tier < int(Challenges.info(cid)["tiers"]) and win:
+						next_text = "Palier %d  ›" % (tier + 1)
+						next_cb = func() -> void: Session.start_challenge(cid, tier + 1)
 				Session.save()
 			"loot":
 				if win:
@@ -891,5 +940,6 @@ func _toggle_battle_stats() -> void:
 
 
 func _back_to_menu() -> void:
-	var back := {"tower": "res://scenes/tower.tscn", "loot": "res://scenes/loot.tscn", "campaign": "res://scenes/campaign.tscn"}
+	var back := {"tower": "res://scenes/tower.tscn", "loot": "res://scenes/loot.tscn", "campaign": "res://scenes/campaign.tscn",
+		"challenge": "res://scenes/challenges.tscn"}
 	get_tree().change_scene_to_file(back.get(Session.battle.get("mode", ""), "res://scenes/main.tscn"))

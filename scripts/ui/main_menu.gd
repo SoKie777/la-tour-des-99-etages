@@ -67,6 +67,9 @@ func _ready() -> void:
 	if Campaign.unlocked("tower", cleared):
 		var tw := _sign("TOUR", 44, Color("7fd8ff"), _go.bind("tower"), -4.0)
 		_pin(tw, HomeTower.anchor(4.6, 1.0), Vector2(200, 0))
+	if cleared >= 10:  # Défis : le premier (Défense de la forêt) s'ouvre à l'étape 10
+		var dfi := _sign("DÉFIS", 40, Color("8fe08a"), _go.bind("challenges"), 4.0)
+		_pin(dfi, HomeTower.anchor(1.2, 1.0), Vector2(230, 30))
 	if Campaign.unlocked("expedition", cleared):
 		var loot := _sign("EXPÉDITION", 40, Color("ff8a6a"), _go.bind("loot"), -5.0)
 		_pin(loot, HomeTower.anchor(2.2, -1.0), Vector2(-220, 40))
@@ -121,6 +124,13 @@ func _ready() -> void:
 	if not p.unseen.is_empty():
 		UiKit.badge(coll, "+%d" % p.unseen.size())
 	nav.add_child(coll)
+	if cleared >= int(Dispatch.cfg()["unlock"]):
+		var mis := _sign("MISSIONS", 38, UiKit.PAPER, _go.bind("missions"), 0.0)
+		for m: Dictionary in p.dispatch_missions(Session.now()):
+			if p.dispatch_left(m, Session.now()) == 0 and not m.get("claimed", false):
+				UiKit.badge(mis, "!")
+				break
+		nav.add_child(mis)
 	var gear := UiKit.icon_button("info", _toggle_settings, 48)
 	gear.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	nav.add_child(gear)

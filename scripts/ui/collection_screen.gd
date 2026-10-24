@@ -35,6 +35,8 @@ func _ready() -> void:
 	var left_col := VBoxContainer.new()
 	left_col.custom_minimum_size.x = 372
 	cols.add_child(left_col)
+	var b := p.account_bonus()
+	left_col.add_child(UiKit.rich("Codex : %d ★   ·   ATK et PV +%.1f %%" % [p.codex_stars(), float(b["atk_pct"])], 15, UiKit.ACCENT))
 	var filters := HBoxContainer.new()
 	filters.add_theme_constant_override("separation", 4)
 	left_col.add_child(filters)

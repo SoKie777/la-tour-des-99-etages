@@ -70,8 +70,11 @@ func _init(spec: Dictionary, team_: int) -> void:
 		for f in data.get("factions", []):
 			factions.append(str(f))
 	base = HeroDb.stats(id, level, star, spec.get("gear", []), float(spec.get("power", 1.0)))
-	max_hp = base["hp"] * float(HeroDb.rules().get("hp_mult", 1.0))
+	var bonus: Dictionary = spec.get("bonus", {})  # bonus de compte (Codex) : {atk_pct, hp_pct}
+	max_hp = base["hp"] * float(HeroDb.rules().get("hp_mult", 1.0)) * (1.0 + float(bonus.get("hp_pct", 0.0)) / 100.0)
 	hp = max_hp
+	if bonus.has("atk_pct"):
+		mods["atk_pct"] = float(bonus["atk_pct"])
 	boss = data.get("boss", false)
 	range_m = float(data.get("range", cls_info["range"]))
 	move_speed = float(data.get("move", cls_info["move"]))
