@@ -27,12 +27,9 @@ const TITLE_FONT := preload("res://assets/fonts/LilitaOne-Regular.ttf")
 const FONT_SCALE := 1.25
 const ICON_DIR := "res://assets/icons/"
 const CONST_COLORS := {"orion": Color("4a7ab8"), "grande_ourse": Color("c94f35"), "sirius": Color("8e6bb8")}
-const CONST_NAMES := {"orion": "Orion", "grande_ourse": "Grande Ourse", "sirius": "Sirius"}
-const RARITY_COLORS := {3: Color("8fa3c0"), 4: Color("b07de0"), 5: Color("e8b84a")}
-const CLASS_NAMES := {
-	"dps_single": "DPS mono-cible", "dps_aoe": "DPS zone", "tank_def": "Tank défensif",
-	"tank_off": "Tank offensif", "neutralizer": "Neutralisateur", "support": "Support", "titan": "Titan",
-}
+const RARITY_COLORS := {2: Color("9a9aa8"), 3: Color("6fb0e0"), 4: Color("b07de0"), 5: Color("e8b84a"), 0: Color("e05050")}
+const RARITY_NAMES := {2: "N", 3: "R", 4: "SR", 5: "SSR", 0: "BOSS"}
+const STAR_COLORS := {"or": Color("f2c94c"), "violet": Color("b07de0"), "rouge": Color("ff5a4a"), "arc": Color("7fe8ff")}
 const STAT_NAMES := {
 	"hp": "PV", "atk": "ATK", "def": "DEF", "spd": "VIT", "cr": "TC", "cd": "DC", "acc": "PRÉ", "res": "RÉS",
 	"hp_pct": "PV", "atk_pct": "ATK", "def_pct": "DEF", "spd_pct": "VIT",
@@ -48,8 +45,8 @@ const SET_SPECIAL_NAMES := {
 	"cd_reduce_turn_25": "Océan (25 % recharge −1)", "extra_turn_15": "Astralis (15 % +50 % PA)",
 	"dmg_per_debuff_10": "Calamité (+10 % dégâts/malus)", "start_shield_15": "Égide (Bouclier 15 % PV)",
 }
-const CURRENCY_NAMES := {"eclat_de_voeu": "Éclats de Vœu", "pieces": "Pièces", "fragments_etage": "Fragments d'étage"}
-const RECRUIT_NAMES := {"recrue_orion": "Recrue d'Orion", "recrue_ourse": "Recrue de la Grande Ourse", "recrue_sirius": "Recrue de Sirius"}
+const CURRENCY_NAMES := {"eclat_de_voeu": "Éclats de Vœu", "pieces": "Pièces", "encre": "Encre (XP de héros)",
+	"essence": "Essence d'étoile", "gelee": "Gelée d'encre", "sceau": "Sceau d'invocation", "sceau_destin": "Sceau du destin"}
 const TARGET_NAMES := {"enemy": "un ennemi", "all_enemies": "tous les ennemis", "ally": "un allié", "all_allies": "toute l'équipe", "self": "soi-même"}
 
 
@@ -58,13 +55,45 @@ const TARGET_NAMES := {"enemy": "un ennemi", "all_enemies": "tous les ennemis", 
 static func char_name(id: String) -> String:
 	if GameData.characters().has(id):
 		return GameData.character(id)["name"]
-	return RECRUIT_NAMES.get(id, id.capitalize())
+	return id.capitalize()
 
 
 static func char_color(id: String) -> Color:
-	if not GameData.characters().has(id):
+	var h := HeroDb.hero(id)
+	if h.is_empty() or h.get("factions", []).is_empty():
 		return DIM
-	return CONST_COLORS[GameData.constellation_of(GameData.character(id)["nation"])]
+	return faction_color(str(h["factions"][0]))
+
+
+static func faction_color(f: String) -> Color:
+	return Color(str(HeroDb.faction(f).get("color", "a89cb8")))
+
+
+static func faction_name(f: String) -> String:
+	return str(HeroDb.faction(f).get("short", f))
+
+
+static func class_name_of(id: String) -> String:
+	return str(HeroDb.class_info(HeroDb.hero(id).get("class", "")).get("name", ""))
+
+
+static func class_icon(cls: String) -> String:
+	return str(HeroDb.class_info(cls).get("icon", "atk"))
+
+
+static func rarity_color(id: String) -> Color:
+	return RARITY_COLORS.get(int(HeroDb.hero(id).get("rarity", 3)), DIM)
+
+
+## Étoiles en BBCode : pastilles de la couleur du palier (or, violet, rouge, arc-en-ciel).
+static func stars_bb(star: int, size := 16) -> String:
+	if star <= 0:
+		return ""
+	var t := HeroDb.star_tier(star)
+	var col: Color = STAR_COLORS.get(str(t["color"]), ACCENT)
+	var n := int(t["pip"])
+	var icon_id := "star_" + str(t["color"])
+	return bb(icon_id, size, col).repeat(n)
 
 
 ## Stat en BBCode (pour rich()) : icône puis valeur.
@@ -89,67 +118,36 @@ static func relic_subs(r: Dictionary) -> String:
 	return "   ".join(parts)
 
 
-## Symbole d'une compétence (règle UI : pas de nom écrit en combat). Clé « icon » des données si
-## présente, sinon déduit de ce que fait la compétence : effet posé, soin, zone ou frappe simple.
+## Symbole d'une compétence (temps réel) : le 1er statut posé s'il a une icône, sinon soin, zone ou frappe.
 static func skill_icon_id(sk: Dictionary) -> String:
 	if sk.has("icon"):
 		return str(sk["icon"])
-	if sk.has("passive"):
-		return "passive"
-	var ids: Array[String] = []
-	for key in ["effects", "self_effects", "pre_effects", "while_cooldown"]:
-		for ef: Dictionary in sk.get(key, []):
-			ids.append(str(ef["id"]))
-	for h: Dictionary in sk.get("hits", []):
-		for ef: Dictionary in h.get("on_hit", []):
-			ids.append(str(ef["id"]))
-	for id in ids:
-		if not id in BattleEngine.ACTIONS and ResourceLoader.exists(ICON_DIR + "fx_" + id + ".svg"):
-			return "fx_" + id
-	if "heal" in ids or "cleanse" in ids or sk.has("revive") or sk.has("heal_lowest_ally_pct_dmg") or sk.get("target", "") == "all_allies":
+	var heal := false
+	for ef: Dictionary in sk.get("effects", []):
+		var t := str(ef.get("t", ""))
+		if t == "status":
+			var ic := str(HeroDb.status_info(str(ef["id"])).get("icon", ""))
+			if ResourceLoader.exists(ICON_DIR + "fx_" + ic + ".svg"):
+				return "fx_" + ic
+		if t in ["heal", "shield", "cleanse"]:
+			heal = true
+	if heal:
 		return "support"
-	if "ap_down" in ids:
-		return "fx_spd_down"
-	if "ap_up" in ids:
-		return "fx_spd_up"
-	return "dps_aoe" if sk.get("target", "") == "all_enemies" else "atk"
+	if not sk.get("area", {}).is_empty() or sk.get("target", "") == "all_enemies":
+		return "dps_aoe"
+	return "atk"
 
 
-## Description courte d'une compétence, tirée de ses données (BBCode : stats et effets en icônes).
-static func skill_text(sk: Dictionary) -> String:
-	if sk.has("passive"):
-		return bb("passive") + " " + str(sk.get("desc", ""))
+## Description d'une compétence : texte de la fiche, coût et recharge en icônes.
+static func skill_text(sk: Dictionary, kind := "skill") -> String:
 	var parts: Array[String] = []
-	var hits: Array = sk.get("hits", [])
-	if not hits.is_empty():
-		var strikes: Array[String] = []
-		for h: Dictionary in hits:
-			var sc: Variant = h.get("scale", "atk")
-			var terms: Array[String] = []
-			if sc is Dictionary:
-				for s: String in sc:
-					terms.append("%d %% %s" % [roundi(float(sc[s]) * 100.0), bb(s)])
-			else:
-				terms.append("%d %% %s" % [roundi(float(h.get("mult", 1.0)) * 100.0), bb(str(sc))])
-			var txt := " + ".join(terms)
-			if int(h.get("repeat", 1)) > 1:
-				txt = "%d x (%s)" % [int(h["repeat"]), txt]
-			strikes.append(txt)
-		parts.append("Frappe %s : %s" % [TARGET_NAMES.get(sk.get("target", ""), "la cible"), ", puis ".join(strikes)])
-	elif sk.has("target"):
-		parts.append("Cible : " + TARGET_NAMES.get(sk["target"], sk["target"]))
-	if not sk.has("desc"):  # la description de la fiche détaille déjà les effets
-		for ef: Dictionary in sk.get("effects", []):
-			if ef["id"] in BattleEngine.ACTIONS:
-				continue
-			var chance := int(ef.get("chance", 100))
-			parts.append("%s %d%s" % [bb_status(ef["id"]), int(ef.get("turns", 1)),
-				" (%d %%)" % chance if chance < 100 else ""])
+	if kind == "overdrive":
+		parts.append("%s %d" % [bb("overdrive", 16, ACCENT), int(sk.get("cost", 3))])
 	if sk.has("cd"):
-		parts.append("%s %d" % [bb("cooldown"), int(sk["cd"])])
-	if sk.has("desc"):
-		parts.append(str(sk["desc"]).trim_suffix("."))
-	return ". ".join(parts) + "."
+		parts.append("%s %d s" % [bb("cooldown"), int(sk["cd"])])
+	var head := "   ".join(parts)
+	return (head + "
+" if head != "" else "") + str(sk.get("desc", ""))
 
 
 # --- Icônes ------------------------------------------------------------------
@@ -160,7 +158,8 @@ static func icon_texture(id: String) -> Texture2D:
 
 
 static func status_texture(effect_id: String) -> Texture2D:
-	var path := "res://assets/status_icons/%s.svg" % effect_id
+	var info := HeroDb.status_info(effect_id)
+	var path := "res://assets/status_icons/%s.svg" % str(info.get("icon", effect_id))
 	return load(path) if ResourceLoader.exists(path) else null
 
 
@@ -196,9 +195,10 @@ static func bb(id: String, size := 16, tint := PAPER) -> String:
 
 
 static func bb_status(effect_id: String, size := 16) -> String:
-	var path := "res://assets/status_icons/%s.svg" % effect_id
+	var info := HeroDb.status_info(effect_id)
+	var path := "res://assets/status_icons/%s.svg" % str(info.get("icon", effect_id))
 	if not ResourceLoader.exists(path):
-		return BattleLog.effect_name(effect_id)
+		return str(info.get("name", effect_id))
 	return "[img width=%d height=%d]%s[/img]" % [size, size, path]
 
 
@@ -427,11 +427,11 @@ static func badge(target: Control, text := "!", icon_id := "") -> void:
 	tw.tween_property(b, "scale", Vector2.ONE, 0.6).set_trans(Tween.TRANS_SINE)
 
 
-static func currency_bar() -> HBoxContainer:
+static func currency_bar(keys: Array = ["eclat_de_voeu", "pieces", "encre", "sceau"]) -> HBoxContainer:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 8)
 	var labels := {}
-	for k in ["eclat_de_voeu", "pieces", "fragments_etage", "energie"]:
+	for k: String in keys:
 		var box := amount(k, "", 15, HIGHLIGHT if k == "eclat_de_voeu" else (Color("9fd8b0") if k == "energie" else PAPER))
 		labels[k] = box.get_child(1)
 		var pill := PanelContainer.new()  # chaque ressource dans une pastille arrondie
@@ -447,11 +447,12 @@ static func currency_bar() -> HBoxContainer:
 		for k: String in labels:
 			if k != "energie":
 				labels[k].text = thousands(Session.profile.amount(k))
-		var p: Profile = Session.profile
-		p.refresh_energy(Session.now())
-		var nxt := p.energy_next_in(Session.now())
-		labels["energie"].text = "%d/%d%s" % [p.energy, int(GameData.progression()["energy"]["max"]),
-			"  %d:%02d" % [nxt / 60, nxt % 60] if nxt > 0 else ""]
+		if labels.has("energie"):
+			var p: Profile = Session.profile
+			p.refresh_energy(Session.now())
+			var nxt := p.energy_next_in(Session.now())
+			labels["energie"].text = "%d/%d%s" % [p.energy, int(GameData.progression()["energy"]["max"]),
+				"  %d:%02d" % [nxt / 60, nxt % 60] if nxt > 0 else ""]
 	refresh.call()
 	var timer := Timer.new()  # suit les dépenses faites sur l'écran
 	timer.wait_time = 0.25
@@ -574,31 +575,45 @@ static func portrait(id: String, side: float) -> TextureRect:
 	return t
 
 
-static func char_card(id: String, cb: Callable, selected := false, locked := false) -> Button:
+static func char_card(id: String, cb: Callable, selected := false, locked := false, star := 0, sub := "") -> Button:
 	var b := Button.new()
-	b.custom_minimum_size = Vector2(170, 86)
+	b.custom_minimum_size = Vector2(176, 86)
 	var col := char_color(id)
 	var normal := panel_style(Color(col, 0.18) if not locked else Color(PANEL, 0.6), col if selected else Color(col, 0.5), 3 if selected else 1)
 	b.add_theme_stylebox_override("normal", normal)
 	b.add_theme_stylebox_override("hover", panel_style(Color(col, 0.3), col, 2))
 	b.add_theme_stylebox_override("pressed", panel_style(Color(col, 0.4), col, 3))
-	var rarity := int(GameData.character(id)["rarity"]) if GameData.characters().has(id) else 3
-	b.text = "%s\n%s" % [char_name(id) if not locked else "???", "★".repeat(rarity)]
-	if GameData.characters().has(id) and not locked:  # classe en icône, en haut à droite
-		var ci := icon(str(GameData.character(id)["class"]), 18, Color(PAPER, 0.8))
-		ci.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-		ci.offset_left = -24
-		ci.offset_top = 6
-		ci.offset_right = -6
-		ci.offset_bottom = 24
-		b.add_child(ci)
-	b.add_theme_color_override("font_color", RARITY_COLORS[rarity] if not locked else DIM)
+	var rarity := int(HeroDb.hero(id).get("rarity", 3))
+	b.text = "%s
+%s" % [char_name(id) if not locked else "???", RARITY_NAMES.get(rarity, "") if sub == "" else sub]
+	b.add_theme_color_override("font_color", RARITY_COLORS.get(rarity, PAPER) if not locked else DIM)
 	if not locked:
+		var corner := HBoxContainer.new()  # classe et faction en icônes, en haut à droite
+		corner.add_theme_constant_override("separation", 2)
+		corner.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		corner.offset_left = -48
+		corner.offset_top = 5
+		corner.offset_right = -5
+		corner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		corner.add_child(icon(class_icon(str(HeroDb.hero(id).get("class", ""))), 18, Color(PAPER, 0.85)))
+		var facs: Array = HeroDb.hero(id).get("factions", [])
+		if not facs.is_empty():
+			corner.add_child(icon("f_" + str(facs[0]), 18, faction_color(str(facs[0])).lightened(0.25)))
+		b.add_child(corner)
+		if star > 0:
+			var st := rich(stars_bb(star, 13), 13)
+			st.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+			st.offset_left = -96
+			st.offset_top = -22
+			st.offset_right = -4
+			st.offset_bottom = -2
+			st.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			b.add_child(st)
 		b.icon = portrait_texture(id)
 		b.expand_icon = true
 		b.add_theme_constant_override("icon_max_width", 64)
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.clip_text = true  # un nom long ne doit pas écraser l'icône
+		b.clip_text = true
 		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		b.add_theme_font_size_override("font_size", fs(13))
 	b.pressed.connect(cb)

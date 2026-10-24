@@ -1,0 +1,41 @@
+{
+  "_comment": "6 factions à mécanique de combat propre, sur le modèle des 6 factions de Dragon Traveler (docs/ANALYSE_DRAGON_TRAVELER.md §2.7), renommées d'après les 6 pièces d'échecs de T99. Un héros R ou mieux a une 2e faction, active à 6 étoiles. bonus : 4/5/6 héros d'une même faction déployés -> ATK et PV de toute l'équipe +10/15/20 %. Les valeurs de chaque mécanique sont dans 'mechanic'.",
+  "factions": {
+    "roi": {
+      "name": "Couronne du Roi", "short": "Roi", "color": "e0b04a", "dt": "Écho élémentaire",
+      "desc": "Pose Brûlure, Choc ou Givre. Un 2e élément sur une cible déclenche une Réaction élémentaire.",
+      "mechanic": {"reaction_mult": 1.5, "reactions": {
+        "burn_shock": {"name": "Surcharge", "radius": 2.2, "status": "def_down", "dur": 5, "value": 20},
+        "burn_chill": {"name": "Vaporisation", "bonus_mult": 0.8},
+        "shock_chill": {"name": "Supraconduction", "status": "stun", "dur": 1.2}
+      }}
+    },
+    "cavalier": {
+      "name": "Charge du Cavalier", "short": "Cavalier", "color": "c8553d", "dt": "Esprit sauvage",
+      "desc": "La Rage monte en frappant et en perdant des PV. Pleine, le héros entre au Galop.",
+      "mechanic": {"rage_max": 100, "rage_per_hit": 6, "rage_per_hp_pct": 1.2, "galop_dur": 8, "galop": {"aspd_pct": 35, "dmg_pct": 14, "dr_pct": 8}}
+    },
+    "fou": {
+      "name": "Sagesse du Fou", "short": "Fou", "color": "7d6bd6", "dt": "Sagesse arcanique",
+      "desc": "Gagne de l'Éveil chaque fois qu'un allié lance un Overdrive. Chaque Éveil renforce les compétences.",
+      "mechanic": {"max_stacks": 6, "per_stack": {"dmg_pct": 3, "haste": 4}, "start": 1}
+    },
+    "dame": {
+      "name": "Grâce de la Dame", "short": "Dame", "color": "e88fb4", "dt": "Gloire du sanctuaire",
+      "desc": "Moral et Ferveur réunis sur un héros le font entrer en Grâce.",
+      "mechanic": {"grace_dur": 7, "grace": {"dmg_pct": 28, "heal_pct": 30, "dr_pct": 16}}
+    },
+    "tour": {
+      "name": "Siège de la Tour", "short": "Tour", "color": "6b8fb8", "dt": "Voile d'illusion",
+      "desc": "Châtiment : certaines compétences frappent plus fort les ennemis dont l'Overdrive coûte 3 ou plus, et alourdissent leur prochain Overdrive. Les héros de la Tour se soignent de 20 % des dégâts infligés.",
+      "mechanic": {"threshold": 3, "chatiment_dmg_pct": 45, "passive_dmg_pct": 25, "lifesteal_pct": 20}
+    },
+    "pion": {
+      "name": "Promesse du Pion", "short": "Pion", "color": "8fb86b", "dt": "Retour de l'autre monde",
+      "desc": "Chaque allié tombé donne une Promesse : plus d'ATK, moins de dégâts subis, un regain de vie.",
+      "mechanic": {"max_stacks": 4, "per_stack": {"atk_pct": 12, "dr_pct": 6}, "heal_pct": 10}
+    }
+  },
+  "order": ["roi", "cavalier", "fou", "dame", "tour", "pion"],
+  "bonus": {"4": 10, "5": 15, "6": 20}
+}

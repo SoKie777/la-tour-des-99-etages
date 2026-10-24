@@ -1,0 +1,19 @@
+{
+  "_comment": "Campagne principale (Histoire de Dragon Traveler, docs/ANALYSE_DRAGON_TRAVELER.md §5) : les 8 univers de la Tour en 8 chapitres. Une étape = un combat ; chaque première victoire rapporte 'first' et relève le revenu de Patrouille. Ennemis générés (scripts/core/campaign.gd) : niveau de level_from à level_to sur le chapitre, nombre d'ennemis team_size (début, fin), étoiles selon la rareté + bonus d'étoiles en fin de chapitre ; la dernière étape d'un chapitre est un boss si 'boss'. Patrouille : par minute, gold/encre de base + par étape ; essence toutes les 'essence_every' minutes ; stockage plafonné à cap_hours ; Patrouille rapide = quick_hours de revenu (1 gratuite par jour, puis prix en Éclats). unlocks : déblocages de cases de l'équipe et des modes (n = étapes gagnées).",
+  "chapters": [
+    {"id": "cite_acier",   "name": "Cité d'Acier",           "stages": 12, "decor": "acier",  "level_from": 1,  "level_to": 10, "team_size": [2, 4], "pool": ["pion_guerrier", "pion_archer", "pion_gardien", "pion_mage", "eirikr", "issa", "general_metal", "espion_lumiere"], "boss": "promethee", "boss_decor": "forge"},
+    {"id": "foret_gemmes", "name": "Forêt des Gemmes",       "stages": 20, "decor": "gemmes", "level_from": 10, "level_to": 22, "team_size": [4, 5], "pool": ["ymir", "nidhogg", "don_diego", "moussa", "mohamed", "issa", "espion_lumiere", "general_metal", "pion_pretre"], "boss": "geode", "boss_decor": "geode"},
+    {"id": "desert_verre", "name": "Désert de Verre",        "stages": 24, "decor": "sirius", "level_from": 22, "level_to": 34, "team_size": [5, 5], "pool": ["mohamed", "moussa", "issa", "jo_prince", "flint", "nidhogg", "don_diego", "saraya"], "boss": "serpent"},
+    {"id": "abysses_glace","name": "Abysses de Glace",       "stages": 28, "decor": "givre",  "level_from": 34, "level_to": 46, "team_size": [5, 6], "pool": ["ymir", "selene", "nyssa", "ghost", "eirikr", "tarkhan", "saraya", "don_diego"], "boss": "wyrm"},
+    {"id": "archives",     "name": "Archives des Mille Vérités", "stages": 32, "decor": "orion", "level_from": 46, "level_to": 58, "team_size": [6, 6], "pool": ["yass", "nyssa", "ghost", "saraya", "flint", "jo_prince", "selene", "tarkhan", "espion_lumiere"], "boss": "chronophage"},
+    {"id": "mer_celeste",  "name": "Mer Céleste",            "stages": 36, "decor": "dojo",   "level_from": 58, "level_to": 70, "team_size": [6, 6], "pool": ["noor_el", "mikhaila", "yass", "tarkhan", "jo_prince", "selene", "flint", "nyssa"], "boss": "geode", "boss_decor": "geode"},
+    {"id": "serments",     "name": "Royaume des Serments",   "stages": 40, "decor": "dojo",   "level_from": 70, "level_to": 84, "team_size": [6, 6], "pool": ["adrian", "mello", "ezra", "mikhaila", "ghost", "saraya", "yass", "selene"], "boss": "promethee", "boss_decor": "forge"},
+    {"id": "clans",        "name": "Domaine des Clans",      "stages": 48, "decor": "forge",  "level_from": 84, "level_to": 100, "team_size": [6, 6], "pool": ["montana", "don_selah", "noor_el", "adrian", "mello", "ezra", "mikhaila", "tarkhan", "nyssa"], "boss": "wyrm"}
+  ],
+  "star_bonus_end": 1,
+  "boss_power": 1.0,
+  "power": {"from": 0.8, "to": 1.0},
+  "first": {"eclat_de_voeu": 30, "pieces_per_level": 120, "encre_per_level": 80, "boss_eclats": 150, "ticket_every": 4},
+  "patrol": {"gold": 6, "gold_per_stage": 2.2, "encre": 4, "encre_per_stage": 1.6, "essence_every": 30, "essence_per_stage": 0.06, "cap_hours": 12, "quick_hours": 2, "quick_prices": [0, 50, 80, 100, 150, 200], "min_stage": 1},
+  "unlocks": {"slot_4": 3, "slot_5": 6, "slot_6": 12, "summon": 2, "stars": 4, "tower": 8, "expedition": 12, "auto": 2, "speed2": 4, "patrol": 1}
+}

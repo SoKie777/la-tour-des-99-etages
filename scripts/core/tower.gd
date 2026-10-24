@@ -1,103 +1,79 @@
 class_name Tower
 extends RefCounted
-## Ascension de la Tour : étages numérotés à partir de 1, ennemis renforcés selon « power »,
-## récompenses de victoire (data/tower.json).
+## La Tour des 99 Étages (data/tower.json) : étages générés, Élites régulières, un boss à la fin de
+## chaque univers. Ennemis au format de RtBattle.
+
+
+static func cfg() -> Dictionary:
+	return GameData.tower()
 
 
 static func floor_count() -> int:
-	var n := 0
-	for u: Dictionary in GameData.tower()["universes"]:
-		n += u["floors"].size()
-	return n
+	return int(cfg()["universes"][-1]["last"])
 
 
-## {number, universe, decor, enemies, power, elite, boss}
+static func universe_of(number: int) -> Dictionary:
+	for u: Dictionary in cfg()["universes"]:
+		if number <= int(u["last"]):
+			return u
+	return cfg()["universes"][-1]
+
+
+## {number, universe, decor, level, power, elite, boss: id ou ""}
 static func floor_info(number: int) -> Dictionary:
-	for u: Dictionary in GameData.tower()["universes"]:
-		var idx := number - int(u["first_floor"])
-		if idx >= 0 and idx < u["floors"].size():
-			var f: Dictionary = u["floors"][idx].duplicate()
-			f["number"] = number
-			f["universe"] = u["name"]
-			f["decor"] = u.get("boss_decor" if f.has("boss") else "decor", "dojo")
-			return f
-	return {}
+	var c := cfg()
+	var u := universe_of(number)
+	var is_boss := number == int(u["last"])
+	var raw_level := int(c["level_base"]) + int(float(c["level_per_floor"]) * number)
+	var power := float(c["power_base"]) + float(c["power_per_floor"]) * number
+	if raw_level > 100:
+		power += float(c["power_over_100"]) * (raw_level - 100)
+	var elite := not is_boss and number % int(c["elite_every"]) == 0
+	if elite:
+		power *= float(c["elite_power"])
+	return {"number": number, "universe": u["name"], "decor": str(u.get("boss_decor", u["decor"])) if is_boss else str(u["decor"]),
+		"level": mini(100, raw_level), "power": power, "elite": elite, "boss": str(u["boss"]) if is_boss else ""}
 
 
-## Constellations qui entament la Ténacité des ennemis d'un étage (mode tactique), sans doublon.
-static func floor_weaknesses(number: int) -> Array[String]:
-	return weaknesses_of(floor_info(number))
-
-
-## Faiblesses d'un groupe d'ennemis {enemies | boss_unit} (étage ou niveau du prologue).
-static func weaknesses_of(f: Dictionary) -> Array[String]:
-	var out: Array[String] = []
-	var beats: Dictionary = GameData.rules()["triangle"]["beats"]
-	var cons: Array[String] = []
-	if f.has("boss_unit"):
-		for c: String in GameData.boss(f["boss_unit"]).get("weakness", []):
-			if not c in out:
-				out.append(c)
-		return out
-	for id: String in f["enemies"]:
-		cons.append(GameData.constellation_of(GameData.character(id)["nation"]))
-	for c: String in beats:
-		if beats[c] in cons and not c in out:
-			out.append(c)
-	return out
-
-
-## Personnages dont le kit contient une arme contre ce boss (clé « boss_bane »), le 5★ d'abord.
-static func boss_banes(boss_id: String) -> Array[String]:
-	var out: Array[String] = []
-	for c: Dictionary in GameData.characters().values():
-		if c.has("boss_bane") and c["boss_bane"]["boss"] == boss_id:
-			out.append(c["id"])
-	out.sort_custom(func(a: String, b: String) -> bool: return int(GameData.character(a)["rarity"]) > int(GameData.character(b)["rarity"]))
-	return out
-
-
-## Rang des ennemis pour la Ténacité du mode tactique (un boss a la sienne).
-static func tactics_rank(number: int) -> String:
-	return "elite" if floor_info(number).get("elite", false) else "normal"
-
-
-## Ennemis d'un étage. Étage de boss : le boss (data/bosses.json), renforcé selon le palier de difficulté.
-static func enemy_units(number: int, difficulty := "facile") -> Array[BattleUnit]:
-	return make_enemies(floor_info(number), difficulty)
-
-
-## Ennemis d'un groupe {enemies | boss_unit, power} (étage ou niveau du prologue).
-static func make_enemies(f: Dictionary, difficulty := "facile") -> Array[BattleUnit]:
-	var power := float(f["power"])
-	var out: Array[BattleUnit] = []
-	if f.has("boss_unit"):
-		var data := GameData.boss(f["boss_unit"])
-		var stats: Dictionary = data["stats"].duplicate()
-		var dp := float(GameData.bosses()["difficulties"][difficulty]["power"]) * power
-		for k in ["hp", "atk", "def"]:
-			stats[k] = roundf(float(stats[k]) * dp)
-		out.append(BattleUnit.new(data, 1, 0, stats))
-		return out
-	for id: String in f["enemies"]:
-		var data := GameData.character(id)
-		var stats: Dictionary = data["stats"].duplicate()
-		for k in ["hp", "atk", "def"]:
-			stats[k] = roundf(float(stats[k]) * power)
-		out.append(BattleUnit.new(data, 1, out.size(), stats))
+static func enemy_specs(number: int) -> Array:
+	var f := floor_info(number)
+	var lvl := int(f["level"])
+	var tier := clampi(number / 12, 0, 8)
+	if f["boss"] != "":
+		return [{"id": f["boss"], "level": lvl, "star": mini(19, 5 + tier * 2), "slot": 4, "power": float(f["power"])}]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 104729 * number + 7
+	var pool: Array = universe_of(number)["pool"].duplicate()
+	var ids: Array[String] = []
+	while ids.size() < 6 and not pool.is_empty():
+		ids.append(str(pool.pop_at(rng.randi() % pool.size())))
+	var placed := HeroDb.auto_place(ids)
+	var out := []
+	for slot: int in placed:
+		var id: String = placed[slot]
+		var r := int(HeroDb.hero(id)["rarity"])
+		out.append({"id": id, "level": lvl, "star": mini(HeroDb.max_star(r), HeroDb.start_star(r) + tier + (1 if f["elite"] else 0)),
+			"slot": slot, "power": float(f["power"])})
 	return out
 
 
 ## {currencies: {id: n}, relics: [relique...]}
 static func rewards(number: int, first_clear: bool, rng: RandomNumberGenerator) -> Dictionary:
-	var cfg: Dictionary = GameData.tower()["rewards"]
+	var rw: Dictionary = cfg()["rewards"]
 	var f := floor_info(number)
-	var cur := {"pieces": int(cfg["each"]["pieces_base"]) + int(cfg["each"]["pieces_per_floor"]) * number}
+	var each: Dictionary = rw["each"]
+	var cur := {"pieces": int(each["pieces_base"]) + int(each["pieces_per_floor"]) * number,
+		"encre": int(each["encre_base"]) + int(each["encre_per_floor"]) * number}
 	if first_clear:
-		var key := "eclat_de_voeu_boss" if f.has("boss") else ("eclat_de_voeu_elite" if f.get("elite", false) else "eclat_de_voeu")
-		cur["eclat_de_voeu"] = int(cfg["first"][key])
+		var first: Dictionary = rw["first"]
+		if f["boss"] != "":
+			cur["eclat_de_voeu"] = int(first["eclat_de_voeu_boss"])
+			cur["essence"] = int(first["essence_boss"])
+			cur["sceau_destin"] = int(first["sceau_destin_boss"])
+		else:
+			cur["eclat_de_voeu"] = int(first["eclat_de_voeu_elite" if f["elite"] else "eclat_de_voeu"])
 	var sets: Array = GameData.progression()["relic_drop_sets"]
 	var relics: Array[Dictionary] = []
-	for i in int(cfg["each"]["relics"]):
+	for i in int(each["relics"]):
 		relics.append(Relics.generate(rng, sets[rng.randi() % sets.size()], rng.randi_range(1, 6)))
 	return {"currencies": cur, "relics": relics}

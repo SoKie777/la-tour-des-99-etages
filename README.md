@@ -1,17 +1,23 @@
 # T99
 
-Gacha RPG mobile au tour par tour (3 contre 3, barre d'action), inspiré de Dislyte, dans un univers
-d'estampe japonaise : anime 3D, encre ukiyo-e et symbolique des échecs. Moteur : **Godot 4.7**.
-Version actuelle : **v0.16.0** (fichier `VERSION`).
+Gacha RPG mobile **en temps réel** dans un univers d'estampe japonaise (anime 3D, encre ukiyo-e, symbolique
+des échecs). Depuis la v0.17, la boucle de jeu reprend celle de **Dragon Traveler** (analyse REA de l'APK :
+`docs/ANALYSE_DRAGON_TRAVELER.md`) : 6 héros sur une grille 3 × 3, Overdrive lancés avec une jauge d'énergie
+commune, progression par doublons, campagne avec Patrouille hors ligne. Moteur : **Godot 4.7**.
+Version actuelle : **v0.17.0** (fichier `VERSION`).
 
 - **Jouer sur Android :** Releases → **[`apk-latest`](../../releases/tag/apk-latest)** (toujours la dernière version).
-  L'APK est signé avec une clé fixe : on installe chaque nouvelle version **par-dessus** l'ancienne et la
-  sauvegarde est conservée.
+  L'APK est signé avec une clé fixe : on installe chaque nouvelle version **par-dessus** l'ancienne.
+  **La v0.17 repart d'une nouvelle partie** (les sauvegardes d'avant la refonte ne sont pas reprises).
 - **Jouer sur PC :** `Lancer le jeu.bat` · **Modifier :** `Ouvrir dans Godot.bat`
 
 <p align="center">
-  <img src="docs/images/combat.png" width="49%" alt="Combat">
-  <img src="docs/images/invocation.png" width="49%" alt="Invocation">
+  <img src="docs/images/combat.png" width="49%" alt="Combat en temps réel : 6 contre 6, jauge d'énergie et cartes d'Overdrive">
+  <img src="docs/images/accueil.png" width="49%" alt="Accueil : Campagne, Patrouille, Invocation, Tour, Expédition">
+</p>
+<p align="center">
+  <img src="docs/images/equipe.png" width="49%" alt="Équipe sur la grille 3 × 3">
+  <img src="docs/images/heros.png" width="49%" alt="Héros : compétences au format Dragon Traveler">
 </p>
 <p align="center">
   <img src="docs/images/decor_volcan.png" width="32%" alt="Volcan de Prométhée">
@@ -24,29 +30,35 @@ Version actuelle : **v0.16.0** (fichier `VERSION`).
 
 ## Ce qu'on peut faire
 
-- **Accueil** en 3D : l'équipe, de dos au pied de la Tour des 99 Étages, lève les yeux vers une tour qui
-  se perd dans les nuages ; les modes (Ascension, Invocation, Boss de butin) sont écrits en grand sur la
-  tour, Équipe et Collection dans la barre du bas.
-- **Prologue** (8 niveaux) dès le début, avec Eiríkr seul : les bases du jeu pas à pas, deux invocations
-  x10 offertes sur la bannière « Premier Appel » (Yass, puis Mello à la garantie de 20), et 8 x10 à
-  la sortie. La Tour s'ouvre ensuite.
-- **Ascension de la Tour** (25 étages) : univers 01, la Cité d'Acier (boss **Prométhée**), et univers 02,
-  la Forêt des Gemmes (boss **l'Impératrice Géode**). Combats en **mode tactique** inspiré de Honkai: Star
-  Rail : Sceaux d'équipe, ultimes qui coupent la ligne de temps, Ténacité et Rupture par faiblesse de
-  constellation, assauts coordonnés, charges de boss télégraphiées, Résonance, 3 étoiles par étage.
-  Chaque victoire rapporte des Pièces et une relique, la première des Éclats de Vœu ; énergie, balayage.
-- **Boss de butin** : le Chronophage (Orion), le Wyrm de givre (Grande Ourse), le Serpent solaire (Sirius),
-  4 paliers (Facile à Enfer), reliques ciblées et garantie après plusieurs victoires.
-- **Combats** à la barre d'action : 24 personnages en 3 nations / constellations (triangle Orion › Grande
-  Ourse › Sirius), compétences en symboles (appui long pour les lire), ultimes avec gros plan, effets
-  visibles, mode auto, vitesse ×1 à ×3, bilan de fin de combat (dégâts, dégâts subis, boucliers, soins).
-- **Invocation** façon Dislyte (illustration de la vedette, sélecteur de bannières, taux et garanties)
-  avec cinématique sur l'échiquier.
-- **Équipe** de 3 et formations, **Collection** (fiche, stats, compétences) et **reliques** (6 emplacements,
-  ensembles, niveaux, recyclage).
+- **Combat en temps réel** : jusqu'à 6 héros sur une grille 3 × 3 (Gardiens devant, tireurs et soigneurs
+  derrière) avancent et frappent seuls ; touche la carte d'un héros pour lancer son **Overdrive** avec la
+  jauge d'énergie commune (ou laisse faire l'AUTO), vitesse ×1 à ×3, pause, bilan de fin de combat.
+- **6 classes et 6 factions** (Roi, Cavalier, Fou, Dame, Tour, Pion), chacune avec sa mécanique (réactions
+  élémentaires, Rage et Galop, Éveil, Grâce, Châtiment, Promesse) et un bonus à 4, 5 ou 6 héros.
+- **Campagne** : 8 chapitres, 240 étapes, boss de fin de chapitre ; la **Patrouille** rapporte Pièces,
+  Encre et Essence même jeu fermé (12 h max), Patrouille rapide une fois par jour.
+- **La Tour des 99 Étages** (Élites, boss par univers) et l'**Expédition** (boss qui donnent des reliques).
+- **Héros** : niveaux 1 à 100 plafonnés par les étoiles, **19 paliers d'étoiles** par doublons (copies,
+  héros de la même classe, Pions d'encre et Poupées en remplacement, montée rapide, réinitialisation),
+  **Résonance de classe** au-delà du niveau 100, reliques (6 emplacements, sets).
+- **Invocation** aux taux de Dragon Traveler (SSR 3 %, garanti en 40 ; bannière limitée garantie en 50),
+  liste de souhaits, cinématique sur l'échiquier.
 - Progression **sauvegardée** sur l'appareil.
 
 ## Nouveautés récentes
+
+- **v0.17.0** — **Refonte complète sur le modèle de Dragon Traveler** (analyse REA de l'APK 1.19.0 : tables de
+  design SQLite extraites des bundles, voir `docs/ANALYSE_DRAGON_TRAVELER.md`) :
+  - **Combat en temps réel** (`scripts/core/rt_battle.gd`) : grille 3 × 3, 6 héros, déplacement et portée,
+    compétences automatiques, **Overdrive à coût d'énergie** commune (jauge de 10, ouverture à 6,5 s, délai
+    d'équipe), boss qui annoncent leurs coups, nouvel écran de combat de côté avec cartes d'Overdrive.
+  - **6 classes, 6 factions** à mécanique propre, bonus de faction, 24 kits réécrits au format DT
+    (compétence, Overdrive, passif, talent) + 6 **Pions d'encre** (N) et 5 boss (`docs/KITS.md`).
+  - **Progression DT** : niveaux et courbes reprises du jeu, **étoiles par doublons** (19 paliers, de ×0,7 à
+    ×2,12), Résonance de classe, Gelée et Poupées ; **invocation** aux taux et garanties de DT.
+  - **Campagne + Patrouille idle**, Tour à 99 étages générés, Expédition ; nouveaux écrans (Campagne, Équipe
+    en grille, Héros, Invocation, Accueil avec Patrouille).
+  - Tests réécrits (6 116 vérifications + simulations d'équilibrage des factions et de la campagne).
 
 - **v0.16.0** — **Mise en scène, audio et systèmes façon Dislyte (analyse REA de `XGame`)** :
   - **Caméra et chorégraphie de combat (`SkillConfig`)** : cadrage dynamique d'impact après le gros plan des ultimes et sur les S2, rotation des attaquants au corps-à-corps vers leur cible (`FaceTargetsCenter`) avec sillage d'élan (`dash_trail`), compteur de **Combo & Dégâts cumulés** en direct et indicateur d'affinité élémentaire (`▲` / `▼` / `★` Rupture) sur le choix des cibles.
@@ -112,11 +124,13 @@ Détails et commandes (portraits, icônes, décors, shaders, captures) : **`docs
 
 | Dossier | Contenu |
 |---|---|
-| `docs/GDD.md` | Game design : lore, combat, triangle, roster, reliques, gacha, simulations, feuille de route |
+| `docs/GDD.md` | Game design (refonte DT) : combat temps réel, classes, factions, progression, gacha, modes, équilibrage |
+| `docs/ANALYSE_DRAGON_TRAVELER.md` | Analyse REA de Dragon Traveler : règles, chiffres, modes, ce qui reste à reprendre |
+| `docs/KITS.md` | Kits des 24 héros et des boss (généré depuis `data/heroes.json`) |
 | `docs/PIPELINE.md` | Pipeline 3D, icônes, décors, rendu, APK |
 | `docs/CAPTOLOGIE.md` | Principes de motivation du joueur (sans manipulation) |
-| `data/` | Tout l'équilibrage en JSON (personnages, règles, statuts, gacha, reliques, Tour, boss, progression) |
-| `scripts/core/` | Moteur de combat, gacha, reliques, profil, Tour, boss de butin (sans affichage, testable) |
+| `data/` | Tout l'équilibrage en JSON (héros, classes, factions, combat, statuts, étoiles, niveaux, gacha, campagne, Tour, Expédition, reliques) |
+| `scripts/core/` | Combat temps réel (`rt_battle.gd`), données (`hero_db.gd`), profil, gacha, campagne, Tour, Expédition, reliques (sans affichage, testable) |
 | `scripts/ui/` | Écrans, combat, décors (`battle_decor.gd`), effets (`battle_fx.gd`), `character_model.gd`, `ui_kit.gd` |
 | `assets/` | Modèles, animations, portraits, icônes SVG, shaders (`materials/shaders/`), polices, image de bannière |
 | `tools/` | Génération (personnages, portraits, icônes, bannière) et outils de contrôle (captures, réglages) |

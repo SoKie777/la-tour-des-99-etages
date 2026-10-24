@@ -8,8 +8,8 @@ const FILES := 9   # 3 colonnes par couloir
 const RANKS := 8
 const LANES := ["orion", "grande_ourse", "sirius"]
 const LANE_COLORS := {"orion": Color("7fc8ff"), "grande_ourse": Color("d0242c"), "sirius": Color("f2dc9a")}
-const RARITY_GLOW := {3: Color("9fb6d8"), 4: Color("b07de0"), 5: Color("ffcf4a")}
-const PIECE_FOR := {4: "rook", 5: "queen"}
+const RARITY_GLOW := {2: Color("8a8a96"), 3: Color("9fb6d8"), 4: Color("b07de0"), 5: Color("ffcf4a")}
+const PIECE_FOR := {2: "pawn", 4: "rook", 5: "queen"}
 
 var results: Array = []
 var cam: Camera3D
@@ -236,7 +236,8 @@ func _process(delta: float) -> void:
 
 func _lane_of(r: Dictionary) -> String:
 	var id: String = r["id"]
-	return GameData.constellation_of(GameData.character(id)["nation"]) if GameData.characters().has(id) else "orion"
+	var facs: Array = HeroDb.hero(id).get("factions", ["roi"])
+	return {"roi": "orion", "fou": "orion", "cavalier": "grande_ourse", "tour": "grande_ourse"}.get(str(facs[0]), "sirius")
 
 
 ## Tout ce qui est lourd est préparé pendant le fondu d'entrée (pièces de promotion, lumières, personnage,
@@ -522,7 +523,7 @@ func _name_card(r: Dictionary) -> void:
 	nl.add_theme_constant_override("outline_size", 10)
 	nl.add_theme_color_override("font_outline_color", Color(0.05, 0.02, 0.08))
 	box.add_child(nl)
-	box.add_child(UiKit.label("★".repeat(rar) + ("   NOUVEAU !" if r.get("new", false) else ""), 24, col))
+	box.add_child(UiKit.label(str(UiKit.RARITY_NAMES.get(rar, "")) + ("   NOUVEAU !" if r.get("new", false) else ""), 24, col))
 	var tw := create_tween()
 	tw.tween_property(box, "position:x", 60.0, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
@@ -593,5 +594,5 @@ func _finish() -> void:
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_child(row)
-	var back := "res://scenes/prologue.tscn" if Session.profile.in_prologue() else "res://scenes/summon.tscn"
+	var back := "res://scenes/summon.tscn"
 	row.add_child(UiKit.button("Continuer", func() -> void: get_tree().change_scene_to_file(back), Vector2(200, 50)))

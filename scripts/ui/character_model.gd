@@ -6,11 +6,11 @@ extends Node3D
 
 const BASE_SCENE := "res://assets/mixamo/ybot_idle.fbx"
 const ANIM_DIR := "res://assets/mixamo/anims/"
-const LOOPS := ["idle", "idle_caster"]
+const LOOPS := ["idle", "idle_caster", "walk_fwd"]
 ## Action du combat -> animation Mixamo (par défaut)
 const MAP := {
 	"idle": "idle", "attack": "cross", "skill": "punch_combo", "ultimate": "hurricane_kick",
-	"hit": "hit", "crit_hit": "hit_big", "death": "ko", "victory": "victory",
+	"hit": "hit", "crit_hit": "hit_big", "death": "ko", "victory": "victory", "walk": "walk_fwd",
 }
 ## Jeu d'animations de chaque personnage, selon son kit (remplace MAP action par action)
 const CHAR_MAP := {
@@ -104,10 +104,8 @@ static func available() -> bool:
 
 ## Modèle 3D d'un personnage ou d'un boss : clé « model » de ses données (modèle provisoire), sinon son id.
 static func model_id(char_id: String) -> String:
-	if GameData.characters().has(char_id):
-		return str(GameData.character(char_id).get("model", char_id))
-	if GameData.bosses()["bosses"].has(char_id):
-		return str(GameData.boss(char_id).get("model", char_id))
+	if HeroDb.exists(char_id):
+		return str(HeroDb.hero(char_id).get("model", char_id))
 	return char_id
 
 

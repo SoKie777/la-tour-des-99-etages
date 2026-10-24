@@ -15,7 +15,7 @@ func _ready() -> void:
 func _build() -> void:
 	var g := Session.gacha
 	var b := g.banner
-	var featured: Array = b["featured"]
+	var featured: Array = b.get("featured", [])
 	var star_id: String = featured[0] if not featured.is_empty() else ""
 	var col := UiKit.char_color(star_id) if star_id != "" else UiKit.ACCENT
 	var content := UiKit.screen(self, "Invocation")
@@ -29,19 +29,19 @@ func _build() -> void:
 	left.add_theme_constant_override("separation", 8)
 	body.add_child(left)
 	if star_id != "":
-		var d := GameData.character(star_id)
-		var cons := GameData.constellation_of(d["nation"])
-		left.add_child(UiKit.rich("%s  [b]%s[/b]" % [UiKit.bb(str(d["class"]), 20, col.lightened(0.4)),
-			str(UiKit.CONST_NAMES[cons]).to_upper()], 18, col.lightened(0.4)))
+		var d := HeroDb.hero(star_id)
+		var f0 := str(d["factions"][0])
+		left.add_child(UiKit.rich("%s %s   %s  [b]%s[/b]" % [UiKit.bb(UiKit.class_icon(d["class"]), 20, col.lightened(0.4)), UiKit.class_name_of(star_id),
+			UiKit.bb("f_" + f0, 20, col.lightened(0.4)), UiKit.faction_name(f0).to_upper()], 18, col.lightened(0.4)))
 		left.add_child(_big_name(str(d["name"]).to_upper()))
-		left.add_child(UiKit.label("★".repeat(int(d["rarity"])), 30, UiKit.RARITY_COLORS[5]))
+		left.add_child(UiKit.label("SSR", 30, UiKit.RARITY_COLORS[5]))
 	else:
 		left.add_child(_big_name(str(b["name"]).to_upper()))
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	left.add_child(spacer)
 	# garantie Épique (petite jauge) puis encart de la vedette et garantie Légendaire
-	left.add_child(UiKit.progress("[color=#%s]★★★★+[/color]" % UiKit.RARITY_COLORS[4].to_html(false), g.pity_4,
+	left.add_child(UiKit.progress("[color=#%s]SR+[/color]" % UiKit.RARITY_COLORS[4].to_html(false), int(g.pity_4.get(g.key(), 0)),
 		int(b["guarantee_4_every"]), UiKit.RARITY_COLORS[4], 260))
 	var box := PanelContainer.new()
 	var st := UiKit.panel_style(Color(UiKit.BG, 0.82), Color(col, 0.7), 1, 10)
@@ -56,17 +56,19 @@ func _build() -> void:
 		fh.add_theme_constant_override("separation", 10)
 		bv.add_child(fh)
 		fh.add_child(UiKit.portrait(star_id, 44))
-		fh.add_child(UiKit.rich("[color=#%s]★★★★★[/color]  ×%s   [b]%s[/b]" % [UiKit.RARITY_COLORS[5].to_html(false),
-			str(b["featured_multiplier"]).trim_suffix(".0"), UiKit.char_name(star_id)], 20, Color("8fe6d6")))
-	var left_5 := int(b["hard_pity_5"]) - g.pity_5
-	bv.add_child(UiKit.rich("[center][color=#%s]★★★★★[/color]   %s   [font_size=34][color=#%s]%d[/color][/font_size][/center]" % [
+		fh.add_child(UiKit.rich("[color=#%s]SSR[/color] = 100 %%   [b]%s[/b]" % [UiKit.RARITY_COLORS[5].to_html(false),
+			UiKit.char_name(star_id)], 20, Color("8fe6d6")))
+	var left_5 := int(b["pity_5"]) - g.pity_count()
+	bv.add_child(UiKit.rich("[center][color=#%s]SSR[/color] garanti dans   %s   [font_size=34][color=#%s]%d[/color][/font_size][/center]" % [
 		UiKit.RARITY_COLORS[5].to_html(false), UiKit.bb("turn", 18), UiKit.ACCENT.to_html(false), left_5], 18))
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 16)
 	left.add_child(buttons)
-	var cost := int(GameData.progression()["pull_cost"])
 	for n in [1, 10]:
-		buttons.add_child(_pull_button(n, cost))
+		buttons.add_child(_pull_button(n))
+	var tick := str(b.get("ticket", "sceau"))
+	left.add_child(UiKit.rich("%s %d   %s %s" % [UiKit.bb(tick, 20), Session.profile.amount(tick), UiKit.bb("eclat_de_voeu", 20),
+		UiKit.thousands(Session.profile.amount("eclat_de_voeu"))], 16))
 	if not Session.last_pulls.is_empty():  # derniers tirages, en vignettes
 		var last := HBoxContainer.new()
 		last.add_theme_constant_override("separation", 4)
@@ -152,11 +154,15 @@ func _big_name(text: String) -> Label:
 	return l
 
 
-## Bouton d'invocation incliné (×1 / ×10) avec son coût en Éclats.
-func _pull_button(n: int, cost: int) -> Button:
-	var enough := Session.profile.amount("eclat_de_voeu") >= n * cost
-	var bt := UiKit.rich_button("[font_size=22][b]×%d[/b][/font_size]    %s %d" % [n, UiKit.bb("eclat_de_voeu", 20, UiKit.INK), n * cost],
-		_pull.bind(n), Vector2(250, 64), 22, UiKit.INK if enough else UiKit.DIM)
+## Bouton d'invocation (×1 / ×10) : Sceaux de la bannière d'abord, puis Éclats de Vœu.
+func _pull_button(n: int) -> Button:
+	var cost := Session.pull_cost(n)
+	var enough := Session.profile.can_pay(cost)
+	var parts: Array[String] = []
+	for k: String in cost:
+		parts.append("%s %s" % [UiKit.bb(k, 20, UiKit.INK), UiKit.thousands(int(cost[k]))])
+	var bt := UiKit.rich_button("[font_size=22][b]×%d[/b][/font_size]    %s" % [n, "  ".join(parts)],
+		_pull.bind(n), Vector2(280, 64), 20, UiKit.INK if enough else UiKit.DIM)
 	UiKit.cta(bt)  # même style or que les boutons principaux
 	bt.disabled = not enough
 	return bt
@@ -189,7 +195,7 @@ func _banner_bar() -> Control:
 		var selected := id == Session.gacha.banner_id
 		var v := VBoxContainer.new()
 		v.add_theme_constant_override("separation", 0)
-		var fe: Array = bd["featured"]
+		var fe: Array = bd.get("featured", [])
 		var tab := Button.new()
 		tab.custom_minimum_size = Vector2(64, 52)
 		tab.flat = true
@@ -217,22 +223,41 @@ func _toggle_rates() -> void:
 	var b := Session.gacha.banner
 	rates_panel = PanelContainer.new()
 	rates_panel.add_theme_stylebox_override("panel", UiKit.panel_style(Color(UiKit.BG, 0.96), UiKit.ACCENT, 2, 8))
-	rates_panel.set_anchors_preset(Control.PRESET_CENTER)
-	rates_panel.offset_left = -200
-	rates_panel.offset_right = 200
-	rates_panel.offset_top = -120
-	rates_panel.offset_bottom = 120
+	rates_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	rates_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	rates_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	rates_panel.custom_minimum_size.x = 460
 	add_child(rates_panel)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 8)
 	rates_panel.add_child(v)
-	var rates: Dictionary = b["rates"]
-	for r in [5, 4, 3]:
-		v.add_child(UiKit.rich("[color=#%s]%s[/color]   %s %%" % [UiKit.RARITY_COLORS[r].to_html(false), "★".repeat(r),
-			str(rates[str(r)]).trim_suffix(".0")], 18))
-	v.add_child(UiKit.rich("[color=#%s]★★★★★[/color]  %s %d     [color=#%s]★★★★+[/color]  %s %d" % [UiKit.RARITY_COLORS[5].to_html(false),
-		UiKit.bb("turn", 16), int(b["hard_pity_5"]), UiKit.RARITY_COLORS[4].to_html(false), UiKit.bb("turn", 16),
-		int(b["guarantee_4_every"])], 16, UiKit.DIM))
+	for line in Session.gacha.rates_text():
+		v.add_child(UiKit.label(line, 15))
+	if b.has("wishlist_unlock"):
+		var g := Session.gacha
+		var open := g.wishlist_open()
+		v.add_child(UiKit.label("Liste de souhaits (%d / %d)%s" % [g.wishlist.size(), int(b["wishlist_size"]),
+			"" if open else "  —  %d / %d invocations" % [g.total_pulls, int(b["wishlist_unlock"])]], 15, UiKit.ACCENT if open else UiKit.DIM))
+		var wl := HFlowContainer.new()
+		wl.add_theme_constant_override("h_separation", 4)
+		v.add_child(wl)
+		for id in HeroDb.ids_of_rarity(5):
+			var on := g.wishlist.has(id)
+			var chip := Button.new()
+			chip.custom_minimum_size = Vector2(52, 52)
+			chip.icon = UiKit.portrait_texture(id)
+			chip.expand_icon = true
+			chip.modulate = Color.WHITE if on else Color(1, 1, 1, 0.45)
+			chip.disabled = not open
+			chip.pressed.connect(func() -> void:
+				if g.wishlist.has(id):
+					g.wishlist.erase(id)
+				elif g.wishlist.size() < int(b["wishlist_size"]):
+					g.wishlist.append(id)
+				Session.save()
+				_toggle_rates()
+				_toggle_rates())
+			wl.add_child(chip)
 	v.add_child(UiKit.icon_button("close", _toggle_rates, 40))
 
 

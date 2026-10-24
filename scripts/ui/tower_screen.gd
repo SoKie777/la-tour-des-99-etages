@@ -1,7 +1,6 @@
 extends Control
-## Ascension de la Tour : liste des étages, adversaires, récompenses, combat, balayage des étages gagnés.
-
-var sweep_msg := ""
+## La Tour des 99 Étages (mode à étages, comme les Ruines d'os de Wyrm de Dragon Traveler) :
+## un étage après l'autre, Élites régulières, un boss à la fin de chaque univers.
 
 
 func _ready() -> void:
@@ -10,12 +9,11 @@ func _ready() -> void:
 
 func _build() -> void:
 	var p := Session.profile
-	var content := UiKit.screen(self, "Ascension de la Tour")
+	var content := UiKit.screen(self, "La Tour des 99 Étages")
 	var cols := HBoxContainer.new()
 	cols.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	cols.add_theme_constant_override("separation", 20)
 	content.add_child(cols)
-
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -26,7 +24,8 @@ func _build() -> void:
 	scroll.add_child(list)
 	var universe := ""
 	var focus: Control = null
-	for n in range(Tower.floor_count(), 0, -1):  # du sommet vers la base, comme une tour
+	var top := mini(Tower.floor_count(), p.tower_cleared + 6)
+	for n in range(top, 0, -1):  # du sommet vers la base, comme une tour
 		var f := Tower.floor_info(n)
 		if f["universe"] != universe:
 			universe = f["universe"]
@@ -37,19 +36,18 @@ func _build() -> void:
 			focus = row
 	if focus != null:
 		_scroll_to.call_deferred(scroll, focus)
-
 	var side := VBoxContainer.new()
 	side.custom_minimum_size.x = 380
+	side.add_theme_constant_override("separation", 8)
 	cols.add_child(side)
-	var view := UiKit.model_view(p.team, Vector2i(380, 330))
-	side.add_child(view)
+	side.add_child(UiKit.model_view(p.formation_ids().slice(0, 4), Vector2i(380, 300)))
+	side.add_child(UiKit.label("Étage atteint : %d / %d" % [p.tower_cleared, Tower.floor_count()], 18, UiKit.ACCENT))
+	side.add_child(UiKit.rich("%s %s" % [UiKit.bb("atk", 18, UiKit.HIGHLIGHT), UiKit.thousands(p.team_power())], 18, UiKit.HIGHLIGHT))
 	side.add_child(UiKit.button("Modifier l'équipe", func() -> void: get_tree().change_scene_to_file("res://scenes/team.tscn"), Vector2(380, 52)))
-	if sweep_msg != "":
-		side.add_child(UiKit.rich(sweep_msg, 14, UiKit.ACCENT, true))
 
 
 func _scroll_to(scroll: ScrollContainer, target: Control) -> void:
-	await get_tree().process_frame  # attendre la mise en page
+	await get_tree().process_frame
 	scroll.ensure_control_visible(target)
 
 
@@ -57,71 +55,37 @@ func _floor_row(f: Dictionary) -> Control:
 	var p := Session.profile
 	var n: int = f["number"]
 	var cleared := n <= p.tower_cleared
-	var open := p.can_enter_floor(n)
+	var open := n <= p.tower_cleared + 1
 	var border := UiKit.ACCENT if open and not cleared else (Color("4a8a5a") if cleared else Color.TRANSPARENT)
 	var panel := UiKit.panel(border)
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 14)
 	panel.add_child(h)
 	var title := "%s %d" % [UiKit.bb("floor", 20), n]
-	if f.has("boss"):
+	if f["boss"] != "":
 		title += "  " + UiKit.bb("boss", 20, UiKit.VERMILION.lightened(0.3))
-	elif f.get("elite", false):
-		title += "  ★"
-	var stars := p.floor_stars(n)  # étoiles obtenues (victoire, aucun K.O., victoire rapide)
-	var srow: Array[String] = []
-	for k in 3:
-		srow.append("[color=#%s]★[/color]" % (UiKit.ACCENT if (stars >> k) & 1 == 1 else Color(UiKit.DIM, 0.4)).to_html())
-	var weak: Array[String] = []  # faiblesses : constellations qui brisent la Ténacité
-	for c in Tower.floor_weaknesses(n):
-		weak.append(UiKit.bb(c, 24, UiKit.CONST_COLORS[c].lightened(0.3)))
-	if f.has("boss_unit"):  # personnages armés contre ce boss : portraits marqués d'une étoile
-		for id in Tower.boss_banes(str(f["boss_unit"])):
-			if UiKit.portrait_texture(id) != null:
-				weak.append("  [color=#%s]★[/color][img width=24 height=24]%s[/img]" % [UiKit.RARITY_COLORS[int(GameData.character(id)["rarity"])].to_html(false),
-					UiKit.portrait_texture(id).resource_path])
-	var t := UiKit.rich("%s\n%s   %s" % [title, "".join(srow), " ".join(weak)], 18, UiKit.ACCENT if f.has("boss") else UiKit.PAPER)
-	t.custom_minimum_size.x = 170
+	elif f["elite"]:
+		title += "  Élite"
+	var t := UiKit.rich("%s\nNiv. %d" % [title, int(f["level"])], 17, UiKit.ACCENT if f["boss"] != "" else UiKit.PAPER)
+	t.custom_minimum_size.x = 150
 	h.add_child(t)
-	var names: Array[String] = []
-	for id: String in f["enemies"]:
-		names.append(UiKit.char_name(id))
-	var txt := "%s\n%s %d %%" % [", ".join(names), UiKit.bb("atk", 14), roundi(float(f["power"]) * 100.0)]
-	if f.has("boss_unit"):
-		var b := GameData.boss(f["boss_unit"])
-		txt = "%s · %s\n%s" % [b["name"], b.get("voie", ""), b["skills"][1]["desc"]]
-	if open and not cleared:  # anticipation : la récompense de première victoire est annoncée
-		var rk := "eclat_de_voeu_boss" if f.has("boss") else ("eclat_de_voeu_elite" if f.get("elite", false) else "eclat_de_voeu")
-		txt += "\n★ %s +%d" % [UiKit.bb("eclat_de_voeu", 16, UiKit.ACCENT), int(GameData.tower()["rewards"]["first"][rk])]
-	var info := UiKit.rich(txt, 14, UiKit.ACCENT if open and not cleared else UiKit.DIM, true)
-	h.add_child(info)
+	var foes := HBoxContainer.new()
+	foes.add_theme_constant_override("separation", 2)
+	foes.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(foes)
+	for s: Dictionary in Tower.enemy_specs(n):
+		foes.add_child(UiKit.portrait(s["id"], 44))
+	if open and not cleared:
+		var rw: Dictionary = Tower.cfg()["rewards"]["first"]
+		var key := "eclat_de_voeu_boss" if f["boss"] != "" else ("eclat_de_voeu_elite" if f["elite"] else "eclat_de_voeu")
+		h.add_child(UiKit.rich("★ %s +%d" % [UiKit.bb("eclat_de_voeu", 16, UiKit.ACCENT), int(rw[key])], 15, UiKit.ACCENT))
 	if open:
-		var cost := p.floor_cost(n)
-		var fight := UiKit.rich_button(("%s" % UiKit.bb("auto", 18) if cleared else "Combattre") + ("  %s %d" % [UiKit.bb("energie", 16), cost] if cost > 0 else ""),
-			func() -> void: Session.start_tower_floor(n), Vector2(150, 50), 15)
-		fight.disabled = p.energy < cost
+		var fight := UiKit.button("Rejouer" if cleared else "Combattre", func() -> void: Session.start_tower_floor(n), Vector2(140, 50))
+		if not cleared:
+			UiKit.cta(fight)
+		fight.disabled = p.formation.is_empty()
 		h.add_child(fight)
-		if cleared:
-			for times in [1, 5]:
-				var sw := UiKit.rich_button("%s ×%d" % [UiKit.bb("speed", 16), times], _sweep.bind(n, times), Vector2(76, 50), 15)
-				sw.disabled = cost > 0 and p.energy < cost
-				h.add_child(sw)
 	else:
 		h.add_child(UiKit.icon("lock", 22, UiKit.DIM))
-	if not open:
 		panel.modulate = Color(1, 1, 1, 0.55)
 	return panel
-
-
-func _sweep(n: int, times: int) -> void:
-	var rw := Session.profile.sweep_floor(n, times, Session.rng, Session.now())
-	Session.save()
-	if int(rw["times"]) == 0:
-		sweep_msg = "%s 0" % UiKit.bb("energie", 16, UiKit.VERMILION.lightened(0.3))
-	else:
-		var sets: Array[String] = []
-		for r: Dictionary in rw["relics"]:
-			sets.append(UiKit.relic_title(r))
-		sweep_msg = "%s %d ×%d   %s +%s\n%s" % [UiKit.bb("floor", 16), n, int(rw["times"]), UiKit.bb("pieces", 16),
-			UiKit.thousands(int(rw["currencies"].get("pieces", 0))), "\n".join(sets)]
-	_build()

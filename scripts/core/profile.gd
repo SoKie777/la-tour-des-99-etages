@@ -1,78 +1,58 @@
 class_name Profile
 extends RefCounted
-## Profil du joueur : collection, monnaies, reliques et équipement, équipe, progression dans la Tour,
-## compteurs du gacha. Pur état + règles de méta-jeu : aucune dépendance à l'affichage.
-## Sérialisé en Dictionary (to_dict / from_dict) pour la sauvegarde locale, plus tard le serveur.
+## Profil du joueur (refonte Dragon Traveler) : exemplaires de héros et leurs étoiles, niveaux partagés
+## par héros, Résonance de classe, monnaies, reliques, formation sur la grille 3 × 3, campagne,
+## Patrouille (revenu hors ligne), Tour, Expédition, compteurs du gacha.
+## Pur état + règles de méta-jeu : aucune dépendance à l'affichage. Sérialisé par to_dict / from_dict.
 
-const SAVE_VERSION := 1
+const SAVE_VERSION := 2
 
-var owned: Dictionary = {}          # id -> nombre d'exemplaires obtenus
-var currencies: Dictionary = {}     # eclat_de_voeu, pieces, fragments_etage
-var relics: Array[Dictionary] = []  # reliques avec un "uid"
+var heroes: Array[Dictionary] = []   # exemplaires : {uid, id, star, consumed: [{id, star, at, kind}]}
+var next_uid := 1
+var levels: Dictionary = {}          # id -> niveau (partagé par tous les exemplaires, comme dans DT)
+var class_levels: Dictionary = {}    # classe -> niveau de Résonance (100 et plus)
+var currencies: Dictionary = {}
+var relics: Array[Dictionary] = []
 var next_relic_uid := 1
-var equipped: Dictionary = {}       # id du perso -> {"1".."6": uid}
-var team: Array[String] = []
-var tower_cleared := 0              # plus haut étage gagné
-var prologue_cleared := 0           # niveaux du prologue gagnés (la Tour s'ouvre après le dernier)
-var prologue_pulls := 0             # invocations gratuites du prologue déjà faites
-var seen_tips := {}                 # tutoriels déjà vus (id -> true)
-var tower_stars := {}               # étage -> étoiles obtenues (masque : 1 victoire, 2 aucun K.O., 4 victoire rapide)
-var gacha_state: Dictionary = {}
+var equipped: Dictionary = {}        # id du héros -> {"1".."6": uid de relique}
+var formation: Dictionary = {}       # case "0".."8" -> id du héros
+var presets: Array = []              # formations enregistrées
+var campaign_cleared := 0
+var patrol_time := 0
+var quick_day := 0
+var quick_used := 0
+var tower_cleared := 0
+var tower_stars: Dictionary = {}
+var loot: Dictionary = {}
 var energy := 0
-var energy_time := 0                # instant (secondes Unix) du dernier point d'énergie compté
-var formations: Array = []          # {"team": [ids], "relics": {id: {"1".."6": uid}}} ou {} si vide
-var loot: Dictionary = {}           # boss de butin : id -> {unlocked, wins, pity, pity_set}
-var resonances: Dictionary = {}     # id du perso -> rang de Résonance d'Étage (0..6)
+var energy_time := 0
+var gacha_state: Dictionary = {}
+var seen_tips: Dictionary = {}
+var unseen: Array[String] = []
 var grants_received: Array[String] = []
-var unseen: Array[String] = []      # personnages obtenus mais pas encore vus dans la collection  # cadeaux déjà versés (data/progression.json, « grants »)
+var reset_week := 0
+var resets_used := 0
+
+
+static func cfg() -> Dictionary:
+	return GameData.progression()
 
 
 static func new_game(now: int = 0) -> Profile:
 	var p := Profile.new()
-	var cfg := GameData.progression()
-	p.energy = int(cfg["energy"]["max"])
-	p.energy_time = now if now > 0 else int(Time.get_unix_time_from_system())
-	for id: String in cfg["starter_characters"]:
-		p.owned[id] = 1
-		if p.team.size() < 3:
-			p.team.append(id)
-	for k: String in cfg["starter_currencies"]:
-		p.currencies[k] = int(cfg["starter_currencies"][k])
+	var c := cfg()
+	var t := now if now > 0 else int(Time.get_unix_time_from_system())
+	p.energy = int(c["energy"]["max"])
+	p.energy_time = t
+	p.patrol_time = t
+	for h: Dictionary in c["starter_heroes"]:
+		p.add_hero(str(h["id"]), int(h["star"]))
+		p.levels[str(h["id"])] = int(c.get("starter_levels", 1))
+	for k: String in c["starter_currencies"]:
+		p.currencies[k] = int(c["starter_currencies"][k])
+	p.unseen.clear()
+	p.auto_formation()
 	return p
-
-
-# --- Prologue ------------------------------------------------------------------
-
-func in_prologue() -> bool:
-	return prologue_cleared < Prologue.level_count()
-
-
-## Une invocation gratuite du prologue attend (après les niveaux 2 et 3).
-func free_multi_due() -> bool:
-	return in_prologue() and prologue_pulls < Prologue.free_multis_unlocked(prologue_cleared)
-
-
-## Prochain niveau jouable du prologue, 0 si une invocation gratuite passe avant (ou prologue fini).
-func prologue_next() -> int:
-	return 0 if not in_prologue() or free_multi_due() else prologue_cleared + 1
-
-
-## Victoire au niveau n du prologue : récompense (une x10) à la première victoire. À la fin du prologue,
-## les cadeaux en attente sont versés. Renvoie {currencies, done, grants}.
-func win_prologue(n: int) -> Dictionary:
-	var out := {"currencies": {}, "done": false, "grants": []}
-	if n != prologue_cleared + 1:
-		return out
-	prologue_cleared = n
-	var rw: Dictionary = Prologue.cfg()["reward"]
-	for k: String in rw:
-		add(k, int(rw[k]))
-		out["currencies"][k] = int(rw[k])
-	if not in_prologue():
-		out["done"] = true
-		seen_tips["tower_boss"] = true  # les pages des boss ont été vues pendant le prologue
-		out["grants"] = apply_grants()
-	return out
 
 
 # --- Monnaies ---------------------------------------------------------------
@@ -85,6 +65,11 @@ func add(currency: String, n: int) -> void:
 	currencies[currency] = amount(currency) + n
 
 
+func add_all(d: Dictionary) -> void:
+	for k: String in d:
+		add(k, int(d[k]))
+
+
 func spend(currency: String, n: int) -> bool:
 	if amount(currency) < n:
 		return false
@@ -92,28 +77,568 @@ func spend(currency: String, n: int) -> bool:
 	return true
 
 
-## Verse les cadeaux pas encore reçus (ressources de test, compensations). Renvoie leurs notes.
+func can_pay(cost: Dictionary) -> bool:
+	for k: String in cost:
+		if amount(k) < int(cost[k]):
+			return false
+	return true
+
+
+func pay(cost: Dictionary) -> bool:
+	if not can_pay(cost):
+		return false
+	for k: String in cost:
+		spend(k, int(cost[k]))
+	return true
+
+
 func apply_grants() -> Array[String]:
 	var notes: Array[String] = []
-	if in_prologue():
-		return notes  # versés à la fin du prologue
-	for g: Dictionary in GameData.progression().get("grants", []):
+	for g: Dictionary in cfg().get("grants", []):
 		if g["id"] in grants_received:
 			continue
-		for c: String in g["currencies"]:
-			add(c, int(g["currencies"][c]))
+		add_all(g["currencies"])
 		grants_received.append(g["id"])
 		notes.append(str(g.get("note", "")))
 	return notes
 
 
-# --- Énergie -----------------------------------------------------------------
+# --- Exemplaires de héros ------------------------------------------------------
 
-## Recharge l'énergie écoulée depuis la dernière mise à jour (aussi pendant l'absence du joueur).
+func add_hero(id: String, star: int = -1) -> int:
+	var h := HeroDb.hero(id)
+	if star < 1:
+		star = HeroDb.start_star(int(h["rarity"]))
+	var inst := {"uid": next_uid, "id": id, "star": star, "consumed": []}
+	next_uid += 1
+	heroes.append(inst)
+	if not levels.has(id):
+		levels[id] = 1
+	return int(inst["uid"])
+
+
+func instance(uid: int) -> Dictionary:
+	for h in heroes:
+		if int(h["uid"]) == uid:
+			return h
+	return {}
+
+
+func instances(id: String) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for h in heroes:
+		if h["id"] == id:
+			out.append(h)
+	return out
+
+
+func owns(id: String) -> bool:
+	for h in heroes:
+		if h["id"] == id:
+			return true
+	return false
+
+
+func copies(id: String) -> int:
+	return instances(id).size()
+
+
+## Héros possédés (un par nom), du plus rare au plus commun.
+func owned_ids(include_substitutes := false) -> Array[String]:
+	var out: Array[String] = []
+	for id in HeroDb.playable_ids():
+		if owns(id) and (include_substitutes or not HeroDb.hero(id).get("substitute", false)):
+			out.append(id)
+	out.sort_custom(func(a: String, b: String) -> bool:
+		var ra := int(HeroDb.hero(a)["rarity"])
+		var rb := int(HeroDb.hero(b)["rarity"])
+		if ra != rb:
+			return ra > rb
+		return best_star(a) > best_star(b))
+	return out
+
+
+## L'exemplaire le mieux étoilé (celui qui combat, comme dans DT).
+func best_uid(id: String) -> int:
+	var best := -1
+	var star := -1
+	for h in instances(id):
+		if int(h["star"]) > star:
+			star = int(h["star"])
+			best = int(h["uid"])
+	return best
+
+
+func best_star(id: String) -> int:
+	var b := best_uid(id)
+	return int(instance(b)["star"]) if b >= 0 else 0
+
+
+## Résultat d'une invocation : un exemplaire de plus ; un N déjà possédé devient de la Gelée.
+func add_pull(result: Dictionary) -> Dictionary:
+	var id: String = result["id"]
+	var rarity := int(result.get("rarity", HeroDb.hero(id)["rarity"]))
+	if rarity <= 2 and owns(id):
+		var g := int(cfg()["n_duplicate_gelee"])
+		add("gelee", g)
+		return {"new": false, "gelee": g, "uid": -1}
+	var is_new := not owns(id)
+	var uid := add_hero(id)
+	if is_new and not id in unseen:
+		unseen.append(id)
+	return {"new": is_new, "gelee": 0, "uid": uid}
+
+
+## Fabrique un Pion d'encre (substitut d'une classe) avec de la Gelée.
+func craft_pion(cls: String) -> int:
+	var pc: Dictionary = cfg()["pion_craft"]
+	var id := HeroDb.substitute_for(cls)
+	if id == "" or not spend("gelee", int(pc["gelee"])):
+		return -1
+	return add_hero(id, int(pc["star"]))
+
+
+# --- Niveaux ---------------------------------------------------------------
+
+func level(id: String) -> int:
+	return int(levels.get(id, 1))
+
+
+func level_cap(id: String) -> int:
+	return HeroDb.max_level_for_star(best_star(id))
+
+
+## Coût pour passer au niveau suivant : {encre, pieces[, essence]}.
+func level_cost(id: String) -> Dictionary:
+	var lv := HeroDb.levels()
+	var l := level(id)
+	if l >= int(lv["max_level"]):
+		return {}
+	var cost := {"encre": int(lv["xp"][l - 1]), "pieces": int(lv["gold"][l - 1])}
+	if lv["essence"].has(str(l)):
+		cost["essence"] = int(lv["essence"][str(l)])
+	return cost
+
+
+func can_level(id: String) -> bool:
+	return owns(id) and level(id) < level_cap(id) and can_pay(level_cost(id))
+
+
+func level_up(id: String) -> bool:
+	if not can_level(id):
+		return false
+	pay(level_cost(id))
+	levels[id] = level(id) + 1
+	if level(id) >= 100 and not class_levels.has(HeroDb.hero(id)["class"]):
+		class_levels[HeroDb.hero(id)["class"]] = 100
+	return true
+
+
+## Monte jusqu'à n niveaux (s'arrête au plafond ou faute de ressources). Renvoie le nombre de niveaux gagnés.
+func level_up_many(id: String, n: int) -> int:
+	var done := 0
+	while done < n and level_up(id):
+		done += 1
+	return done
+
+
+# --- Résonance de classe (après le niveau 100) --------------------------------------
+
+func class_level(cls: String) -> int:
+	return int(class_levels.get(cls, 0))
+
+
+## Niveau de combat : un héros niveau 100 prend le niveau de sa classe.
+func effective_level(id: String) -> int:
+	var l := level(id)
+	if l >= 100:
+		return maxi(100, class_level(HeroDb.hero(id)["class"]))
+	return l
+
+
+func class_cap(cls: String) -> int:
+	var res: Dictionary = HeroDb.levels()["resonance"]
+	var best := 0
+	for id in owned_ids():
+		if HeroDb.hero(id)["class"] == cls and level(id) >= 100:
+			best = maxi(best, best_star(id))
+	var cap := 100
+	for k: String in res["cap_by_star"]:
+		if best >= int(k):
+			cap = maxi(cap, int(res["cap_by_star"][k]))
+	var lowest := 100000
+	for c: String in class_levels:
+		lowest = mini(lowest, int(class_levels[c]))
+	if class_levels.size() > 1:
+		cap = mini(cap, lowest + int(res["lead"]))
+	return mini(cap, int(res["max"]))
+
+
+func class_level_cost(cls: String) -> Dictionary:
+	var res: Dictionary = HeroDb.levels()["resonance"]
+	var over := class_level(cls) - 100
+	var cost := {"encre": int(res["xp_base"]) + int(res["xp_step"]) * over, "pieces": int(res["gold_base"]) + int(res["gold_step"]) * over}
+	if (over + 1) % int(res["essence_every"]) == 0:
+		cost["essence"] = int(res["essence"])
+	return cost
+
+
+func can_class_level(cls: String) -> bool:
+	return class_levels.has(cls) and class_level(cls) < class_cap(cls) and can_pay(class_level_cost(cls))
+
+
+func class_level_up(cls: String) -> bool:
+	if not can_class_level(cls):
+		return false
+	pay(class_level_cost(cls))
+	class_levels[cls] = class_level(cls) + 1
+	return true
+
+
+# --- Étoiles ---------------------------------------------------------------------
+
+## Exigences pour passer l'exemplaire à l'étoile suivante : {main, main_star, class, class_star} ou {}.
+func star_req(uid: int) -> Dictionary:
+	var inst := instance(uid)
+	if inst.is_empty():
+		return {}
+	var h := HeroDb.hero(inst["id"])
+	var star := int(inst["star"])
+	if h.get("substitute", false) and star >= int(HeroDb.stars()["substitute_max_star"]):
+		return {}
+	if star >= HeroDb.max_star(int(h["rarity"])) or star >= 19:
+		return {}
+	var tier := HeroDb.star_tier(star)
+	var ms := int(tier.get("main_star", -1))
+	return {"main": int(tier.get("main", 0)), "main_star": star if ms < 0 else ms,
+		"class": int(tier.get("class", 0)), "class_star": int(tier.get("class_star", 6))}
+
+
+func _is_main_copy(main: Dictionary, other: Dictionary, need_star: int) -> bool:
+	if int(other["uid"]) == int(main["uid"]) or int(other["star"]) < need_star:
+		return false
+	if other["id"] == main["id"]:
+		return true
+	var oh := HeroDb.hero(other["id"])
+	return oh.get("substitute", false) and oh["class"] == HeroDb.hero(main["id"])["class"] \
+		and need_star <= int(HeroDb.stars()["substitute_max_star"])
+
+
+func _is_class_fodder(main: Dictionary, other: Dictionary, need_star: int) -> bool:
+	return int(other["uid"]) != int(main["uid"]) and int(other["star"]) >= need_star \
+		and HeroDb.hero(other["id"])["class"] == HeroDb.hero(main["id"])["class"]
+
+
+## Exemplaires utilisables : {main: [uids], class: [uids]} (les moins précieux d'abord).
+func fodder_candidates(uid: int) -> Dictionary:
+	var req := star_req(uid)
+	var main := instance(uid)
+	var out := {"main": [], "class": []}
+	if req.is_empty():
+		return out
+	var pool := heroes.duplicate()
+	pool.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return _fodder_value(a) < _fodder_value(b))
+	for o: Dictionary in pool:
+		if int(req["main"]) > 0 and _is_main_copy(main, o, int(req["main_star"])):
+			out["main"].append(int(o["uid"]))
+		if int(req["class"]) > 0 and _is_class_fodder(main, o, int(req["class_star"])) and o["id"] != main["id"]:
+			out["class"].append(int(o["uid"]))
+	return out
+
+
+## Valeur d'un exemplaire comme fourrage : on sacrifie d'abord les Pions, les doublons, les moins rares.
+func _fodder_value(o: Dictionary) -> int:
+	var h := HeroDb.hero(o["id"])
+	var v := int(h["rarity"]) * 100 + int(o["star"])
+	if h.get("substitute", false):
+		v -= 1000
+	if best_uid(o["id"]) == int(o["uid"]):
+		v += 500
+		if formation.values().has(o["id"]):
+			v += 2000
+	return v
+
+
+## Choix automatique du fourrage (doublons d'abord, Poupées pour les héros de classe). {} si impossible.
+func auto_fodder(uid: int) -> Dictionary:
+	var req := star_req(uid)
+	if req.is_empty():
+		return {}
+	var cand := fodder_candidates(uid)
+	var main_list: Array = cand["main"].slice(0, int(req["main"]))
+	if main_list.size() < int(req["main"]):
+		return {}
+	var cls := str(HeroDb.hero(instance(uid)["id"])["class"])
+	var need_class := int(req["class"])
+	var dolls := mini(need_class, amount("poupee_" + cls))
+	var class_list: Array = []
+	for c: int in cand["class"]:
+		if class_list.size() >= need_class - dolls:
+			break
+		if not main_list.has(c) and _fodder_value(instance(c)) < 2000:
+			class_list.append(c)
+	if class_list.size() + dolls < need_class:
+		return {}
+	return {"main": main_list, "class": class_list, "dolls": dolls}
+
+
+func can_star_up(uid: int) -> bool:
+	return not auto_fodder(uid).is_empty()
+
+
+## Monte l'exemplaire d'une étoile en consommant les exemplaires indiqués (et des Poupées).
+func star_up(uid: int, main_uids: Array = [], class_uids: Array = [], dolls := -1) -> bool:
+	var req := star_req(uid)
+	if req.is_empty():
+		return false
+	if main_uids.is_empty() and class_uids.is_empty() and dolls < 0:
+		var auto := auto_fodder(uid)
+		if auto.is_empty():
+			return false
+		main_uids = auto["main"]
+		class_uids = auto["class"]
+		dolls = int(auto["dolls"])
+	dolls = maxi(0, dolls)
+	var main := instance(uid)
+	var cls := str(HeroDb.hero(main["id"])["class"])
+	if main_uids.size() != int(req["main"]) or class_uids.size() + dolls != int(req["class"]) or amount("poupee_" + cls) < dolls:
+		return false
+	var seen := {}
+	for m: int in main_uids:
+		if seen.has(m) or not _is_main_copy(main, instance(m), int(req["main_star"])):
+			return false
+		seen[m] = true
+	for c: int in class_uids:
+		if seen.has(c) or not _is_class_fodder(main, instance(c), int(req["class_star"])):
+			return false
+		seen[c] = true
+	var at := int(main["star"])
+	for m: int in main_uids:
+		var o := instance(m)
+		main["consumed"].append({"id": o["id"], "star": int(o["star"]), "at": at, "kind": "main"})
+		_remove_instance(m)
+	for c: int in class_uids:
+		var o := instance(c)
+		main["consumed"].append({"id": o["id"], "star": int(o["star"]), "at": at, "kind": "class"})
+		_remove_instance(c)
+	for i in dolls:
+		main["consumed"].append({"id": "", "star": int(req["class_star"]), "at": at, "kind": "doll"})
+	spend("poupee_" + cls, dolls)
+	main["star"] = at + 1
+	return true
+
+
+func _remove_instance(uid: int) -> void:
+	var inst := instance(uid)
+	if inst.is_empty():
+		return
+	heroes.erase(inst)
+	var id: String = inst["id"]
+	if not owns(id):
+		for s: String in formation.keys():
+			if formation[s] == id:
+				formation.erase(s)
+		equipped.erase(id)
+
+
+## Montée rapide (DT) : monte tout ce qui peut l'être jusqu'à 6★, les plus rares d'abord.
+func quick_star_up() -> int:
+	var n := 0
+	var progress := true
+	while progress:
+		progress = false
+		var order := heroes.duplicate()
+		order.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return _fodder_value(a) > _fodder_value(b))
+		for h: Dictionary in order:
+			if instance(int(h["uid"])).is_empty() or int(h["star"]) >= 6 or HeroDb.hero(h["id"]).get("substitute", false):
+				continue
+			if int(h["uid"]) != best_uid(h["id"]):
+				continue
+			if star_up(int(h["uid"])):
+				n += 1
+				progress = true
+				break
+	return n
+
+
+func resets_left(now: int) -> int:
+	var week := now / 604800
+	if week != reset_week:
+		reset_week = week
+		resets_used = 0
+	return maxi(0, int(HeroDb.stars()["reset"]["free_per_week"]) - resets_used)
+
+
+## Réinitialisation d'étoiles (DT) : retour à 6★, copies principales rendues à leur étoile, héros de
+## classe rendus en Poupées. 5 gratuites par semaine.
+func star_reset(uid: int, now: int) -> bool:
+	var inst := instance(uid)
+	var rs: Dictionary = HeroDb.stars()["reset"]
+	if inst.is_empty() or int(inst["star"]) < int(rs["min_star"]) or resets_left(now) <= 0:
+		return false
+	var cls := str(HeroDb.hero(inst["id"])["class"])
+	var keep: Array = []
+	for c: Dictionary in inst["consumed"]:
+		if int(c["at"]) < 6:
+			keep.append(c)
+			continue
+		if c["kind"] == "main" and str(c["id"]) != "":
+			add_hero(str(c["id"]), int(c["star"]))
+		else:
+			add("poupee_" + cls, 1)
+	inst["consumed"] = keep
+	inst["star"] = 6
+	resets_used += 1
+	return true
+
+
+# --- Formation (grille 3 × 3) ------------------------------------------------------
+
+func deploy_max() -> int:
+	return Campaign.deploy_slots(campaign_cleared)
+
+
+func formation_ids() -> Array[String]:
+	var out: Array[String] = []
+	for s in 9:
+		if formation.has(str(s)):
+			out.append(str(formation[str(s)]))
+	return out
+
+
+func slot_of(id: String) -> int:
+	for s: String in formation:
+		if formation[s] == id:
+			return int(s)
+	return -1
+
+
+## Place un héros (ou "" pour vider la case). Refuse les placements interdits par la classe,
+## les doublons et le dépassement du nombre de cases débloquées.
+func set_slot(slot: int, id: String) -> bool:
+	var key := str(slot)
+	if id == "":
+		formation.erase(key)
+		return true
+	if not owns(id) or not HeroDb.can_place(id, slot):
+		return false
+	var prev := slot_of(id)
+	if prev >= 0:
+		formation.erase(str(prev))
+	elif not formation.has(key) and formation.size() >= deploy_max():
+		return false
+	formation[key] = id
+	return true
+
+
+## Formation automatique : les héros les plus puissants, placés selon leur classe.
+func auto_formation() -> void:
+	var ids := owned_ids()
+	ids.sort_custom(func(a: String, b: String) -> bool: return hero_power(a) > hero_power(b))
+	ids = ids.slice(0, deploy_max())
+	formation = {}
+	var placed := HeroDb.auto_place(ids)
+	for s: int in placed:
+		formation[str(s)] = placed[s]
+
+
+func hero_stats(id: String) -> Dictionary:
+	return HeroDb.stats(id, effective_level(id), best_star(id), equipped_relics(id))
+
+
+func hero_power(id: String) -> int:
+	return HeroDb.power_of(hero_stats(id))
+
+
+func team_power() -> int:
+	var p := 0
+	for id in formation_ids():
+		p += hero_power(id)
+	return p
+
+
+## Équipe du joueur prête pour RtBattle.
+func battle_specs() -> Array:
+	var out := []
+	for s in 9:
+		var key := str(s)
+		if formation.has(key):
+			var id: String = formation[key]
+			out.append({"id": id, "level": effective_level(id), "star": best_star(id), "gear": equipped_relics(id), "slot": s})
+	return out
+
+
+# --- Campagne et Patrouille -------------------------------------------------------
+
+func next_stage() -> int:
+	return mini(campaign_cleared + 1, Campaign.stage_count())
+
+
+func win_stage(n: int, now: int) -> Dictionary:
+	var out := {"first": false, "currencies": {}}
+	if n != campaign_cleared + 1:
+		return out
+	claim_patrol(now)  # le revenu accumulé est compté au taux d'avant la victoire
+	campaign_cleared = n
+	var rw := Campaign.first_rewards(n)
+	add_all(rw)
+	out["first"] = true
+	out["currencies"] = rw
+	return out
+
+
+func patrol_minutes(now: int) -> float:
+	var cap := float(Campaign.cfg()["patrol"]["cap_hours"]) * 60.0
+	return clampf(float(now - patrol_time) / 60.0, 0.0, cap)
+
+
+func patrol_pending(now: int) -> Dictionary:
+	var rate := Campaign.patrol_rate(campaign_cleared)
+	var m := patrol_minutes(now)
+	var out := {}
+	for k: String in rate:
+		var v := int(floor(float(rate[k]) * m))
+		if v > 0:
+			out[k] = v
+	return out
+
+
+func claim_patrol(now: int) -> Dictionary:
+	var got := patrol_pending(now)
+	add_all(got)
+	patrol_time = now
+	return got
+
+
+func quick_price(now: int) -> int:
+	var day := now / 86400
+	if day != quick_day:
+		quick_day = day
+		quick_used = 0
+	var prices: Array = Campaign.cfg()["patrol"]["quick_prices"]
+	return int(prices[mini(quick_used, prices.size() - 1)]) if quick_used < prices.size() else -1
+
+
+func quick_patrol(now: int) -> Dictionary:
+	var price := quick_price(now)
+	if price < 0 or not spend("eclat_de_voeu", price):
+		return {}
+	quick_used += 1
+	var rate := Campaign.patrol_rate(campaign_cleared)
+	var m := float(Campaign.cfg()["patrol"]["quick_hours"]) * 60.0
+	var out := {}
+	for k: String in rate:
+		out[k] = int(floor(float(rate[k]) * m))
+	add_all(out)
+	return out
+
+
+# --- Énergie (Expédition) ------------------------------------------------------------
+
 func refresh_energy(now: int) -> void:
-	var cfg: Dictionary = GameData.progression()["energy"]
-	var maxe := int(cfg["max"])
-	var period := int(cfg["regen_seconds"])
+	var c: Dictionary = cfg()["energy"]
+	var maxe := int(c["max"])
+	var period := int(c["regen_seconds"])
 	if energy >= maxe:
 		energy_time = now
 		return
@@ -123,73 +648,25 @@ func refresh_energy(now: int) -> void:
 		energy_time = now if energy >= maxe else energy_time + gained * period
 
 
-## Secondes avant le prochain point d'énergie (0 si plein).
 func energy_next_in(now: int) -> int:
-	var cfg: Dictionary = GameData.progression()["energy"]
-	if energy >= int(cfg["max"]):
+	var c: Dictionary = cfg()["energy"]
+	if energy >= int(c["max"]):
 		return 0
-	return int(cfg["regen_seconds"]) - (now - energy_time)
-
-
-func floor_cost(number: int) -> int:
-	var cfg: Dictionary = GameData.progression()["energy"]
-	return 0 if number <= int(cfg["free_floors"]) else int(cfg["floor_cost"])
+	return int(c["regen_seconds"]) - (now - energy_time)
 
 
 func spend_energy(n: int, now: int) -> bool:
 	refresh_energy(now)
 	if energy < n:
 		return false
-	var cfg: Dictionary = GameData.progression()["energy"]
-	if energy >= int(cfg["max"]):
-		energy_time = now  # la recharge repart du moment où l'on passe sous le maximum
+	if energy >= int(cfg()["energy"]["max"]):
+		energy_time = now
 	energy -= n
 	return true
 
 
 func refund_energy(n: int) -> void:
-	energy += n  # peut dépasser le maximum, comme une récompense
-
-
-# --- Collection et invocation -----------------------------------------------
-
-func owns(id: String) -> bool:
-	return int(owned.get(id, 0)) > 0
-
-
-func owned_ids() -> Array[String]:
-	var out: Array[String] = []
-	for id: String in GameData.characters():
-		if owns(id):
-			out.append(id)
-	return out
-
-
-## Ajoute le résultat d'une invocation. Les 3★ (recrues) et les doublons deviennent des Fragments d'étage.
-## Renvoie {"new": bool, "fragments": int}.
-func add_pull(result: Dictionary) -> Dictionary:
-	var id: String = result["id"]
-	var frag := int(GameData.progression()["duplicate_fragments"][str(result["rarity"])])
-	if not GameData.characters().has(id) or owns(id):
-		owned[id] = int(owned.get(id, 0)) + 1
-		add("fragments_etage", frag)
-		return {"new": false, "fragments": frag}
-	owned[id] = 1
-	if not id in unseen:
-		unseen.append(id)
-	return {"new": true, "fragments": 0}
-
-
-# --- Équipe ------------------------------------------------------------------
-
-func set_team(ids: Array) -> bool:
-	if ids.is_empty() or ids.size() > 3:
-		return false
-	for id: String in ids:
-		if not owns(id):
-			return false
-	team.assign(ids)
-	return true
+	energy += n
 
 
 # --- Reliques ----------------------------------------------------------------
@@ -208,7 +685,6 @@ func relic(uid: int) -> Dictionary:
 	return {}
 
 
-## Personnage qui porte la relique, ou "".
 func owner_of(uid: int) -> String:
 	for id: String in equipped:
 		for slot: String in equipped[id]:
@@ -217,7 +693,6 @@ func owner_of(uid: int) -> String:
 	return ""
 
 
-## Équipe la relique sur le personnage (remplace la pièce du même emplacement, la retire à son ancien porteur).
 func equip(char_id: String, uid: int) -> bool:
 	var r := relic(uid)
 	if r.is_empty() or not owns(char_id):
@@ -248,11 +723,10 @@ func equipped_relics(char_id: String) -> Array[Dictionary]:
 
 
 func relic_level_cost(r: Dictionary) -> int:
-	var c: Dictionary = GameData.progression()["relic_level_cost"]
+	var c: Dictionary = cfg()["relic_level_cost"]
 	return int(c["base"]) + int(c["per_level"]) * int(r["level"])
 
 
-## Monte la relique d'un niveau en payant des Pièces. Renvoie false si impossible.
 func level_relic(uid: int, rng: RandomNumberGenerator) -> bool:
 	var r := relic(uid)
 	if r.is_empty() or int(r["level"]) >= int(GameData.relics()["max_level"]):
@@ -263,17 +737,14 @@ func level_relic(uid: int, rng: RandomNumberGenerator) -> bool:
 	return true
 
 
-## Pièces investies dans une relique (montées de niveau), rendues au recyclage.
 func relic_invested(r: Dictionary) -> int:
-	var c: Dictionary = GameData.progression()["relic_level_cost"]
+	var c: Dictionary = cfg()["relic_level_cost"]
 	var total := 0
 	for lvl in int(r["level"]):
 		total += int(c["base"]) + int(c["per_level"]) * lvl
 	return total
 
 
-## Recyclage intégral (fiche, partie 5) : la relique disparaît, toutes les Pièces investies sont rendues
-## (plus une petite base). Renvoie les Pièces gagnées, -1 si la relique n'existe pas.
 func recycle_relic(uid: int) -> int:
 	var r := relic(uid)
 	if r.is_empty():
@@ -281,124 +752,36 @@ func recycle_relic(uid: int) -> int:
 	var owner := owner_of(uid)
 	if owner != "":
 		unequip(owner, int(r["slot"]))
-	for f: Dictionary in formations:
-		for id: String in f.get("relics", {}):
-			for slot: String in f["relics"][id].keys():
-				if int(f["relics"][id][slot]) == uid:
-					f["relics"][id].erase(slot)
-	var gain := int(GameData.progression()["relic_recycle_base"]) + relic_invested(r)
+	var gain := int(cfg()["relic_recycle_base"]) + relic_invested(r)
 	relics.erase(r)
 	add("pieces", gain)
 	return gain
 
 
-# --- Formations (fiche, partie 4) --------------------------------------------
+# --- Formations enregistrées --------------------------------------------------------
 
-## Enregistre l'équipe actuelle et ses reliques dans l'emplacement i.
-func save_formation(i: int) -> void:
-	while formations.size() < int(GameData.progression()["formation_slots"]):
-		formations.append({})
-	var rel := {}
-	for id in team:
-		rel[id] = equipped.get(id, {}).duplicate()
-	formations[i] = {"team": team.duplicate(), "relics": rel}
+func save_preset(i: int) -> void:
+	while presets.size() < int(cfg()["formation_slots"]):
+		presets.append({})
+	presets[i] = {"formation": formation.duplicate()}
 
 
-## Applique une formation : équipe et reliques (une relique portée ailleurs est déplacée).
-func apply_formation(i: int) -> bool:
-	if i >= formations.size() or formations[i].is_empty():
+func apply_preset(i: int) -> bool:
+	if i >= presets.size() or presets[i].is_empty():
 		return false
-	var f: Dictionary = formations[i]
-	if not set_team(f["team"]):
-		return false
-	for id: String in f["relics"]:
-		for slot: String in f["relics"][id]:
-			var uid := int(f["relics"][id][slot])
-			if not relic(uid).is_empty():
-				equip(id, uid)
+	var f: Dictionary = presets[i]["formation"]
+	formation = {}
+	for s: String in f:
+		set_slot(int(s), str(f[s]))
 	return true
 
 
-## Personnage du joueur prêt pour le combat (Résonance et reliques appliquées).
-func make_unit(char_id: String) -> BattleUnit:
-	return Relics.make_unit(char_id, equipped_relics(char_id), resonance(char_id))
-
-
-# --- Résonance d'Étage (Ascension R1..R6 par Fragments d'étage) --------------
-
-func resonance(char_id: String) -> int:
-	return int(resonances.get(char_id, 0))
-
-
-func resonance_max() -> int:
-	return int(GameData.progression().get("resonance", {}).get("max_rank", 6))
-
-
-func resonance_cost(char_id: String) -> Dictionary:
-	var cfg: Dictionary = GameData.progression().get("resonance", {})
-	var rarity := str(int(GameData.character(char_id)["rarity"])) if GameData.characters().has(char_id) else "3"
-	var r := resonance(char_id)
-	return {
-		"fragments_etage": int(cfg.get("fragment_cost", {}).get(rarity, 10)),
-		"pieces": int(cfg.get("pieces_cost", {}).get(rarity, 1000)) * (r + 1),
-	}
-
-
-func can_ascend(char_id: String) -> bool:
-	if not owns(char_id) or resonance(char_id) >= resonance_max():
-		return false
-	var cost := resonance_cost(char_id)
-	return amount("fragments_etage") >= int(cost["fragments_etage"]) and amount("pieces") >= int(cost["pieces"])
-
-
-## Monte la Résonance d'Étage d'un personnage (+4 % PV/ATK/DEF de base par rang, jusqu'à R6).
-func ascend(char_id: String) -> bool:
-	if not can_ascend(char_id):
-		return false
-	var cost := resonance_cost(char_id)
-	spend("fragments_etage", int(cost["fragments_etage"]))
-	spend("pieces", int(cost["pieces"]))
-	resonances[char_id] = resonance(char_id) + 1
-	return true
-
-
-# --- Tour --------------------------------------------------------------------
-
-func can_enter_floor(number: int) -> bool:
-	return number >= 1 and number <= mini(tower_cleared + 1, Tower.floor_count())
-
-
-## Applique une victoire : monnaies et reliques gagnées. Renvoie les récompenses.
-## Étoiles d'un étage (Tour tactique) : masque des conditions remplies, cumulé d'une victoire à l'autre.
-func floor_stars(number: int) -> int:
-	return int(tower_stars.get(str(number), 0))
-
-
-static func star_count(mask: int) -> int:
-	return (mask & 1) + ((mask >> 1) & 1) + ((mask >> 2) & 1)
-
-
-## Enregistre les étoiles d'une victoire ; chaque nouvelle étoile rapporte star_reward. Renvoie
-## {"mask": masque cumulé, "new": nouvelles étoiles, "currencies": récompenses versées}.
-func record_stars(number: int, mask: int) -> Dictionary:
-	var before := floor_stars(number)
-	var after := before | mask
-	tower_stars[str(number)] = after
-	var gained := star_count(after) - star_count(before)
-	var cur := {}
-	var rw: Dictionary = GameData.rules()["tower_tactics"]["star_reward"]
-	for k: String in rw:
-		cur[k] = int(rw[k]) * gained
-		if cur[k] > 0:
-			add(k, cur[k])
-	return {"mask": after, "new": gained, "currencies": cur}
-
+# --- Tour et Expédition ---------------------------------------------------------------
 
 func win_floor(number: int, rng: RandomNumberGenerator) -> Dictionary:
 	var first := number > tower_cleared
 	var rw := Tower.rewards(number, first, rng)
-	for k: String in rw["currencies"]:
-		add(k, int(rw["currencies"][k]))
+	add_all(rw["currencies"])
 	for r: Dictionary in rw["relics"]:
 		add_relic(r)
 	if first:
@@ -407,16 +790,12 @@ func win_floor(number: int, rng: RandomNumberGenerator) -> Dictionary:
 	return rw
 
 
-# --- Boss de butin ------------------------------------------------------------
-
-## État d'un boss de butin : {"unlocked": palier max ouvert, "wins", "pity", "pity_set"}.
 func loot_state(id: String) -> Dictionary:
 	if not loot.has(id):
 		loot[id] = {"unlocked": 0, "wins": 0, "pity": 0, "pity_set": LootBoss.boss(id)["sets"][0]}
 	return loot[id]
 
 
-## Victoire contre un boss de butin : reliques, Pièces, palier suivant débloqué, pitié.
 func win_loot(id: String, diff: int, rng: RandomNumberGenerator) -> Dictionary:
 	var st := loot_state(id)
 	st["wins"] = int(st["wins"]) + 1
@@ -426,8 +805,7 @@ func win_loot(id: String, diff: int, rng: RandomNumberGenerator) -> Dictionary:
 		forced = st["pity_set"]
 		st["pity"] = 0
 	var rw := LootBoss.rewards(id, diff, rng, forced)
-	for c: String in rw["currencies"]:
-		add(c, int(rw["currencies"][c]))
+	add_all(rw["currencies"])
 	for r: Dictionary in rw["relics"]:
 		add_relic(r)
 	if diff == int(st["unlocked"]) and diff + 1 < LootBoss.difficulty_count():
@@ -437,46 +815,37 @@ func win_loot(id: String, diff: int, rng: RandomNumberGenerator) -> Dictionary:
 	return rw
 
 
-## Balayage (fiche, partie 5) : rejoue un étage déjà gagné sans combat, autant de fois que l'énergie le
-## permet (au plus « times »). Renvoie {currencies, relics, times} ; times = 0 si impossible.
-func sweep_floor(number: int, times: int, rng: RandomNumberGenerator, now: int) -> Dictionary:
-	var out := {"currencies": {}, "relics": [], "times": 0}
-	if number > tower_cleared or times <= 0:
-		return out
-	refresh_energy(now)
-	var cost := floor_cost(number)
-	if cost > 0:
-		times = mini(times, energy / cost)
-	for k in times:
-		spend_energy(cost, now)
-		var rw := Tower.rewards(number, false, rng)
-		for c: String in rw["currencies"]:
-			add(c, int(rw["currencies"][c]))
-			out["currencies"][c] = int(out["currencies"].get(c, 0)) + int(rw["currencies"][c])
-		for r: Dictionary in rw["relics"]:
-			add_relic(r)
-			out["relics"].append(r)
-	out["times"] = times
-	return out
-
-
 # --- Sauvegarde ----------------------------------------------------------------
 
 func to_dict() -> Dictionary:
 	return {
-		"version": SAVE_VERSION, "owned": owned, "currencies": currencies, "relics": relics,
-		"next_relic_uid": next_relic_uid, "equipped": equipped, "team": team,
-		"tower_cleared": tower_cleared, "prologue_cleared": prologue_cleared, "prologue_pulls": prologue_pulls, "tower_stars": tower_stars, "seen_tips": seen_tips, "gacha_state": gacha_state,
-		"energy": energy, "energy_time": energy_time, "formations": formations, "loot": loot,
-		"resonances": resonances, "grants_received": grants_received, "unseen": unseen,
+		"version": SAVE_VERSION, "heroes": heroes, "next_uid": next_uid, "levels": levels,
+		"class_levels": class_levels, "currencies": currencies, "relics": relics, "next_relic_uid": next_relic_uid,
+		"equipped": equipped, "formation": formation, "presets": presets, "campaign_cleared": campaign_cleared,
+		"patrol_time": patrol_time, "quick_day": quick_day, "quick_used": quick_used, "tower_cleared": tower_cleared,
+		"tower_stars": tower_stars, "loot": loot, "energy": energy, "energy_time": energy_time,
+		"gacha_state": gacha_state, "seen_tips": seen_tips, "unseen": unseen, "grants_received": grants_received,
+		"reset_week": reset_week, "resets_used": resets_used,
 	}
 
 
-## Relit une sauvegarde (le JSON rend les entiers en flottants : on les reconvertit).
+## Relit une sauvegarde v2 ; une sauvegarde plus ancienne (avant la refonte) donne null : nouvelle partie.
 static func from_dict(d: Dictionary) -> Profile:
+	if int(d.get("version", 1)) < SAVE_VERSION:
+		return null
 	var p := Profile.new()
-	for id: String in d.get("owned", {}):
-		p.owned[id] = int(d["owned"][id])
+	for h: Dictionary in d.get("heroes", []):
+		if not HeroDb.exists(str(h["id"])):
+			continue
+		var cons: Array = []
+		for c: Dictionary in h.get("consumed", []):
+			cons.append({"id": str(c["id"]), "star": int(c["star"]), "at": int(c["at"]), "kind": str(c["kind"])})
+		p.heroes.append({"uid": int(h["uid"]), "id": str(h["id"]), "star": int(h["star"]), "consumed": cons})
+	p.next_uid = int(d.get("next_uid", p.heroes.size() + 1))
+	for k: String in d.get("levels", {}):
+		p.levels[k] = int(d["levels"][k])
+	for k: String in d.get("class_levels", {}):
+		p.class_levels[k] = int(d["class_levels"][k])
 	for k: String in d.get("currencies", {}):
 		p.currencies[k] = int(d["currencies"][k])
 	for r: Dictionary in d.get("relics", []):
@@ -489,35 +858,28 @@ static func from_dict(d: Dictionary) -> Profile:
 		p.equipped[id] = {}
 		for slot: String in d["equipped"][id]:
 			p.equipped[id][slot] = int(d["equipped"][id][slot])
-	p.team.assign(d.get("team", []))
+	for s: String in d.get("formation", {}):
+		if HeroDb.exists(str(d["formation"][s])):
+			p.formation[s] = str(d["formation"][s])
+	p.presets = d.get("presets", [])
+	p.campaign_cleared = int(d.get("campaign_cleared", 0))
+	p.patrol_time = int(d.get("patrol_time", Time.get_unix_time_from_system()))
+	p.quick_day = int(d.get("quick_day", 0))
+	p.quick_used = int(d.get("quick_used", 0))
 	p.tower_cleared = int(d.get("tower_cleared", 0))
-	# sauvegarde d'avant le prologue : considéré comme fait
-	p.prologue_cleared = int(d.get("prologue_cleared", Prologue.level_count()))
-	p.prologue_pulls = int(d.get("prologue_pulls", Prologue.cfg()["free_multis_after"].size()))
-	for k: String in d.get("seen_tips", {}):
-		p.seen_tips[k] = true
 	for k: String in d.get("tower_stars", {}):
 		p.tower_stars[k] = int(d["tower_stars"][k])
-	p.gacha_state = d.get("gacha_state", {})
 	for id: String in d.get("loot", {}):
 		var ls: Dictionary = d["loot"][id]
 		p.loot[id] = {"unlocked": int(ls.get("unlocked", 0)), "wins": int(ls.get("wins", 0)), "pity": int(ls.get("pity", 0)),
 			"pity_set": str(ls.get("pity_set", ""))}
-	p.grants_received.assign(d.get("grants_received", []))
-	p.unseen.assign(d.get("unseen", []))
-	for id: String in d.get("resonances", {}):
-		p.resonances[id] = int(d["resonances"][id])
-	p.energy = int(d.get("energy", GameData.progression()["energy"]["max"]))
+	p.energy = int(d.get("energy", cfg()["energy"]["max"]))
 	p.energy_time = int(d.get("energy_time", Time.get_unix_time_from_system()))
-	for f: Variant in d.get("formations", []):
-		var fd: Dictionary = f
-		if fd.has("team"):
-			var rel := {}
-			for id: String in fd["relics"]:
-				rel[id] = {}
-				for slot: String in fd["relics"][id]:
-					rel[id][slot] = int(fd["relics"][id][slot])
-			p.formations.append({"team": Array(fd["team"]), "relics": rel})
-		else:
-			p.formations.append({})
+	p.gacha_state = d.get("gacha_state", {})
+	for k: String in d.get("seen_tips", {}):
+		p.seen_tips[k] = true
+	p.unseen.assign(d.get("unseen", []))
+	p.grants_received.assign(d.get("grants_received", []))
+	p.reset_week = int(d.get("reset_week", 0))
+	p.resets_used = int(d.get("resets_used", 0))
 	return p

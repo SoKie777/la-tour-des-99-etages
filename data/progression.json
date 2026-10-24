@@ -1,65 +1,18 @@
 {
-  "_comment": "Nouveau joueur, conversion des doublons, coût et recyclage des reliques, énergie (fiche, partie 5 : généreuse, se recharge pendant l'absence ; étages 1 à free_floors gratuits ; une défaite rend l'énergie). Monnaies : eclat_de_voeu, pieces, fragments_etage. Départ : Eiríkr seul, puis le prologue (data/prologue.json) ; les cadeaux ('grants') sont versés à la fin du prologue.",
-  "starter_characters": [
-    "eirikr"
-  ],
-  "starter_currencies": {
-    "eclat_de_voeu": 0,
-    "pieces": 2000,
-    "fragments_etage": 0
-  },
-  "pull_cost": 1,
-  "duplicate_fragments": {
-    "3": 1,
-    "4": 10,
-    "5": 40
-  },
-  "relic_level_cost": {
-    "base": 100,
-    "per_level": 100
-  },
-  "relic_drop_sets": [
-    "attaque",
-    "vitesse",
-    "taux_critique",
-    "vampirisme",
-    "defense",
-    "immunite",
-    "gel",
-    "vie",
-    "precision"
-  ],
-  "energy": {
-    "max": 120,
-    "regen_seconds": 300,
-    "floor_cost": 6,
-    "free_floors": 4,
-    "refund_on_defeat": true
-  },
+  "_comment": "Méta-jeu de la refonte (modèle Dragon Traveler). Monnaies : eclat_de_voeu (premium, = diamants), pieces (or), encre (XP de héros), essence (Essence d'étoile : paliers de niveau), gelee (doublons N démontés, sert à fabriquer des Pions d'encre), sceau / sceau_destin (tickets d'invocation standard / limitée), poupee_<classe> (Poupées : remplacent un héros de classe 6★ dans les montées d'étoiles). Sauvegarde v2 : une sauvegarde d'avant la refonte est remplacée par une nouvelle partie. Énergie : seulement pour les boss de l'Expédition.",
+  "save_version": 2,
+  "starter_heroes": [{"id": "eirikr", "star": 3}, {"id": "don_diego", "star": 3}, {"id": "issa", "star": 3}],
+  "starter_levels": 5,
+  "starter_currencies": {"eclat_de_voeu": 300, "pieces": 3000, "encre": 2000, "essence": 0, "sceau": 10, "sceau_destin": 0, "gelee": 0},
+  "n_duplicate_gelee": 10,
+  "pion_craft": {"gelee": 60, "star": 5},
+  "energy": {"max": 120, "regen_seconds": 300, "loot_cost": 12, "refund_on_defeat": true},
+  "relic_level_cost": {"base": 100, "per_level": 100},
   "relic_recycle_base": 50,
   "formation_slots": 3,
-  "resonance": {
-    "max_rank": 6,
-    "stat_pct_per_rank": 4,
-    "fragment_cost": {
-      "3": 5,
-      "4": 15,
-      "5": 40
-    },
-    "pieces_cost": {
-      "3": 1000,
-      "4": 2500,
-      "5": 5000
-    }
-  },
+  "relic_drop_sets": ["attaque", "vitesse", "taux_critique", "vampirisme", "defense", "immunite", "gel", "vie", "precision"],
   "grants": [
-    {
-      "id": "test_2026_10",
-      "note": "Version de test : de quoi invoquer et monter des reliques.",
-      "currencies": {
-        "eclat_de_voeu": 3000,
-        "pieces": 300000
-      }
-    }
+    {"id": "refonte_2026_10", "note": "Version de test de la refonte : de quoi invoquer, monter et tester les étoiles.",
+     "currencies": {"eclat_de_voeu": 15000, "pieces": 400000, "encre": 300000, "essence": 3000, "sceau": 60, "sceau_destin": 30, "gelee": 120}}
   ]
 }

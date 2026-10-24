@@ -27,7 +27,7 @@ func _initialize() -> void:
 	sun.light_energy = 1.15
 	world.add_child(sun)
 	var others: Array[String] = []
-	for c in GameData.characters().values():
+	for c in HeroDb.all().values():
 		if int(c["rarity"]) == 5 and c["id"] != star:
 			others.append(c["id"])
 	# arc derrière la vedette : les plus proches du centre un peu plus en avant

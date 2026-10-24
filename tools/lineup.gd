@@ -29,7 +29,7 @@ func _initialize() -> void:
 	if args.size() > 3:
 		ids.assign(args[3].split(","))
 	else:
-		for c in GameData.characters().values():
+		for c in HeroDb.all().values():
 			ids.append(c["id"])
 	cam_dist = 2.2 + ids.size() * 0.45
 	for i in ids.size():

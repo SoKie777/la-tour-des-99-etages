@@ -1,8 +1,7 @@
 class_name LootBoss
 extends RefCounted
-## Boss de butin (data/loot_bosses.json) : un par constellation, chacun donne les reliques de sa
-## constellation. Paliers Facile à Enfer ; aux paliers élevés, les équipes qui ne dominent pas le boss
-## ratent plus et subissent plus de dégâts. Pitié : une relique du set choisi toutes les N victoires.
+## Expédition (data/loot_bosses.json) : boss qui donnent des reliques de leurs sets, 4 paliers.
+## Fiche de combat des boss : data/heroes.json (section bosses).
 
 
 static func cfg() -> Dictionary:
@@ -25,26 +24,9 @@ static func difficulty_count() -> int:
 	return cfg()["difficulties"].size()
 
 
-## Constellation qui domine le boss (celle qu'il faut emmener).
-static func countered_by(id: String) -> String:
-	var beats: Dictionary = GameData.rules()["triangle"]["beats"]
-	for c: String in beats:
-		if beats[c] == boss(id)["constellation"]:
-			return c
-	return ""
-
-
-static func enemy_units(id: String, diff: int) -> Array[BattleUnit]:
-	var data := boss(id)
+static func enemy_specs(id: String, diff: int) -> Array:
 	var d := difficulty(diff)
-	var stats: Dictionary = data["stats"].duplicate()
-	for k in ["hp", "atk", "def"]:
-		stats[k] = roundf(float(stats[k]) * float(d["power"]))
-	var u := BattleUnit.new(data, 1, 0, stats)
-	if d.has("punish"):
-		u.traits["punish"] = d["punish"]
-	var out: Array[BattleUnit] = [u]
-	return out
+	return [{"id": id, "level": int(d["level"]), "star": int(d["star"]), "slot": 4, "power": float(d["power"])}]
 
 
 ## {currencies: {pieces}, relics: [...]} ; forced_set : set imposé pour une relique (pitié).

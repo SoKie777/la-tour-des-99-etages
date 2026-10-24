@@ -12,7 +12,7 @@ func _initialize() -> void:
 	if args.size() > 1:
 		ids.assign(args[1].split(","))
 	else:
-		ids.assign(GameData.characters().keys())
+		ids.assign(HeroDb.all().keys())
 		ids.append_array(["promethee", "chronophage", "wyrm", "serpent"])
 	var vp := SubViewport.new()
 	vp.size = Vector2i(512, 512)

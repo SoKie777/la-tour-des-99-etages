@@ -1,0 +1,16 @@
+{
+  "_comment": "Combat en temps réel (boucle de Dragon Traveler, docs/ANALYSE_DRAGON_TRAVELER.md §2). PV multipliés par hp_mult en combat (durée des combats : 30 à 60 s comme dans DT). Simulation à pas fixe 'tick' (s). Terrain : ligne de front à x = 0, ton équipe à gauche (x < 0), l'adversaire à droite ; 'columns' = distance au centre des colonnes devant/milieu/fond, 'rows' = profondeur des 3 rangées. Énergie d'Overdrive commune à l'équipe : max, départ, régénération par seconde ; 'team_gcd' = délai entre deux Overdrive d'une même équipe ; 'ov_open' = un Overdrive n'est jamais prêt avant cette seconde (DT : 6,5 s). Dégâts = puissance × K / (K + DEF × (1 − pénétration)), K = def_k_base + def_k_per_level × niveau de l'attaquant. Coup critique : +crit_dmg % ; blocage : −block_pct %.",
+  "tick": 0.05,
+  "hp_mult": 2.6,
+  "time_limit": 90.0,
+  "energy": {"max": 10, "start": 2, "regen": 0.55, "team_gcd": 1.2, "ov_open": 6.5},
+  "grid": {"columns": [1.7, 3.4, 5.1], "rows": [-1.9, 0.0, 1.9], "boss_x": 3.2},
+  "field": {"x_max": 9.0, "z_max": 3.4, "separation": 0.85},
+  "damage": {"def_k_base": 600, "def_k_per_level": 30, "variance": 0.05, "crit_base": 8, "crit_dmg": 60, "block_pct": 30, "min_chance": 10},
+  "cast_lock": {"skill": 0.55, "overdrive": 0.8, "attack": 0.25},
+  "rage_on_hit": 4,
+  "kill_energy": 0.5,
+  "level_skill_bonus": 0.006,
+  "star_talent": {"6": "second_faction"},
+  "berserk": {"at": [60.0, 75.0], "atk_pct": 30}
+}

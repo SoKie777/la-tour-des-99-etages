@@ -1,34 +1,31 @@
 extends SceneTree
-## Tests des règles + simulation d'équilibrage, sans écran.
-## godot --headless --path . --script res://tests/run_tests.gd [-- --sims=500]
+## Tests des règles de la refonte temps réel + simulations d'équilibrage, sans écran.
+## godot --headless --path . --script res://tests/run_tests.gd [-- --sims=100] [-- --quick]
 
 var failures := 0
 var checks := 0
 
 
 func _init() -> void:
-	var sims := 300
+	var sims := 100
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--sims="):
 			sims = int(a.split("=")[1])
-	test_formulas()
-	test_cooldowns()
-	test_effects()
-	test_passives()
-	test_kits_v2()
-	test_generic_effects()
-	test_boss()
-	test_loot()
+	test_data()
+	test_placement()
+	test_stats()
+	test_battle_basics()
+	test_energy_and_overdrive()
+	test_factions()
+	test_statuses()
+	test_profile_levels()
+	test_profile_stars()
+	test_profile_misc()
 	test_gacha()
-	test_relics()
-	test_profile()
-	test_battle_stats()
-	test_tactics()
-	test_prologue()
-	if not "--quick" in OS.get_cmdline_user_args():  # --quick : règles seulement, sans les longues simulations
-		simulate_balance(sims)
-		simulate_rarity(maxi(40, sims / 2))
-		simulate_tower(maxi(20, sims / 4))
+	test_campaign_and_tower()
+	if not "--quick" in OS.get_cmdline_user_args():
+		simulate_factions(maxi(10, sims / 5))
+		simulate_campaign(maxi(6, sims / 10))
 	print("\n%d vérifications, %d échec(s)." % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -44,538 +41,315 @@ func approx(a: float, b: float, label: String, eps := 0.01) -> void:
 	check(absf(a - b) <= eps, "%s (obtenu %.4f, attendu %.4f)" % [label, a, b])
 
 
-func unit_of(e: BattleEngine, id: String) -> BattleUnit:
+func spec(id: String, slot: int, level := 60, star := 6) -> Dictionary:
+	return {"id": id, "level": level, "star": star, "slot": slot}
+
+
+func unit_of(e: RtBattle, id: String, team := -1) -> RtUnit:
 	for u in e.units:
-		if u.id == id:
+		if u.id == id and (team < 0 or u.team == team):
 			return u
 	return null
 
 
-func test_formulas() -> void:
-	print("Formules du document MVP")
-	# Mohamed (Sirius) contre Eiríkr (Orion) : Sirius domine Orion.
-	var e := BattleEngine.new(["mohamed"], ["eirikr"], 1)
-	var moh := unit_of(e, "mohamed")
-	var eir := unit_of(e, "eirikr")
-	approx(e.crit_chance(moh, eir), 40.0, "Sirius vs Orion : TC 20 % + 20 points")
-	approx(e.crit_chance(eir, moh), 15.0, "Orion vs Sirius : pas de bonus de TC")
-	# 1 000 dégâts d'Orion contre Sirius tombent à 850 (DEF neutralisée pour l'exemple).
-	moh.base["def"] = 0
-	approx(e.compute_damage(eir, moh, 1000.0, {}, false, 1.0), 850.0, "Orion -> Sirius : -15 %")
-	# Avec 500 de DEF, on subit 67 % des dégâts.
-	moh.base["def"] = 500
-	var e2 := BattleEngine.new(["moussa"], ["mohamed"], 1)
-	unit_of(e2, "mohamed").base["def"] = 500
-	approx(e2.compute_damage(unit_of(e2, "moussa"), unit_of(e2, "mohamed"), 1000.0, {}, false, 1.0), 666.67, "DEF 500 -> 67 %", 0.5)
-	# Critique : DC 70 % -> x1,7
-	unit_of(e2, "mohamed").base["def"] = 0
-	var m2 := unit_of(e2, "mohamed")
-	approx(e2.compute_damage(m2, unit_of(e2, "moussa"), 1000.0, {}, true, 1.0) / e2.compute_damage(m2, unit_of(e2, "moussa"), 1000.0, {}, false, 1.0), 1.7, "Critique DC 70 %")
-	# TC plafonné à 100 %
-	m2.base["cr"] = 95
-	var e3 := BattleEngine.new(["issa"], ["eirikr"], 1)
-	unit_of(e3, "issa").base["cr"] = 95
-	approx(e3.crit_chance(unit_of(e3, "issa"), unit_of(e3, "eirikr")), 100.0, "TC plafonné à 100 %")
-	# Chance d'effet bornée 15..100
-	var e4 := BattleEngine.new(["ymir"], ["nidhogg"], 1)
-	var y := unit_of(e4, "ymir")
-	var n := unit_of(e4, "nidhogg")
-	approx(e4.effect_chance(y, n, 50.0), 65.0, "Chance = 50 + 45 PRÉ - 30 RÉS")
-	n.base["res"] = 200
-	approx(e4.effect_chance(y, n, 50.0), 15.0, "Chance plancher 15 %")
+# --- Données -----------------------------------------------------------------
+
+func test_data() -> void:
+	print("Données du roster")
+	var per_faction := {}
+	var per_class := {}
+	var main := HeroDb.playable_ids(false)
+	check(main.size() == 24, "24 héros jouables (hors Pions)")
+	for id in HeroDb.all():
+		var h := HeroDb.hero(id)
+		check(HeroDb.classes().has(h["class"]), "%s : classe connue" % id)
+		for f in h.get("factions", []):
+			check(HeroDb.factions().has(f), "%s : faction %s connue" % [id, f])
+		for key in ["skill", "overdrive", "passive", "talent"]:
+			if h.has(key):
+				for e: Dictionary in h[key].get("effects", []):
+					if e.get("t", "") == "status":
+						check(not HeroDb.status_info(e["id"]).is_empty(), "%s : statut %s connu" % [id, e["id"]])
+		check(h.has("skill") and h.has("overdrive"), "%s : compétence et Overdrive" % id)
+	for id in main:
+		var h := HeroDb.hero(id)
+		per_faction[h["factions"][0]] = int(per_faction.get(h["factions"][0], 0)) + 1
+		per_class[h["class"]] = int(per_class.get(h["class"], 0)) + 1
+		check(h["factions"].size() == 2 and h["factions"][0] != h["factions"][1], "%s : 2 factions distinctes" % id)
+	for f in HeroDb.faction_order():
+		check(int(per_faction.get(f, 0)) == 4, "faction %s : 4 héros (obtenu %d)" % [f, int(per_faction.get(f, 0))])
+	for c in HeroDb.class_order():
+		check(int(per_class.get(c, 0)) == 4, "classe %s : 4 héros (obtenu %d)" % [c, int(per_class.get(c, 0))])
+		check(HeroDb.substitute_for(c) != "", "classe %s : un Pion d'encre" % c)
+	check(HeroDb.stars()["tiers"].size() == 19, "19 paliers d'étoiles")
+	check(HeroDb.levels()["rate"].size() == 100 and HeroDb.levels()["xp"].size() == 99, "courbes de niveau 1 à 100")
 
 
-func test_cooldowns() -> void:
-	print("Recharges")
-	var e := BattleEngine.new(["general_metal"], ["moussa"], 7)
-	var g := unit_of(e, "general_metal")
-	check(e.usable_skills(g) == [0, 1, 2], "Tour 1 : toutes les compétences sont prêtes (recharges à zéro)")
-	g.cooldowns[2] = g.skill_cd(2)
-	var wait := 0
-	while not 2 in e.usable_skills(g):
-		e._end_turn(g)
-		wait += 1
-	check(wait == 5, "Recharge 5 : utilisable 5 tours plus tard (obtenu %d)" % wait)
+func test_placement() -> void:
+	print("Grille 3 × 3 et classes")
+	check(HeroDb.can_place("adrian", 1) and not HeroDb.can_place("adrian", 4), "Gardien : devant seulement")
+	check(HeroDb.can_place("eirikr", 4) and not HeroDb.can_place("eirikr", 7), "Guerrier : devant ou milieu")
+	check(not HeroDb.can_place("issa", 0) and HeroDb.can_place("issa", 7), "Prêtre : milieu ou fond")
+	check(HeroDb.can_place("mello", 0) and HeroDb.can_place("mello", 8), "Assassin : partout")
+	var placed := HeroDb.auto_place(["issa", "adrian", "noor_el", "mello", "eirikr", "montana"])
+	check(placed.size() == 6, "placement automatique de 6")
+	for s: int in placed:
+		check(HeroDb.can_place(placed[s], s), "placement auto valide : %s en %d" % [placed[s], s])
 
 
-func test_effects() -> void:
-	print("Effets")
-	var e := BattleEngine.new(["espion_lumiere"], ["moussa"], 3)
-	var spy := unit_of(e, "espion_lumiere")
-	var mou := unit_of(e, "moussa")
-	e._try_apply(spy, mou, {"id": "poison", "chance": 100, "turns": 2})
-	check(mou.get_effect("poison").get("turns", 0) == 3, "Venin tenace : Poison 2 -> 3 tours")
-	var hp_before := mou.hp
-	e.current = mou
-	e._end_turn(mou)
-	approx(hp_before - mou.hp, roundf(850 * 0.40), "Poison : 40 % de l'ATK du lanceur après l'action")
-	# Sommeil : réveil quand touché
-	var e2 := BattleEngine.new(["ymir"], ["mohamed"], 3)
-	var moh := unit_of(e2, "mohamed")
-	e2._try_apply(unit_of(e2, "ymir"), moh, {"id": "sleep", "chance": 100, "turns": 2, "no_roll": true})
-	check(not e2.can_act(moh), "Endormi : ne joue pas")
-	e2._deal_damage(unit_of(e2, "ymir"), moh, 10.0, {})
-	check(e2.can_act(moh), "Sommeil levé quand la cible est touchée")
-	# Nidhogg immunisé aux contrôles
-	var e3 := BattleEngine.new(["ymir"], ["nidhogg"], 3)
-	e3._try_apply(unit_of(e3, "ymir"), unit_of(e3, "nidhogg"), {"id": "sleep", "chance": 100, "turns": 2, "no_roll": true})
-	check(not unit_of(e3, "nidhogg").has_effect("sleep"), "Un roi ne pleure pas : pas de Sommeil")
-	# Provocation : ciblage forcé
-	var e4 := BattleEngine.new(["mohamed"], ["don_diego", "issa"], 3)
-	var dd := unit_of(e4, "don_diego")
-	e4._try_apply(dd, dd, {"id": "taunt", "turns": 2})
-	var vt := e4.valid_targets(unit_of(e4, "mohamed"), 0)
-	check(vt.size() == 1 and vt[0] == dd, "Provocation : seule cible possible")
-	# Bouclier
-	e4._try_apply(dd, unit_of(e4, "issa"), {"id": "shield", "value": 15, "of": "caster_max_hp", "turns": 2})
-	approx(unit_of(e4, "issa").shield_value(), 975.0, "Citadelle : bouclier 15 % des PV max de Don Diego")
+func test_stats() -> void:
+	print("Stats (classe × niveau × aptitude × étoiles)")
+	var s := HeroDb.stats("adrian", 100, 5)
+	approx(s["hp"], 13186 * 1.08, "Adrian 5★ niv. 100 : PV de classe × aptitude", 2.0)
+	var s1 := HeroDb.stats("adrian", 1, 5)
+	approx(s1["hp"], 13186 / 5.023 * 1.08, "niveau 1 = niveau 100 / 5,023", 1.0)
+	var s19 := HeroDb.stats("adrian", 100, 19)
+	approx(s19["atk"] / s["atk"], 2.12, "arc-en-ciel : ×2,12")
+	var r := HeroDb.stats("eirikr", 100, 5)
+	approx(r["atk"] / (1256.0 * 1.04), 0.86, "aptitude R 0,86")
+	check(HeroDb.active_factions("mello", 5).size() == 1 and HeroDb.active_factions("mello", 6).size() == 2, "2e faction à 6★")
+	check(HeroDb.max_level_for_star(3) == 60 and HeroDb.max_level_for_star(5) == 100, "plafond de niveau par étoiles")
 
 
-func test_passives() -> void:
-	print("Passifs")
-	var e := BattleEngine.new(["mohamed"], ["eirikr"], 5)
-	var eir := unit_of(e, "eirikr")
-	for i in 7:
-		eir.hp = eir.max_hp()
-		e._deal_damage(unit_of(e, "mohamed"), eir, 10.0, {})
-	check(eir.stacks["spark"] == 5, "Étincelle : 5 cumuls max")
-	approx(eir.stat("cr"), 40.0, "Étincelle : TC 15 + 25")
-	var e2 := BattleEngine.new(["mohamed"], ["issa", "moussa"], 5)
-	var issa := unit_of(e2, "issa")
-	e2._apply_damage(issa, 99999.0, unit_of(e2, "mohamed"), {})
-	check(issa.hp == 1.0, "Zéro perte : l'allié reste à 1 PV")
-	e2._apply_damage(issa, 99999.0, unit_of(e2, "mohamed"), {})
-	check(not issa.is_alive(), "Zéro perte : une seule fois par combat")
+# --- Combat ------------------------------------------------------------------
+
+func test_battle_basics() -> void:
+	print("Combat temps réel : bases")
+	var a := [spec("adrian", 1), spec("mello", 4), spec("noor_el", 7)]
+	var b := [spec("selene", 1), spec("ghost", 4), spec("nyssa", 7)]
+	var e1 := RtBattle.new(a, b, 42)
+	var w1 := e1.run()
+	var e2 := RtBattle.new(a, b, 42)
+	var w2 := e2.run()
+	check(w1 >= 0, "le combat se termine")
+	check(w1 == w2 and absf(e1.time - e2.time) < 0.001, "même graine, même combat")
+	check(e1.time > 5.0 and e1.time <= 91.0, "durée plausible (%.1f s)" % e1.time)
+	var ad := unit_of(e1, "adrian", 0)
+	check(ad.home.x < 0 and absf(ad.home.x + 1.7) < 0.01, "ton équipe à gauche, Gardien devant")
+	check(unit_of(e1, "selene", 1).home.x > 0, "l'adversaire à droite")
+	# Les mêlées avancent : après 2 s, Adrian a quitté sa case
+	var e3 := RtBattle.new(a, b, 7)
+	for i in 40:
+		e3.step()
+	check(unit_of(e3, "adrian", 0).pos.x > -1.7, "les combattants avancent vers l'ennemi")
+	# Limite de temps : défaite par défaut
+	var e4 := RtBattle.new([spec("issa", 7, 1, 1)], [spec("don_diego", 1, 1, 1)], 3, {"time_limit": 2.0})
+	check(e4.run() == 1 and e4.time <= 2.1, "temps écoulé : l'attaquant perd")
 
 
-## Moteur v2 : mécaniques des kits (fiche, partie 1) et statuts signature (partie 6).
-func test_kits_v2() -> void:
-	print("Kits v2 et statuts signature")
-	var evs: Array[Dictionary] = []
-	var count := func(type: String) -> int: return evs.filter(func(ev: Dictionary) -> bool: return ev["type"] == type).size()
-	# Coups multiples
-	var e := BattleEngine.new(["ghost"], ["moussa"], 4)
-	e.battle_event.connect(func(ev: Dictionary) -> void: evs.append(ev))
-	e.execute(unit_of(e, "ghost"), unit_of(e, "ghost").skill(0), unit_of(e, "moussa"), 0)
-	check(count.call("damage") == 2, "Pics de glace : 2 coups")
-	# Montana : chaîne de poursuites (100 / 50 / 30 / 10 %) sur chaque S1 et sur toute cible gelée
-	e = BattleEngine.new(["montana"], ["moussa"], 4)
-	var mon := unit_of(e, "montana")
-	var mou := unit_of(e, "moussa")
-	e.battle_event.connect(func(ev: Dictionary) -> void: evs.append(ev))
-	mou.base["hp"] = 1e9
-	mou.hp = 1e9
-	var dist := [0, 0, 0, 0, 0]
-	for k in 400:
-		evs.clear()
-		e.execute(mon, mon.skill(0), mou, 0)
-		dist[count.call("pursuit")] += 1
-	check(dist[0] == 0 and dist[1] > 150 and dist[3] + dist[4] > 0, "Contact accéléré : 1 poursuite certaine, jusqu'à 4 par chance")
-	approx((dist[1] + 2 * dist[2] + 3 * dist[3] + 4 * dist[4]) / 400.0, 1.665, "Poursuites : 1,67 en moyenne", 0.15)
-	evs.clear()
-	e.execute(mon, mon.skill(1), mou, 1)
-	var free_pursuits: int = count.call("pursuit")
-	mou.effects.clear()
-	e._try_apply(mon, mou, {"id": "freeze", "turns": 1, "no_roll": true})
-	evs.clear()
-	e.execute(mon, mon.skill(1), mou, 1)
-	check(free_pursuits == 0 and count.call("pursuit") >= 1, "Room sur une cible gelée : chaîne de poursuites")
-	mou.effects.clear()
-	mou.base["res"] = -200  # Gel certain
-	evs.clear()
-	e.execute(mon, mon.skill(2), mou, 2)
-	check(count.call("pursuit") >= 1 and count.call("bonus_action") == 0, "Selah : Gel réussi -> chaîne de poursuites")
-	check(mon.hp < mon.max_hp(), "Selah : prix de 10 % des PV")
-	# Room : -25 % VIT, Montana vole 10 % de jauge au début du tour de la cible
-	mou.effects.clear()
-	e._try_apply(mon, mou, {"id": "room", "no_roll": true})
-	approx(mou.stat("spd"), 94.0 * 0.75, "Room : -25 % VIT")
-	mou.ap = 0.5
-	mon.ap = 0.0
-	e._start_turn(mou)
-	check(is_equal_approx(mou.ap, 0.4) and is_equal_approx(mon.ap, 0.1), "Room : 10 % de jauge volée à Montana")
-	e._apply_action(mon, mou, {"id": "cleanse"}, {})
-	check(mou.has_effect("room"), "Room : non purgeable")
-	# Vieillissement : -8 % ATK et DEF par cumul ; à 5, Étourdissement et cumuls retirés
-	e = BattleEngine.new(["mikhaila"], ["mello"], 4)
-	var mik := unit_of(e, "mikhaila")
-	var mel := unit_of(e, "mello")
-	e._try_apply(mik, mel, {"id": "vieillissement", "stacks": 2, "no_roll": true})
-	approx(mel.stat("atk"), 1410.0 * 0.84, "Vieillissement x2 : -16 % ATK")
-	e._try_apply(mik, mel, {"id": "vieillissement", "stacks": 3, "no_roll": true})
-	check(mel.has_effect("stun") and not mel.has_effect("vieillissement"), "Vieillissement x5 : Étourdi, cumuls retirés")
-	# Mikhaïla : résurrection une fois, purge, Vieillissement sur les ennemis
-	e = BattleEngine.new(["mikhaila", "ghost"], ["moussa"], 4)
-	mik = unit_of(e, "mikhaila")
-	var gho := unit_of(e, "ghost")
-	e._apply_damage(gho, 99999.0, unit_of(e, "moussa"), {})
-	e._try_apply(unit_of(e, "moussa"), mik, {"id": "def_break", "turns": 2, "no_roll": true})
-	e.execute(mik, mik.skill(2), null, 2)
-	check(gho.is_alive() and is_equal_approx(gho.ap, 1.0), "Le temps ressenti : allié ressuscité à 100 % PA")
-	check(not mik.has_effect("def_break") and mik.has_effect("immunity"), "Le temps ressenti : purge et Immunité")
-	check(unit_of(e, "moussa").status_stacks("vieillissement") == 2, "Le temps ressenti : 2 Vieillissements sur l'ennemi")
-	e._apply_damage(gho, 99999.0, unit_of(e, "moussa"), {})
-	e.execute(mik, mik.skill(2), null, 2)
-	check(not gho.is_alive(), "Résurrection : une seule fois par combat")
-	# Givre : à 3 cumuls, Gel garanti
-	e = BattleEngine.new(["ghost"], ["moussa"], 4)
-	gho = unit_of(e, "ghost")
-	mou = unit_of(e, "moussa")
+func test_energy_and_overdrive() -> void:
+	print("Énergie d'équipe et Overdrive")
+	var en: Dictionary = HeroDb.rules()["energy"]
+	var e := RtBattle.new([spec("mello", 4, 100, 19)], [spec("pion_gardien", 1, 1, 1)], 5, {"time_limit": 60.0})
+	e.auto[0] = false
+	e.auto[1] = false
+	approx(e.energy[0], float(en["start"]), "énergie de départ")
+	var m_unit := unit_of(e, "pion_gardien", 1)
+	m_unit.hp = 1e12
+	m_unit.max_hp = 1e12
+	for i in 20:
+		e.step()
+	approx(e.energy[0], float(en["start"]) + float(en["regen"]) * 1.0, "régénération par seconde", 0.05)
+	var m := unit_of(e, "mello", 0)
+	check(not e.can_overdrive(m), "Overdrive fermé avant %.1f s" % float(en["ov_open"]))
+	e.energy[0] = 10.0
+	while e.time < float(en["ov_open"]) + 0.2 and not e.is_over():
+		e.step()
+	e.energy[0] = 10.0
+	m.lock = 0.0
+	check(e.can_overdrive(m), "Overdrive prêt après l'ouverture")
+	check(e.request_overdrive(m), "demande acceptée")
+	e.step()
+	approx(e.energy[0], 10.0 - m.ov_cost() + float(en["regen"]) * 0.05, "coût prélevé sur la jauge", 0.06)
+	check(m.ov_cd > 15.0, "recharge propre de l'Overdrive")
+	check(e.gcd[0] > 0.0, "délai d'équipe entre deux Overdrive")
+	# Coût alourdi
+	var s := m_unit
+	var before := s.ov_cost()
+	e.apply_status(m, s, "ov_tax", 5.0, 1.0)
+	check(s.ov_cost() == before + 1, "Overdrive alourdi de 1")
+
+
+func test_factions() -> void:
+	print("Mécaniques de faction")
+	# Bonus de faction : 4 héros de la même faction -> +10 % ATK et PV
+	var four := [spec("montana", 4, 60, 5), spec("noor_el", 7, 60, 5), spec("tarkhan", 5, 60, 5), spec("ymir", 8, 60, 5)]
+	var e := RtBattle.new(four, [spec("selene", 1)], 1)
+	check(e.faction_bonus_pct[0] == 10 and e.faction_bonus_id[0] == "roi", "4 Roi : bonus de faction 10 %")
+	var mon := unit_of(e, "montana", 0)
+	approx(mon.max_hp / HeroDb.stats("montana", 60, 5)["hp"] / float(HeroDb.rules()["hp_mult"]), 1.10, "PV +10 %")
+	# Réaction élémentaire : Brûlure puis Choc par un héros du Roi
+	var t := unit_of(e, "selene", 1)
+	e.record_events = true
+	e.apply_status(mon, t, "burn", 5.0, 10.0)
+	var hp0 := t.hp
+	e.apply_status(mon, t, "shock", 5.0, null)
+	var reacted := e.events.any(func(ev: Dictionary) -> bool: return ev["type"] == "reaction")
+	check(reacted and t.hp < hp0 and not t.has_status("burn"), "Réaction élémentaire (Surcharge) : dégâts et élément consommé")
+	# Grâce : Moral + Ferveur
+	var e2 := RtBattle.new([spec("mikhaila", 7)], [spec("selene", 1)], 2)
+	var mk := unit_of(e2, "mikhaila", 0)
+	e2.apply_status(mk, mk, "moral", 6.0, null)
+	e2.apply_status(mk, mk, "ferveur", 6.0, null)
+	check(mk.has_status("grace") and not mk.has_status("moral"), "Moral + Ferveur : Grâce")
+	# Cavalier : la Rage pleine donne le Galop
+	var e3 := RtBattle.new([spec("mello", 4)], [spec("selene", 1)], 3)
+	var me := unit_of(e3, "mello", 0)
+	e3._gain_rage(me, 200.0)
+	check(me.has_status("galop") and me.aspd() > 1.3, "Rage pleine : Galop (+35 % de vitesse d'attaque)")
+	# Pion : un allié tombe -> Promesse
+	var e4 := RtBattle.new([spec("don_selah", 1), spec("issa", 7, 1, 3)], [spec("selene", 1)], 4)
+	var ds := unit_of(e4, "don_selah", 0)
+	var p0 := ds.promesse
+	e4._take(null, unit_of(e4, "issa", 0), 1e9)
+	check(ds.promesse == p0 + 1, "allié tombé : +1 Promesse")
+	# Fou : un Overdrive allié donne de l'Éveil
+	var e5 := RtBattle.new([spec("ezra", 7), spec("mello", 4)], [spec("selene", 1)], 5)
+	var ez := unit_of(e5, "ezra", 0)
+	var ev0 := ez.eveil
+	e5._launch_ov(unit_of(e5, "mello", 0))
+	check(ez.eveil == ev0 + 1, "Overdrive allié : +1 Éveil")
+	# Tour : Châtiment contre un Overdrive coûteux (coût >= 4)
+	var e6 := RtBattle.new([spec("yass", 7)], [spec("montana", 7)], 6)
+	e6.record_events = true
+	var ya := unit_of(e6, "yass", 0)
+	var mo := unit_of(e6, "montana", 1)
+	check(mo.ov_cost() >= 3, "Montana : Overdrive coûteux")
+	e6._deal(ya, mo, 1.0, "atk", "phys", {"chatiment": true})
+	var chat := e6.events.any(func(ev: Dictionary) -> bool: return ev["type"] == "damage" and ev["chatiment"])
+	check(chat and mo.has_status("ov_tax"), "Châtiment : bonus et Overdrive alourdi")
+
+
+func test_statuses() -> void:
+	print("Statuts")
+	var e := RtBattle.new([spec("don_diego", 1)], [spec("mohamed", 1), spec("ghost", 4)], 8)
+	var dd := unit_of(e, "don_diego", 0)
+	var mh := unit_of(e, "mohamed", 1)
+	e.apply_status(dd, mh, "taunt", 3.0, null)
+	e._choose_target(mh)
+	mh.target = null
+	e._choose_target(mh)
+	check(mh.target == dd, "Provocation : force la cible")
+	e.apply_status(dd, mh, "stun", 1.0, null)
+	check(not mh.can_act(), "Étourdi : ne peut pas agir")
+	for i in 25:
+		e.step()
+	check(mh.dead or mh.can_act(), "l'Étourdissement prend fin")
+	var gh := unit_of(e, "ghost", 1)
+	var hp0 := gh.hp
+	e.apply_status(dd, gh, "poison", 3.0, 20.0)
+	for i in 21:
+		e._tick_statuses(gh, 0.05)
+	check(gh.hp < hp0, "Poison : dégâts chaque seconde")
+	gh.shields.append({"amount": 1e7, "t": 5.0})
+	var hp1 := gh.hp
+	e._take(dd, gh, 500.0)
+	check(gh.hp == hp1, "le bouclier absorbe d'abord")
+
+
+# --- Profil ---------------------------------------------------------------
+
+func test_profile_levels() -> void:
+	print("Niveaux et Résonance de classe")
+	var p := Profile.new_game(1000)
+	check(p.formation_ids().size() == 3, "nouvelle partie : 3 héros en formation")
+	check(p.level("eirikr") == int(GameData.progression()["starter_levels"]), "niveau de départ")
+	p.add("encre", 10_000_000)
+	p.add("pieces", 10_000_000)
+	p.add("essence", 100000)
+	var n := p.level_up_many("eirikr", 200)
+	check(p.level("eirikr") == 60, "Eiríkr 3★ plafonné au niveau 60 (obtenu %d, +%d)" % [p.level("eirikr"), n])
+	var uid := p.add_hero("adrian", 5)
+	p.level_up_many("adrian", 200)
+	check(p.level("adrian") == 100, "Adrian 5★ jusqu'au niveau 100")
+	check(p.class_level("gardien") == 100, "niveau 100 : Résonance de la classe")
+	check(p.class_level_up("gardien") and p.effective_level("adrian") == 101, "niveau de classe partagé")
+	check(p.class_cap("gardien") == 120, "plafond de classe selon les étoiles (5★ : 120)")
+	check(uid > 0, "exemplaire créé")
+
+
+func test_profile_stars() -> void:
+	print("Étoiles et doublons")
+	var p := Profile.new_game(1000)
+	var main := p.best_uid("eirikr")
+	check(p.star_req(main)["main"] == 2, "3★ -> 4★ : 2 copies")
+	check(not p.can_star_up(main), "sans copie : impossible")
+	p.add_hero("eirikr", 3)
+	p.add_hero("eirikr", 3)
+	check(p.star_up(main), "2 copies 3★ : 4★")
+	check(int(p.instance(main)["star"]) == 4 and p.copies("eirikr") == 1, "copies consommées")
+	# Pion d'encre comme copie principale
+	p.add("gelee", 1000)
+	var pion := p.craft_pion("guerrier")
+	check(pion > 0 and int(p.instance(pion)["star"]) == 5, "Pion d'encre fabriqué (5★)")
+	p.instance(pion)["star"] = 4
+	check(p.star_up(main), "un Pion de la même classe remplace une copie (4★ -> 5★)")
+	# 6★ -> violet : 1 héros de la même classe à 6★, ou une Poupée
+	var a := p.add_hero("adrian", 6)
+	check(p.star_req(a)["class"] == 1, "6★ -> violet 1 : 1 héros de classe")
+	p.add("poupee_gardien", 1)
+	check(p.star_up(a) and int(p.instance(a)["star"]) == 7, "Poupée de classe utilisée")
+	p.add_hero("adrian", 6)
+	p.add_hero("moussa", 6)
+	check(p.star_up(a) and int(p.instance(a)["star"]) == 8, "violet 1 -> 2 : copie 6★ + Gardien 6★")
+	# Réinitialisation : retour à 6★, copies rendues
+	var before := p.copies("adrian")
+	check(p.star_reset(a, 1000) and int(p.instance(a)["star"]) == 6, "réinitialisation : 6★")
+	check(p.copies("adrian") == before + 1 and p.amount("poupee_gardien") == 2, "copie rendue, héros de classe rendus en Poupées")
+	# Doublon N : Gelée
+	var n0 := p.amount("gelee")
+	p.add_pull({"id": "pion_mage", "rarity": 2})
+	p.add_pull({"id": "pion_mage", "rarity": 2})
+	check(p.amount("gelee") == n0 + int(GameData.progression()["n_duplicate_gelee"]), "doublon N : Gelée")
+	# Montée rapide
+	var q := Profile.new_game(1000)
 	for i in 3:
-		e._try_apply(gho, mou, {"id": "givre", "no_roll": true})
-	check(mou.has_effect("freeze") and not mou.has_effect("givre"), "Givre x3 : Gel garanti")
-	# Clone de Nyssa : un par tour (3 max), absorbe un coup en renvoyant 30 % ATK, copie ses attaques à 40 %
-	e = BattleEngine.new(["nyssa", "noor_el"], ["moussa"], 4)
-	var ny := unit_of(e, "nyssa")
-	mou = unit_of(e, "moussa")
-	for i in 4:
-		e._start_turn(ny)
-	check(ny.status_stacks("clone") == 3, "Clones temporels : 3 au maximum")
-	var ny_hp := ny.hp
-	var mou_hp := mou.hp
-	e._deal_damage(mou, ny, 2000.0, {})
-	check(ny.hp == ny_hp and ny.status_stacks("clone") == 2 and mou.hp < mou_hp, "Clone : coup absorbé, 30 % ATK renvoyés")
-	evs.clear()
-	e.battle_event.connect(func(ev: Dictionary) -> void: evs.append(ev))
-	e.execute(ny, ny.skill(0), mou, 0)
-	check(count.call("clone_copy") == 2, "Clones : chaque clone copie l'attaque")
-	e.last_skill = {"unit": unit_of(e, "noor_el"), "index": 1}
-	evs.clear()
-	e.execute(ny, ny.skill(2), null, 2)
-	check(count.call("copy") == 1 and ny.status_stacks("clone") == 0, "Copie de technique : S2 de Noor-El rejouée, clones consommés")
-	# Selene : Inertie à chaque coup reçu, retirée à son tour ; à 6, bouclier sur sa compétence suivante
-	e = BattleEngine.new(["selene"], ["mohamed", "issa"], 4)
-	var sel := unit_of(e, "selene")
-	var moh := unit_of(e, "mohamed")
-	for i in 6:
-		e._deal_damage(moh, sel, 100.0, {})
-	check(sel.flags.has("shield_next_skill"), "Inertie x6 : bouclier promis")
-	e._start_turn(sel)
-	check(not sel.has_effect("inertie"), "Inertie : retirée au début de son tour")
-	e.execute(sel, sel.skill(0), moh, 0)
-	check(sel.shield_value() > 0.0, "Inertie : bouclier de 20 % PV sur la compétence suivante")
-	# Selene : posture, accumulation puis renvoi à tous les ennemis
-	e = BattleEngine.new(["selene"], ["mohamed", "issa"], 4)
-	sel = unit_of(e, "selene")
-	e.current = sel
-	e.execute(sel, sel.skill(2), null, 2)
-	check(not e.can_act(sel), "Contre-attaque minimale : Selene immobile")
-	e._deal_damage(unit_of(e, "mohamed"), sel, 3000.0, {})
-	var issa_hp := unit_of(e, "issa").hp
-	for i in 3:
-		e.current = sel
-		e._end_turn(sel)
-	check(not sel.has_effect("bastion") and unit_of(e, "issa").hp < issa_hp, "Fin de la posture : dégâts renvoyés aux ennemis")
-	# Adrian : Garde de fer (-12 % par cumul) ; à 4, contre-attaque à 120 % ; renvoi de 10 %
-	e = BattleEngine.new(["adrian"], ["tarkhan"], 4)
-	var adr := unit_of(e, "adrian")
-	var tar := unit_of(e, "tarkhan")
-	e._try_apply(adr, adr, {"id": "garde_de_fer", "stacks": 2})
-	approx(e._taken_mult(adr), 0.76, "Garde de fer x2 : -12 % de dégâts par cumul (-24 %)")
-	evs.clear()
-	e.battle_event.connect(func(ev: Dictionary) -> void: evs.append(ev))
-	e._try_apply(adr, adr, {"id": "garde_de_fer", "stacks": 2}, tar)
-	check(count.call("counter") == 1 and not adr.has_effect("garde_de_fer"), "Garde de fer x4 : contre-attaque, cumuls consommés")
-	var t_hp := tar.hp
-	adr.effects.clear()
-	e._apply_damage(adr, 1000.0, tar, {})
-	approx(t_hp - tar.hp, 100.0, "Corps de feu : renvoie 10 % des dégâts")
-	# Mello : Visage sur lui (+6 DC, +4 % ATK) ; à 6, ignore 30 % DEF et retombe à 2
-	e = BattleEngine.new(["mello"], ["selene"], 4)
-	mel = unit_of(e, "mello")
-	sel = unit_of(e, "selene")
-	e.execute(mel, mel.skill(0), sel, 0)
-	check(mel.status_stacks("visage") == 2, "Flamme bleue : 2 Visages sur Mello")
-	approx(mel.stat("cd"), 75.0 + 12.0, "Visage x2 : +12 DC")
-	for i in 2:
-		e.execute(mel, mel.skill(0), sel, 0)
-	check(mel.status_stacks("visage") == 2 and mel.flags.has("ignore_def_next"), "Visage x6 : retombe à 2, ignore 30 % DEF ensuite")
-	var max_before := mel.max_hp()
-	e.execute(mel, mel.skill(2), sel, 2)
-	check(mel.max_hp() < max_before and not mel.flags.has("ignore_def_next"), "Seimei : PV max perdus, bonus consommé")
-	# Tarkhan : Rage (+5 % ATK, -3 % DEF) ; à 8, explosion de zone ; survit une fois
-	e = BattleEngine.new(["tarkhan"], ["adrian", "flint"], 4)
-	tar = unit_of(e, "tarkhan")
-	e._try_apply(tar, tar, {"id": "rage", "stacks": 4})
-	approx(tar.stat("atk"), 1155.0 * 1.2, "Rage x4 : +20 % ATK")
-	var fl_hp := unit_of(e, "flint").hp
-	e._try_apply(tar, tar, {"id": "rage", "stacks": 4})
-	check(unit_of(e, "flint").hp < fl_hp and not tar.has_effect("rage"), "Rage x8 : explosion de zone")
-	e._apply_damage(tar, 99999.0, unit_of(e, "adrian"), {})
-	check(tar.hp == 1.0, "Immunité à la douleur : survit à 1 PV")
-	e._apply_damage(tar, 99999.0, unit_of(e, "adrian"), {})
-	check(not tar.is_alive(), "Immunité à la douleur : une seule fois")
-	# Yass : Dette (2 % PV max par cumul en fin de tour), Malédiction certaine à 2 Dettes, Banqueroute
-	e = BattleEngine.new(["yass"], ["adrian"], 4)
-	var yas := unit_of(e, "yass")
-	adr = unit_of(e, "adrian")
-	e.execute(yas, yas.skill(0), adr, 0)
-	check(adr.status_stacks("dette") == 2, "Chaînes : 2 Dettes")
-	adr.base["res"] = 500
-	e.execute(yas, yas.skill(1), adr, 1)
-	check(adr.has_effect("curse"), "Dette d'Amour : Malédiction certaine malgré 500 RÉS")
-	var a_hp := adr.hp
-	adr.effects.erase(adr.get_effect("curse"))
-	e.current = adr
-	e._end_turn(adr)
-	approx(a_hp - adr.hp, roundf(adr.max_hp() * 0.04), "Dette x2 : 4 % des PV max en fin de tour", 1.0)
-	e._try_apply(adr, adr, {"id": "immunity", "turns": 2})
-	e._try_apply(yas, adr, {"id": "dette", "no_roll": true})
-	yas.cooldowns = [0, 0, 0]
-	e.current = yas
-	e.use_skill(yas, 2, adr)
-	check(adr.marks("dette") == 0 and adr.has_effect("curse"), "Banqueroute : Dette explosée, Malédiction malgré l'Immunité")
-	check(yas.cooldowns[1] >= 1, "Banqueroute : pas de S2 au tour suivant")
-	# Saraya : Bénédiction (+10 % de soins reçus par cumul) ; sous 30 % PV, soin de 25 %
-	e = BattleEngine.new(["saraya", "ghost"], ["mohamed"], 4)
-	gho = unit_of(e, "ghost")
-	e.execute(unit_of(e, "saraya"), unit_of(e, "saraya").skill(1), gho, 1)
-	check(gho.status_stacks("benediction") == 2, "Guérison végétale : 2 Bénédictions")
-	gho.effects.erase(gho.get_effect("shield"))
-	gho.hp = gho.max_hp() * 0.35
-	e._apply_damage(gho, gho.max_hp() * 0.1, unit_of(e, "mohamed"), {})
-	check(gho.hp_ratio() > 0.45 and not gho.has_effect("benediction"), "Bénédiction : soin de 25 % sous 30 % PV")
-	# Noor-El : Espéra par dégât de zone ; à 5, sa zone suivante frappe deux fois
-	e = BattleEngine.new(["noor_el"], ["don_diego", "moussa"], 4)
-	noor_check(e)
-	# Jo : Gravité (bloque les bonus de VIT ; cible sans jauge entravée)
-	e = BattleEngine.new(["jo_prince"], ["ghost"], 4)
-	gho = unit_of(e, "ghost")
-	gho.ap = 0.0
-	e._try_apply(unit_of(e, "jo_prince"), gho, {"id": "gravite", "no_roll": true})
-	check(gho.has_effect("entrave"), "Gravité : cible sans jauge entravée")
-	check(not e._try_apply(gho, gho, {"id": "spd_up", "value": 30, "turns": 2}), "Gravité : bonus de VIT refusé")
-	# Ezra : Vide (plus de buffs ni de soins, non purgeable) ; suppression des buffs avec bonus ; vol de buff
-	e = BattleEngine.new(["ezra"], ["noor_el", "flint"], 4)
-	var ez := unit_of(e, "ezra")
-	var noor := unit_of(e, "noor_el")
-	for b in ["atk_up", "def_up", "cr_up"]:
-		e._try_apply(noor, noor, {"id": b, "value": 20, "turns": 3})
-	e.execute(ez, ez.skill(1), noor, 1)
-	check(not noor.has_buff() and noor.has_effect("vide"), "Null Void ciblé : buffs supprimés, Vide posé")
-	var n_hp := noor.hp
-	e._heal(noor, 500.0, unit_of(e, "flint"))
-	e._apply_action(unit_of(e, "flint"), noor, {"id": "cleanse"}, {})
-	check(noor.hp == n_hp and noor.has_effect("vide"), "Vide : pas de soin, non purgeable")
-	var fl := unit_of(e, "flint")
-	e._try_apply(fl, fl, {"id": "atk_up", "value": 20, "turns": 3})
-	for i in 8:
-		if ez.has_effect("atk_up"):
-			break
-		e.execute(ez, ez.skill(0), fl, 0)
-	check(ez.has_effect("atk_up") and not fl.has_effect("atk_up"), "Muay Thai : buff volé")
-	# Flint : Révélé (retire l'Immunité, +10 % de dégâts par cumul, +5 % de jauge aux alliés qui frappent)
-	e = BattleEngine.new(["flint", "ghost"], ["moussa"], 4)
-	mou = unit_of(e, "moussa")
-	e._try_apply(mou, mou, {"id": "immunity", "turns": 2})
-	e._try_apply(unit_of(e, "flint"), mou, {"id": "revele", "stacks": 2, "no_roll": true})
-	check(not mou.has_effect("immunity") and not e._try_apply(mou, mou, {"id": "immunity", "turns": 2}), "Révélé : Immunité retirée et refusée")
-	approx(e._taken_mult(mou), 1.2, "Révélé x2 : +20 % de dégâts subis")
-	gho = unit_of(e, "ghost")
-	gho.ap = 0.0
-	e._on_targeted(gho, [mou])
-	approx(gho.ap, 0.05, "Révélé : l'allié qui frappe gagne 5 % de jauge")
-	# Don Selah : immunisé, 50 % de PA, Lien (partage 30 %, bouclier à sa mort), Scellement (contrecoup)
-	e = BattleEngine.new(["don_selah", "flint"], ["ezra", "moussa"], 4)
-	var ds := unit_of(e, "don_selah")
-	check(is_equal_approx(ds.ap, 0.5), "Éveil : commence à 50 % PA")
-	e._try_apply(unit_of(e, "ezra"), ds, {"id": "stun", "turns": 1, "no_roll": true, "ignores_immunity": true})
-	check(not ds.has_effect("stun"), "Éveil : immunisé même contre « ignore l'immunité »")
-	fl = unit_of(e, "flint")
-	e._try_apply(ds, fl, {"id": "lien"})
-	var ds_hp := ds.hp
-	e._apply_damage(fl, 1000.0, unit_of(e, "ezra"), {})
-	approx(fl.max_hp() - fl.hp, 700.0, "Lien : l'allié subit 70 %")
-	approx(ds_hp - ds.hp, 300.0, "Lien : Don Selah absorbe 30 %")
-	e._try_apply(ds, ds, {"id": "scellement"})
-	var m_hp := unit_of(e, "moussa").hp
-	e.current = ds
-	e._end_turn(ds)
-	approx(m_hp - unit_of(e, "moussa").hp, roundf(unit_of(e, "moussa").max_hp() * 0.15), "Scellement : contrecoup de 15 % à l'expiration", 1.0)
-	e._apply_damage(ds, 99999.0, unit_of(e, "ezra"), {})
-	check(not fl.has_effect("lien") and fl.shield_value() > 0.0, "Lien : Don tombe, bouclier de 20 % pour l'allié")
+		q.add_hero("issa", 3)
+	check(q.quick_star_up() >= 1 and q.best_star("issa") >= 4, "montée rapide")
 
 
-func noor_check(e: BattleEngine) -> void:
-	var noor := unit_of(e, "noor_el")
-	var dd := unit_of(e, "don_diego")
-	e.execute(noor, noor.skill(1), null, 1)
-	check(dd.status_stacks("espera") == 1, "Souffle glacial : Espéra sur chaque ennemi touché")
-	approx(e._taken_mult(dd), 1.05, "Espéra x1 : +5 % de dégâts subis")
-	for i in 4:
-		e._try_apply(noor, dd, {"id": "espera", "no_roll": true})
-	check(noor.flags.has("double_aoe"), "Espéra x5 : la zone suivante frappera deux fois")
-
-
-## Effets génériques (fiche, parties 4 et 5) : Invincibilité, Bloc, Anti-soin, Régénération, Sommeil,
-## raté du triangle, « ne peut pas être résisté », égalité de vitesse.
-func test_generic_effects() -> void:
-	print("Effets génériques (Dislyte, Etheria)")
-	var e := BattleEngine.new(["mohamed"], ["issa", "moussa"], 6)
-	var moh := unit_of(e, "mohamed")
-	var issa := unit_of(e, "issa")
-	e._try_apply(issa, issa, {"id": "invincible", "turns": 1})
-	var hp := issa.hp
-	e._deal_damage(moh, issa, 5000.0, {})
-	check(issa.hp == hp, "Invincibilité : aucun dégât")
-	issa.effects.clear()
-	e._try_apply(moh, issa, {"id": "block", "turns": 2, "no_roll": true})
-	check(not e._try_apply(issa, issa, {"id": "atk_up", "value": 20, "turns": 2}), "Bloc : buffs refusés")
-	e._try_apply(moh, issa, {"id": "no_heal", "turns": 2, "no_roll": true})
-	issa.hp = 1000.0
-	e._heal(issa, 500.0, issa)
-	check(issa.hp == 1000.0, "Anti-soin : pas de soin")
-	moh.hp = 1000.0
-	e._try_apply(moh, moh, {"id": "regen", "turns": 2})
-	e._start_turn(moh)
-	approx(moh.hp, 1000.0 + roundf(moh.max_hp() * 0.15), "Régénération : 15 % des PV max au début du tour")
-	# Sommeil : le premier coup frappe 25 % plus fort
-	var e2 := BattleEngine.new(["mohamed"], ["moussa"], 6)
-	var mou := unit_of(e2, "moussa")
-	var normal := e2.compute_damage(unit_of(e2, "mohamed"), mou, 1000.0, {}, false, 1.0)
-	e2._try_apply(unit_of(e2, "mohamed"), mou, {"id": "sleep", "turns": 2, "no_roll": true})
-	var before := mou.hp
-	e2.rng.seed = 1
-	e2._deal_damage(unit_of(e2, "mohamed"), mou, 1000.0, {"missed": false})
-	check(before - mou.hp >= normal * 0.95 * 1.25 - 1.0 or before - mou.hp >= normal * 0.95 * 1.25 * 1.69 - 1.0, "Sommeil : +25 % sur le premier coup")
-	# « Ne peut pas être résisté »
-	mou.base["res"] = 900
-	check(e2._try_apply(unit_of(e2, "mohamed"), mou, {"id": "def_break", "turns": 1, "cannot_resist": true}), "cannot_resist : passe malgré 900 RÉS")
-	# Raté du triangle : le dominé rate, 25 % des dégâts, pas d'effet
-	var tri: Dictionary = GameData.rules()["triangle"]
-	var saved: float = tri["dominated_miss_chance"]
-	tri["dominated_miss_chance"] = 100.0
-	var e3 := BattleEngine.new(["eirikr"], ["mohamed"], 6)  # Orion contre Sirius : Orion est dominé
-	var evs: Array[Dictionary] = []
-	e3.battle_event.connect(func(ev: Dictionary) -> void: evs.append(ev))
-	e3.execute(unit_of(e3, "eirikr"), unit_of(e3, "eirikr").skill(0), unit_of(e3, "mohamed"), 0)
-	check(evs.any(func(ev: Dictionary) -> bool: return ev["type"] == "miss"), "Raté : le dominé rate")
-	tri["dominated_miss_chance"] = saved
-	# Égalité de vitesse : la position dans l'équipe départage
-	var e4 := BattleEngine.new(["issa", "issa"], ["mohamed"], 6)
-	var first := e4.next_turn()
-	check(first.slot == 0 and first.team == 0, "Égalité de VIT : la première position joue d'abord")
-
-
-## Prométhée (étage 12) : phases, résurrection, Aletheia prédictive, résistance aux contrôles.
-func test_boss() -> void:
-	print("Boss : Prométhée")
-	var e := BattleEngine.new(["mello", "mikhaila"], Tower.enemy_units(12), 8)
-	var pro: BattleUnit = e.units[2]
-	var mel := unit_of(e, "mello")
-	check(pro.id == "promethee" and pro.constellation == "neutre", "Étage 12 : Prométhée, neutre")
-	check(Tower.floor_info(1)["decor"] == "acier" and Tower.floor_info(12)["decor"] == "forge", "Décors : Cité d'Acier, forge du boss")
-	check(not e._try_apply(mel, pro, {"id": "freeze", "turns": 1, "no_roll": true}), "Boss final : immunisé au Gel")
-	var stuns := 0
-	for i in 200:
-		pro.effects.clear()
-		if e._try_apply(mel, pro, {"id": "stun", "turns": 1, "no_roll": true}):
-			stuns += 1
-	check(stuns > 70 and stuns < 130, "Boss : Étourdissement deux fois moins probable (%d / 200)" % stuns)
-	pro.effects.clear()
-	e._apply_damage(pro, pro.max_hp() * 0.55, mel, {})
-	check(pro.flags.has("dmg_bonus_pct") and pro.flags.has("self_burn_pct"), "Phase 2 sous 50 % PV")
-	var hp := pro.hp
-	e._start_turn(pro)
-	approx(hp - pro.hp, roundf(pro.max_hp() * 0.02), "Phase 2 : perd 2 % de ses PV max par tour", 1.0)
-	e._apply_damage(pro, 999999.0, mel, {})
-	check(pro.is_alive() and is_equal_approx(pro.hp_ratio(), 0.2), "Laboratoire infini : ressuscite à 20 % PV")
-	e._apply_damage(pro, 999999.0, mel, {})
-	check(not pro.is_alive(), "Laboratoire infini : une seule fois")
-	# Aletheia : seulement contre un héros qui répète la même compétence
-	var e2 := BattleEngine.new(["mello", "mikhaila"], Tower.enemy_units(12), 8)
-	var p2: BattleUnit = e2.units[2]
-	var m2 := unit_of(e2, "mello")
-	var k2 := unit_of(e2, "mikhaila")
-	m2.skill_history.assign([0, 2])
-	k2.skill_history.assign([0, 2])
-	check(not e2.ai_choose(p2)["skill"] == 1 or p2.cooldowns[1] > 0, "Aletheia : pas lancée sans héros prévisible")
-	e2.execute(p2, p2.skill(1), m2, 1)
-	check(not m2.has_effect("freeze"), "Aletheia : échoue si le héros a varié ses compétences")
-	k2.skill_history.assign([0, 0])
-	p2.cooldowns = [0, 0, 0]
-	var c := e2.ai_choose(p2)
-	check(c["skill"] == 2 or (c["skill"] == 1 and c["target"] == k2), "Aletheia : vise le héros prévisible")
-	e2.execute(p2, p2.skill(1), k2, 1)
-	check(k2.has_effect("freeze"), "Aletheia : désactive un héros qui répète sa compétence")
-	e2.execute(p2, p2.skill(0), m2, 0)
-	check(m2.status_stacks("clef") == 2, "Ignis Divinus : une Clef par coup")
-
-
-## Boss de butin : mécaniques, récompenses, pitié, paliers, pénalité des équipes non dominantes.
-func test_loot() -> void:
-	print("Boss de butin")
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 21
-	check(LootBoss.ids().all(func(id: String) -> bool: return LootBoss.boss(id).has("decor")), "Chaque boss de butin a son décor")
-	check(LootBoss.countered_by("chronophage") == "sirius" and LootBoss.countered_by("wyrm") == "orion", "Constellation qui domine chaque boss")
-	# Chronophage : jauge gagnée à chaque tour d'un héros, dégâts croissants
-	var e := BattleEngine.new(["mello"], LootBoss.enemy_units("chronophage", 0), 4)
-	var ch: BattleUnit = e.units[1]
-	ch.ap = 0.0
-	var mel := unit_of(e, "mello")
-	mel.ap = 1.0
-	e.next_turn()
-	check(ch.ap >= 0.05, "Chronophage : +5 % de jauge quand un héros joue")
-	e._start_turn(ch)
-	e._start_turn(ch)
-	approx(float(ch.flags["dmg_bonus_pct"]), 12.0, "Chronophage : +6 % de dégâts par tour")
-	# Wyrm : barre perdue -> bouclier ; bouclier intact à son tour -> Gel et écrasement
-	e = BattleEngine.new(["mello", "adrian"], LootBoss.enemy_units("wyrm", 0), 4)
-	var wy: BattleUnit = e.units[2]
-	e._apply_damage(wy, wy.max_hp() * 0.4, unit_of(e, "adrian"), {})
-	check(wy.shield_value() > 0.0 and wy.flags.has("bar_shield"), "Wyrm : barre perdue, bouclier")
-	var mel_hp := unit_of(e, "mello").hp
-	e._start_turn(wy)
-	check(unit_of(e, "mello").has_effect("freeze") and unit_of(e, "mello").hp < mel_hp, "Wyrm : bouclier intact -> le héros le plus fort est gelé et écrasé")
-	# Serpent : le Venin solaire explose à la fin (20 % PV max)
-	e = BattleEngine.new(["adrian"], LootBoss.enemy_units("serpent", 0), 4)
-	var adr := unit_of(e, "adrian")
-	e._try_apply(e.units[1], adr, {"id": "venin_solaire", "no_roll": true})
-	var hp := adr.hp
-	for i in 4:
-		e.current = adr
-		e._end_turn(adr)
-	approx(hp - adr.hp, roundf(adr.max_hp() * 0.2), "Venin solaire : explose à la fin (20 % des PV max)", 1.0)
-	# Pénalité aux paliers élevés : seule la constellation dominante est épargnée
-	e = BattleEngine.new(["noor_el", "montana"], LootBoss.enemy_units("chronophage", 3), 4)
-	var boss: BattleUnit = e.units[2]
-	var noor := unit_of(e, "noor_el")
-	var mon := unit_of(e, "montana")
-	var misses := [0, 0]
-	for i in 200:
-		if e._rolls_miss(noor, boss, noor.skill(0)):
-			misses[0] += 1
-		if e._rolls_miss(mon, boss, mon.skill(0)):
-			misses[1] += 1
-	check(misses[0] == 0 and misses[1] > 50, "Enfer : Sirius ne rate jamais le Chronophage, Orion rate (%d / 200)" % misses[1])
-	approx(e.compute_damage(boss, mon, 1000.0, {}, false, 1.0) / e.compute_damage(boss, noor, 1000.0, {}, false, 1.0) *
-		(1000.0 + mon.stat("def")) / (1000.0 + noor.stat("def")), 1.35 / 0.85, "Enfer : +35 % de dégâts sur les non-dominants", 0.02)
-	# Récompenses, paliers, pitié
-	var p := Profile.new_game()
-	var rw := p.win_loot("wyrm", 0, rng)
-	check(rw["relics"].size() == 2 and rw["relics"].all(func(r: Dictionary) -> bool: return r["set"] in ["gel", "vie", "precision", "calamite"]), "Wyrm : 2 reliques de la Grande Ourse")
-	check(p.loot_state("wyrm")["unlocked"] == 1, "Victoire en Facile : Difficile débloqué")
-	var rw3 := LootBoss.rewards("wyrm", 3, rng)
-	check(rw3["relics"].size() == 3 and rw3["relics"].all(func(r: Dictionary) -> bool: return int(r["level"]) == 9), "Enfer : 3 reliques déjà à +9")
-	p.loot_state("wyrm")["pity_set"] = "precision"
-	var forced := ""
-	for i in 7:
-		forced = p.win_loot("wyrm", 0, rng)["pity_used"]
-	check(forced == "precision" and p.loot_state("wyrm")["pity"] == 0, "Pitié : relique du set choisi à la 8e victoire")
-	var back := Profile.from_dict(JSON.parse_string(JSON.stringify(p.to_dict())))
-	check(back.loot_state("wyrm")["wins"] == 8 and back.loot_state("wyrm")["pity_set"] == "precision", "Progression des boss de butin sauvegardée")
+func test_profile_misc() -> void:
+	print("Formation, Patrouille, campagne, sauvegarde")
+	var p := Profile.new_game(1000)
+	check(p.deploy_max() == 3, "3 cases au départ")
+	p.add_hero("adrian", 5)
+	check(not p.set_slot(4, "adrian"), "Gardien au milieu : refusé")
+	check(not p.set_slot(0, "adrian") or p.formation.size() <= 3, "limite de cases")
+	p.campaign_cleared = 12
+	check(p.deploy_max() == 6, "6 cases débloquées par la campagne")
+	check(p.set_slot(0, "adrian"), "Gardien devant : accepté")
+	# Patrouille
+	p.patrol_time = 1000
+	var got := p.patrol_pending(1000 + 3600)
+	check(int(got.get("pieces", 0)) > 0 and int(got.get("encre", 0)) > 0, "Patrouille : or et encre accumulés")
+	var cap := p.patrol_pending(1000 + 3600 * 100)
+	var cap_m := float(Campaign.cfg()["patrol"]["cap_hours"]) * 60.0
+	check(int(cap["pieces"]) == int(floor(Campaign.patrol_rate(12)["pieces"] * cap_m)), "Patrouille plafonnée")
+	check(p.quick_price(86400 * 3) == 0, "1re Patrouille rapide gratuite")
+	p.quick_patrol(86400 * 3)
+	check(p.quick_price(86400 * 3) > 0, "les suivantes coûtent des Éclats")
+	# Campagne
+	var q := Profile.new_game(1000)
+	var e0 := q.amount("eclat_de_voeu")
+	var w := q.win_stage(1, 2000)
+	check(w["first"] and q.campaign_cleared == 1 and q.amount("eclat_de_voeu") > e0, "étape 1 gagnée : récompenses")
+	check(not q.win_stage(5, 2000)["first"], "on ne saute pas d'étape")
+	# Sauvegarde
+	var d: Dictionary = JSON.parse_string(JSON.stringify(p.to_dict()))
+	var p2 := Profile.from_dict(d)
+	check(p2 != null and p2.copies("adrian") == p.copies("adrian") and p2.formation == p.formation, "sauvegarde relue")
+	check(Profile.from_dict({"version": 1, "owned": {"montana": 1}}) == null, "sauvegarde d'avant la refonte : nouvelle partie")
 
 
 func test_gacha() -> void:
-	print("Gacha")
-	var g := Gacha.new("standard", 42)
-	var counts := {3: 0, 4: 0, 5: 0}
+	print("Invocation")
+	var g := Gacha.new("standard", 99)
+	var counts := {2: 0, 3: 0, 4: 0, 5: 0}
 	var max_gap := 0
 	var gap := 0
 	var gap4 := 0
 	var max_gap4 := 0
-	for i in 100000:
+	for i in 4000:
 		var r := g.pull()
 		counts[r["rarity"]] += 1
 		gap += 1
@@ -586,468 +360,133 @@ func test_gacha() -> void:
 		if r["rarity"] >= 4:
 			max_gap4 = maxi(max_gap4, gap4)
 			gap4 = 0
-	var hard := int(g.banner["hard_pity_5"])
-	var every := int(g.banner["guarantee_4_every"])
-	check(max_gap <= hard, "Pity : Légendaire garanti en %d invocations max (pire cas %d)" % [hard, max_gap])
-	check(max_gap4 <= every, "Épique ou mieux toutes les %d invocations (pire cas %d)" % [every, max_gap4])
-	print("  Taux observés sur 100 000 : 3★ %.2f %% | 4★ %.2f %% | 5★ %.2f %%" % [counts[3] / 1000.0, counts[4] / 1000.0, counts[5] / 1000.0])
-	var f := Gacha.new("featured_montana", 9)
+		check(HeroDb.exists(r["id"]) and int(HeroDb.hero(r["id"])["rarity"]) == int(r["rarity"]), "tirage cohérent")
+	check(max_gap <= 40, "SSR garanti en 40 (écart max %d)" % max_gap)
+	check(max_gap4 <= 10, "SR ou mieux toutes les 10 (écart max %d)" % max_gap4)
+	var ssr := float(counts[5]) / 4000.0 * 100.0
+	check(ssr > 2.5 and ssr < 6.0, "taux SSR effectif plausible (%.2f %%)" % ssr)
+	var lim := Gacha.new("featured_montana", 5)
+	var all_feat := true
+	for i in 400:
+		var r := lim.pull()
+		if r["rarity"] == 5 and r["id"] != "montana":
+			all_feat = false
+	check(all_feat, "bannière limitée : chaque SSR est la vedette")
+	var w := Gacha.new("standard", 6)
+	w.total_pulls = 500
+	w.wishlist.assign(["adrian"])
 	var hits := 0
-	var fives := 0
-	for i in 50000:
-		var r := f.pull()
+	var ssrs := 0
+	for i in 3000:
+		var r := w.pull()
 		if r["rarity"] == 5:
-			fives += 1
-			if r["id"] == "montana":
+			ssrs += 1
+			if r["id"] == "adrian":
 				hits += 1
-	var n5 := GameData.characters().values().filter(func(c: Dictionary) -> bool: return int(c["rarity"]) == 5).size()
-	print("  Bannière vedette : Montana = %.1f %% des 5★ (%d Légendaires)" % [100.0 * hits / fives, n5])
-	approx(float(hits) / fives, 2.0 / (n5 + 1), "Vedette pondérée x2", 0.03)
+	check(float(hits) / ssrs > 0.2, "liste de souhaits : le héros souhaité sort plus souvent")
+	var st := g.get_state()
+	var g2 := Gacha.new("standard", 1)
+	g2.set_state(st)
+	check(g2.pity_count() == g.pity_count() and g2.total_pulls == g.total_pulls, "compteurs sauvegardés")
 
 
-func test_relics() -> void:
-	print("Reliques")
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 11
-	var gear: Array = []
-	for slot in range(1, 5):
-		gear.append(Relics.generate(rng, "vampirisme", slot))
-	gear.append(Relics.generate(rng, "vitesse", 5))
-	gear.append(Relics.generate(rng, "vitesse", 6))
-	for r: Dictionary in gear:
-		for i in 15:
-			Relics.level_up(rng, r)
-	check(gear[0]["subs"].size() == 4, "Relique +15 : 4 stats secondaires")
-	var active := Relics.active_sets(gear)
-	check(active.get("vampirisme", 0) == 4 and active.get("vitesse", 0) == 2, "Set 4 + set 2 actifs")
-	var u := Relics.make_unit("mohamed", gear)
-	check(u.set_specials.has("lifesteal_20"), "Vampirisme transmis au combat")
-	check(u.base["spd"] > 108 * 1.12 - 0.01, "Set Vitesse (2 pièces) : +12 % VIT")
-	var atk4: Array = []
-	for slot in range(1, 5):
-		atk4.append(Relics.generate(rng, "attaque", slot))
-	var with4: Dictionary = Relics.apply(GameData.character("mohamed")["stats"], atk4)["stats"]
-	var with2: Dictionary = Relics.apply(GameData.character("mohamed")["stats"], atk4.slice(0, 2))["stats"]
-	check(with4["cd"] - with2["cd"] >= 30.0, "Set Attaque (4 pièces) : +30 DC en plus du bonus à 2 pièces")
-	# Nouveaux sets avancés (Océan, Astralis, Calamité, Égide)
-	var egide2: Array = [Relics.generate(rng, "egide", 1), Relics.generate(rng, "egide", 2)]
-	var cal4: Array = []
-	for slot in range(1, 5):
-		cal4.append(Relics.generate(rng, "calamite", slot))
-	var u_eg := Relics.make_unit("moussa", egide2)
-	var u_cal := Relics.make_unit("mohamed", cal4)
-	var eb := BattleEngine.new([u_cal], [u_eg], 12)
-	check(u_eg.shield_value() > 0.0, "Set Égide (2 pièces) : bouclier de 15 % PV max dès le début du combat")
-	var d0 := eb.compute_damage(u_cal, u_eg, 1000.0, {}, false, 1.0)
-	eb._try_apply(u_cal, u_eg, {"id": "atk_down", "value": 20, "turns": 2, "no_roll": true})
-	eb._try_apply(u_cal, u_eg, {"id": "spd_down", "value": 20, "turns": 2, "no_roll": true})
-	var d2 := eb.compute_damage(u_cal, u_eg, 1000.0, {}, false, 1.0)
-	approx(d2 / d0, 1.2, "Set Calamité (4 pièces) : +10 % de dégâts par malus sur la cible (+20 %)")
-	var oce4: Array = []
-	var ast4: Array = []
-	for slot in range(1, 5):
-		oce4.append(Relics.generate(rng, "ocean", slot))
-		ast4.append(Relics.generate(rng, "astralis", slot))
-	var u_oce := Relics.make_unit("issa", oce4)
-	var u_ast := Relics.make_unit("eirikr", ast4)
-	var eb2 := BattleEngine.new([u_oce, u_ast], ["moussa"], 15)
-	var oce_procs := 0
-	var ast_procs := 0
-	for k in 80:
-		u_oce.cooldowns[2] = 4
-		eb2._start_turn(u_oce)
-		if u_oce.cooldowns[2] == 3:
-			oce_procs += 1
-		u_ast.ap = 0.0
-		eb2._end_turn(u_ast)
-		if u_ast.ap >= 0.49:
-			ast_procs += 1
-	check(oce_procs > 5 and ast_procs > 3, "Sets Océan (recharge -1) et Astralis (+50 % PA) actifs en combat")
+func test_campaign_and_tower() -> void:
+	print("Campagne et Tour")
+	check(Campaign.stage_count() == 240, "240 étapes")
+	var last_lvl := 0
+	for n in range(1, Campaign.stage_count() + 1):
+		var info := Campaign.stage_info(n)
+		var specs := Campaign.enemy_specs(n)
+		check(not specs.is_empty(), "étape %d : des ennemis" % n)
+		check(int(info["level"]) >= last_lvl, "niveaux croissants")
+		last_lvl = int(info["level"])
+		for s: Dictionary in specs:
+			check(HeroDb.exists(s["id"]), "étape %d : %s existe" % [n, s["id"]])
+	check(Campaign.stage_info(12)["boss"], "étape 1-12 : boss")
+	check(Tower.floor_count() == 99, "99 étages")
+	check(Tower.floor_info(12)["boss"] == "promethee" and Tower.floor_info(6)["elite"], "boss à 12, Élite à 6")
+	check(Tower.enemy_specs(30).size() == 6, "6 ennemis par étage")
 
 
-func test_profile() -> void:
-	print("Profil, Tour et sauvegarde")
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 3
-	var p := Profile.new_game()
-	check(p.owned_ids() == ["eirikr"] and p.team == ["eirikr"], "Nouveau joueur : Eiríkr seul")
-	check(p.amount("eclat_de_voeu") == 0 and p.in_prologue(), "Nouveau joueur : 0 Éclat, prologue à jouer")
-	p.owned["issa"] = 1
-	check(p.add_pull({"id": "mello", "rarity": 5})["new"], "Nouveau 5★ ajouté à la collection")
-	check(p.add_pull({"id": "mello", "rarity": 5})["fragments"] == 40 and p.amount("fragments_etage") == 40, "Doublon 5★ → 40 Fragments")
-	p.add_pull({"id": "recrue_orion", "rarity": 3})
-	check(p.amount("fragments_etage") == 41 and not "recrue_orion" in p.owned_ids(), "Recrue 3★ → 1 Fragment")
-	check(not p.set_team(["eirikr", "ymir"]), "Équipe refusée avec un personnage non possédé")
-	check(p.set_team(["eirikr", "issa"]), "Équipe de 2 acceptée")
-	check(p.can_enter_floor(1) and not p.can_enter_floor(2), "Seul l'étage 1 est ouvert au départ")
-	var rw := p.win_floor(1, rng)
-	check(rw["first_clear"] and p.tower_cleared == 1 and p.can_enter_floor(2), "Victoire à l'étage 1 : étage 2 ouvert")
-	check(p.amount("eclat_de_voeu") == 3 and p.relics.size() == 1, "Récompenses : 3 Éclats + 1 relique")
-	check(not p.win_floor(1, rng)["first_clear"] and p.amount("eclat_de_voeu") == 3, "Rejouer : pas de nouveaux Éclats")
-	var r: Dictionary = p.relics[0]
-	var uid := int(r["uid"])
-	check(p.equip("eirikr", uid) and p.owner_of(uid) == "eirikr", "Relique équipée")
-	check(p.equip("issa", uid) and p.owner_of(uid) == "issa" and p.equipped_relics("eirikr").is_empty(), "Relique passée à un autre porteur")
-	var pieces := p.amount("pieces")
-	check(p.level_relic(uid, rng) and int(r["level"]) == 1 and p.amount("pieces") == pieces - 100, "Montée +1 : coût 100 Pièces")
-	var u := p.make_unit("issa")
-	check(u.base["hp"] != GameData.character("issa")["stats"]["hp"] or u.base["atk"] != GameData.character("issa")["stats"]["atk"] \
-		or u.base["def"] != GameData.character("issa")["stats"]["def"] or r["main"]["stat"] in ["cr", "cd", "acc", "res", "spd"], "La relique change les stats")
-	var back := Profile.from_dict(JSON.parse_string(JSON.stringify(p.to_dict())))
-	check(back.owner_of(uid) == "issa" and back.tower_cleared == 2 - 1 and back.amount("fragments_etage") == 41, "Sauvegarde relue à l'identique")
-	check(back.team == p.team and int(back.relic(uid)["level"]) == 1, "Équipe et niveau de relique conservés")
-	# Énergie : se recharge pendant l'absence, étages gratuits au début, balayage
-	var t0 := 1_000_000
-	var q := Profile.new_game(t0)
-	check(q.energy == 120 and q.floor_cost(4) == 0 and q.floor_cost(5) == 6, "Énergie : 120 au départ, étages 1-4 gratuits")
-	check(q.spend_energy(30, t0) and q.energy == 90, "Énergie : dépense")
-	q.refresh_energy(t0 + 300 * 10 + 20)
-	check(q.energy == 100 and q.energy_next_in(t0 + 300 * 10 + 20) == 280, "Énergie : +1 toutes les 5 min, même absent")
-	q.refresh_energy(t0 + 300 * 999)
-	check(q.energy == 120, "Énergie : plafonnée à 120")
-	q.tower_cleared = 6
-	var sw := q.sweep_floor(6, 5, rng, t0 + 300 * 999)
-	check(int(sw["times"]) == 5 and q.energy == 90 and sw["relics"].size() == 5, "Balayage x5 : 30 d'énergie, 5 reliques")
-	check(int(q.sweep_floor(7, 1, rng, t0)["times"]) == 0, "Balayage : seulement les étages gagnés")
-	# Recyclage intégral : toutes les Pièces investies reviennent
-	var r2: Dictionary = q.relics[0]
-	var u2 := int(r2["uid"])
-	q.add("pieces", 100000)
-	q.owned["ghost"] = 1
-	q.equip("ghost", u2)
-	for i in 5:
-		q.level_relic(u2, rng)
-	var before := q.amount("pieces")
-	var gain := q.recycle_relic(u2)
-	check(gain == 50 + 100 + 200 + 300 + 400 + 500 and q.amount("pieces") == before + gain, "Recyclage : Pièces investies rendues (+50)")
-	check(q.relic(u2).is_empty() and q.equipped_relics("ghost").is_empty(), "Recyclage : relique retirée et déséquipée")
-	# Formations : équipe et reliques réappliquées, reliques déplacées si besoin
-	q.owned["mello"] = 1
-	q.owned["issa"] = 1
-	var ra := int(q.relics[0]["uid"])
-	q.set_team(["ghost", "issa"])
-	q.equip("ghost", ra)
-	q.save_formation(0)
-	q.set_team(["mello"])
-	q.equip("mello", ra)
-	check(q.apply_formation(0) and q.team == ["ghost", "issa"] and q.owner_of(ra) == "ghost", "Formation : équipe et relique réappliquées")
-	check(q.apply_grants().is_empty(), "Cadeau de test : pas pendant le prologue")
-	q.prologue_cleared = Prologue.level_count()
-	var eclats := q.amount("eclat_de_voeu")
-	check(q.apply_grants().size() == 1 and q.amount("eclat_de_voeu") == eclats + 3000, "Cadeau de test : 3 000 Éclats versés")
-	check(q.apply_grants().is_empty() and q.amount("eclat_de_voeu") == eclats + 3000, "Cadeau de test : une seule fois")
-	var q2 := Profile.from_dict(JSON.parse_string(JSON.stringify(q.to_dict())))
-	check(q2.apply_grants().is_empty(), "Cadeau de test : mémorisé dans la sauvegarde")
-	check(q2.energy == q.energy and q2.formations.size() == q.formations.size() and q2.apply_formation(0), "Énergie et formations sauvegardées")
-	# Résonance d'Étage (R1..R6) et complétude des Voies du roster
-	check(GameData.characters().values().all(func(c: Dictionary) -> bool:
-		return str(c.get("voie", "")) != "" and str(c.get("voie", "")) != "À définir" and str(c.get("affinity", "")) != ""),
-		"Roster : les 24 personnages ont une Voie et une affinité définies")
-	q.add("fragments_etage", 100)
-	q.add("pieces", 50000)
-	var base_atk := float(GameData.character("mello")["stats"]["atk"])
-	check(q.ascend("mello") and q.ascend("mello") and q.resonance("mello") == 2, "Résonance d'Étage : montée R2 avec Fragments et Pièces")
-	approx(q.make_unit("mello").base["atk"], roundf(base_atk * 1.08), "Résonance R2 : +8 % ATK de base")
-	var q3 := Profile.from_dict(JSON.parse_string(JSON.stringify(q.to_dict())))
-	check(q3.resonance("mello") == 2, "Résonance d'Étage sauvegardée")
+# --- Simulations -----------------------------------------------------------------
+
+func team_of_faction(f: String, level := 80, star := 6) -> Array:
+	var ids := []
+	for id in HeroDb.playable_ids(false):
+		if HeroDb.hero(id)["factions"][0] == f:
+			ids.append(id)
+	for id in HeroDb.playable_ids(false):
+		if ids.size() >= 6:
+			break
+		if not ids.has(id) and HeroDb.hero(id)["factions"][1] == f:
+			ids.append(id)
+	var placed := HeroDb.auto_place(ids)
+	var out := []
+	for s: int in placed:
+		out.append({"id": placed[s], "level": level, "star": star, "slot": s})
+	return out
 
 
-func test_prologue() -> void:
-	print("Prologue")
-	check(Prologue.level_count() == 8, "Prologue : 8 niveaux")
-	var old := Profile.from_dict({"owned": {"montana": 1}, "team": ["montana"], "tower_cleared": 3})
-	check(not old.in_prologue() and not old.free_multi_due(), "Ancienne sauvegarde : prologue considéré comme fait")
-	var p := Profile.new_game()
-	var g := Gacha.new("featured_montana", 5)
-	g.set_state({})
-	check(p.prologue_next() == 1 and not p.free_multi_due(), "Prologue : on commence au niveau 1")
-	p.win_prologue(1)
-	p.win_prologue(1)
-	check(p.prologue_cleared == 1 and p.amount("eclat_de_voeu") == 10, "Chaque niveau : 10 Éclats (une x10), une seule fois")
-	p.win_prologue(2)
-	check(p.free_multi_due() and p.prologue_next() == 0, "Après le niveau 2 : invocation offerte avant le niveau 3")
-	var d := Gacha.new(str(Prologue.cfg()["banner"]), 11)
-	d.set_state(g.get_state())
-	var first := d.pull_many(10)
-	check(first.all(func(r: Dictionary) -> bool: return int(r["rarity"]) <= 4), "1re x10 offerte : rien au-dessus d'Épique")
-	check(first[9]["id"] == "yass", "1re x10 : Yass (arme contre la Géode)")
-	p.prologue_pulls = 1
-	check(not p.free_multi_due() and p.prologue_next() == 3, "Puis le niveau 3")
-	p.win_prologue(3)
-	check(p.free_multi_due(), "Après le niveau 3 : 2e invocation offerte")
-	var second := d.pull_many(10)
-	check(second[9]["id"] == "mello" and second.slice(0, 9).all(func(r: Dictionary) -> bool: return int(r["rarity"]) <= 4),
-		"2e x10 : garantie à 20, Mello (arme contre la Géode)")
-	check(d.pity_5 == 0, "Garantie Légendaire remise à zéro après la bannière de départ")
-	p.prologue_pulls = 2
-	var last := {}
-	for n in range(4, 9):
-		last = p.win_prologue(n)
-	var gift := 0
-	for gr: Dictionary in GameData.progression()["grants"]:
-		gift += int(gr["currencies"].get("eclat_de_voeu", 0))
-	check(not p.in_prologue() and last["done"] and p.amount("eclat_de_voeu") - gift == 80, "Fin du prologue : 80 Éclats gagnés, soit 8 invocations x10")
-	check(last["grants"].size() == GameData.progression()["grants"].size(), "Fin du prologue : cadeaux de test versés")
-	# niveaux 1 à 3 : impossibles à perdre, même avec Eiríkr seul
-	for n in [1, 2]:
-		var safe := 0
-		for k in 20:
-			var e := BattleEngine.new([BattleUnit.new(GameData.character("eirikr"), 0, 0)], Prologue.enemy_units(n), 300 + k)
-			e.enable_tactics(Prologue.tactics_rank(n))
-			e.unlosable = Prologue.level(n).get("safe", false)
-			if e.run_auto() == 0:
-				safe += 1
-		check(safe == 20, "Prologue %d : Eiríkr seul gagne toujours (%d / 20)" % [n, safe])
-	var s3 := 0
-	for k in 20:
-		var e := BattleEngine.new(["eirikr", "yass", "issa"], Prologue.enemy_units(3), 400 + k)
-		e.enable_tactics(Prologue.tactics_rank(3))
-		e.unlosable = true
-		if e.run_auto() == 0:
-			s3 += 1
-	check(s3 == 20, "Prologue 3 : impossible à perdre (%d / 20)" % s3)
-	var line: Array[String] = []
-	for n in range(4, 9):
-		var w := 0
-		for k in 40:
-			var e := BattleEngine.new(["mello", "yass", "eirikr"], Prologue.enemy_units(n), 500 + k)
-			e.enable_tactics(Prologue.tactics_rank(n))
-			if e.run_auto() == 0:
-				w += 1
-		line.append("%d:%d%%" % [n, roundi(100.0 * w / 40)])
-	print("  Prologue 4-8 avec Mello, Yass, Eiríkr (sans reliques) : ", " ".join(line))
-
-
-## Une équipe de Légendaires doit battre largement une équipe de Rares (et les Épiques aussi).
-func test_battle_stats() -> void:
-	print("Bilan de combat")
-	var e := BattleEngine.new(GameData.nation_team("A"), GameData.nation_team("C"), 5)
-	var guard := 0
-	while e.winner == BattleEngine.ONGOING and guard < 400:
-		var u := e.next_turn()
-		guard += 1
-		if u == null or not u.is_alive():
-			continue
-		if not e.can_act(u):
-			e.skip_turn(u)
-			continue
-		var c := e.ai_choose(u)
-		e.use_skill(u, c["skill"], c["target"])
-	for team in 2:
-		var dealt := 0.0
-		var taken := 0.0
-		for u in e.units:
-			if u.team == team:
-				dealt += float(e.stats[u]["dealt"])
-			else:
-				taken += float(e.stats[u]["taken"])
-		approx(dealt, taken, "Équipe %d : dégâts infligés = dégâts subis en face" % team, 1.0)
-	check(e.units.any(func(u: BattleUnit) -> bool: return float(e.stats[u]["dealt"]) > 0.0), "Bilan : des dégâts comptés")
-
-
-func test_tactics() -> void:
-	print("Mode tactique de la Tour")
-	var tt: Dictionary = GameData.rules()["tower_tactics"]
-	var e := BattleEngine.new(["montana", "mikhaila", "ghost"], ["adrian", "mello", "tarkhan"], 9)
-	var mon := unit_of(e, "montana")
-	var adr := unit_of(e, "adrian")
-	check(e.tactics.is_empty() and (2 in e.usable_skills(mon)) == (mon.cooldowns[2] == 0), "Hors Tour : règles de base")
-	e.enable_tactics()
-	check(e.sp == int(tt["sp_start"]) and e.sp_max == int(tt["sp_max"]), "Sceaux de départ")
-	check(adr.max_toughness == float(tt["toughness"]["normal"]) and adr.weakness == ["orion"], "Ténacité et faiblesse (constellation dominante)")
-	check(not e.ult_cut and 1 in e.usable_skills(mon), "Étage normal : ultime classique, S2 payable")
-	e.sp = 0
-	check(not 1 in e.usable_skills(mon), "S2 impossible sans Sceau")
-	e.current = mon
-	var energy0 := mon.energy
-	e.use_skill(mon, 0, adr)
-	check(e.sp == 1 and mon.energy >= energy0 + float(tt["energy_gain"][0]), "S1 : +1 Sceau et de l'énergie")
-	check(adr.toughness < adr.max_toughness, "La constellation dominante entame la Ténacité")
-	adr.toughness = 1.0
-	adr.ap = 0.5
-	e.current = mon
-	e.use_skill(mon, 0, adr)
-	check(adr.broken and adr.ap <= 0.2 + 1e-6, "Rupture : recul sur la barre d'action")
-	var m_broken := e._taken_mult(adr)
-	adr.broken = false
-	approx(m_broken / e._taken_mult(adr), 1.0 + float(tt["break_dmg_taken_pct"]) / 100.0, "Rupture : dégâts subis accrus")
-	adr.broken = true
-	e._start_turn(adr)
-	check(not adr.broken and adr.toughness == adr.max_toughness, "Fin de Rupture : Ténacité reconstituée")
-	mon.energy = float(tt["energy_max"])
-	check(not e.ult_ready(mon), "Étage normal : pas d'ultime hors tour")
-	var b := BattleEngine.new(["montana", "mikhaila", "ghost"], Tower.enemy_units(12), 4)
-	b.enable_tactics()
-	var bm := unit_of(b, "montana")
-	bm.energy = float(tt["energy_max"])
-	var acts := b.team_actions
-	check(b.ult_cut and not 2 in b.usable_skills(bm) and b.ult_ready(bm), "Boss : énergie pleine, ultime hors tour prêt")
-	b.cast_ultimate(bm)
-	check(bm.energy < float(tt["energy_max"]) * 0.5 and b.team_actions == acts, "Ultime hors tour : énergie vidée, aucun tour consommé")
-	var boss: BattleUnit = b.units[3]
-	check(boss.max_toughness == float(tt["toughness"]["boss"]) and not boss.weakness.is_empty(), "Boss : Ténacité et faiblesses propres")
-	for k in int(tt["charge"]["every"]):
-		boss.flags.erase("charge_turn")
-		b._boss_charge(boss)
-	check(boss.charging == 1 and boss.is_skipping(), "Boss : charge télégraphiée (il passe son tour)")
-	var hp0 := 0.0
-	for u in b.units:
-		if u.team == 0:
-			hp0 += u.hp
-	b.skip_turn(boss)
-	b._boss_charge(boss)
-	var hp1 := 0.0
-	for u in b.units:
-		if u.team == 0:
-			hp1 += u.hp
-	check(hp1 < hp0 and boss.charging == 0, "Charge non brisée : Oblitération sur l'équipe")
-	# armes anti-boss : actions anodines du kit, décisives contre un boss précis
-	check(Tower.boss_banes("promethee") == ["montana", "nyssa"] and Tower.boss_banes("geode") == ["mello", "yass"],
-		"Armes anti-boss : un 5★ et un Épique de la même nation")
-	var fb := BattleEngine.new(["montana", "mikhaila"], Tower.enemy_units(12), 4)
-	var pro: BattleUnit = fb.units[2]
-	var mk := unit_of(fb, "mikhaila")
-	fb._try_apply(pro, mk, {"id": "clef", "no_roll": true})
-	pro.base["res"] = -500
-	fb.execute(unit_of(fb, "montana"), unit_of(fb, "montana").skill(1), null, 1)
-	check(not mk.has_effect("clef") and pro.flags.has("no_revive"), "Montana : Kairos efface les Clefs et annule la résurrection")
-	pro.hp = 1.0
-	fb._apply_damage(pro, 10.0, mk, {})
-	check(not pro.is_alive(), "Prométhée sous Room : il ne se relève pas")
-	var gb := BattleEngine.new(["mello"], Tower.enemy_units(25), 4)
-	var geo: BattleUnit = gb.units[1]
-	gb.execute(geo, geo.skill(2), null, 2)
-	var had := geo.has_effect("shield") and geo.has_effect("dmg_reduce")
-	gb.execute(unit_of(gb, "mello"), unit_of(gb, "mello").skill(0), geo, 0)
-	check(had and not geo.has_effect("shield") and not geo.has_effect("dmg_reduce"), "Mello : Flamme bleue brise le Prisme cristallin")
-	var w := BattleEngine.new(["montana", "adrian", "noor_el"], ["ghost"], 3)
-	w.enable_tactics()
-	check(w.sp_max == int(tt["sp_max"]) + int(tt["resonance"]["triad_sp_max"]), "Triade : un Sceau max de plus")
-	var t := BattleEngine.new(["montana", "mikhaila", "ghost"], ["adrian", "mello", "tarkhan"], 11)
-	t.enable_tactics()
-	check(t.run_auto() != BattleEngine.ONGOING, "Combat tactique automatique jusqu'au bout")
-	var pr := Profile.new_game()
-	var ecl := pr.amount("eclat_de_voeu")
-	var r1 := pr.record_stars(3, 1 | 2)
-	var r2 := pr.record_stars(3, 1 | 4)
-	check(int(r1["new"]) == 2 and int(r2["new"]) == 1 and pr.floor_stars(3) == 7, "Étoiles d'étage cumulées")
-	check(pr.amount("eclat_de_voeu") == ecl + 3 * int(tt["star_reward"]["eclat_de_voeu"]), "Chaque nouvelle étoile rapporte des Éclats")
-	var saved := Profile.from_dict(pr.to_dict())
-	check(saved.floor_stars(3) == 7, "Étoiles sauvegardées")
-	check(Tower.floor_count() == 25 and Tower.floor_info(25).get("boss_unit", "") == "geode" and Tower.floor_info(13)["decor"] == "gemmes",
-		"Univers 02 : étages 13 à 25, boss Impératrice Géode")
-
-
-func simulate_rarity(n: int) -> void:
-	var by := {3: [], 4: [], 5: []}
-	for id: String in GameData.characters():
-		if id != "don_selah":
-			by[int(GameData.character(id)["rarity"])].append(id)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 77
-	print("
-Raretés (équipes tirées au hasard, %d combats) :" % n)
-	for pair in [[5, 3], [4, 3], [5, 4]]:
-		var wins := 0
-		for k in n:
-			var a: Array = []
-			var b: Array = []
-			var pa: Array = by[pair[0]].duplicate()
-			var pb: Array = by[pair[1]].duplicate()
-			for i in 3:
-				a.append(pa.pop_at(rng.randi() % pa.size()))
-				b.append(pb.pop_at(rng.randi() % pb.size()))
-			var swap := k % 2 == 1
-			var e := BattleEngine.new(b if swap else a, a if swap else b, 3000 + k)
-			var w := e.run_auto()
-			if w != BattleEngine.DRAW and ((w == 0) != swap):
-				wins += 1
-		var pct := 100.0 * wins / n
-		print("  %d★ contre %d★ : %.0f %% de victoires" % [pair[0], pair[1], pct])
-		check(pct >= (85.0 if pair == [5, 3] else 60.0), "%d★ nettement plus fort que %d★" % [pair[0], pair[1]])
-
-
-## Taux de victoire étage par étage (IA des deux côtés), sans reliques.
-## Tour en mode tactique (Sceaux, Ténacité, ultimes hors tour), sans reliques.
-func simulate_tower(n: int) -> void:
-	var teams := {"Départ (Nidhogg, Espion, Issa)": ["nidhogg", "espion_lumiere", "issa"],
-		"Mixte (Eiríkr, Issa, Don Diego)": ["eirikr", "issa", "don_diego"],
-		"Triade v2 (Montana, Adrian, Noor-El)": ["montana", "adrian", "noor_el"],
-		"Épiques (Ghost, Tarkhan, Jo Prince)": ["ghost", "tarkhan", "jo_prince"]}
-	print("
-Tour tactique, sans reliques (%d combats par étage) :" % n)
-	for name: String in teams:
-		var line: Array[String] = []
-		for f in range(1, Tower.floor_count() + 1):
-			line.append("%d:%d%%" % [f, roundi(100.0 * tower_wins(teams[name], f, n) / n)])
-		print("  %-38s %s" % [name, " ".join(line)])
-
-
-func tower_wins(ids: Array, f: int, n: int) -> int:
-	var wins := 0
-	for k in n:
-		var players: Array[BattleUnit] = []
-		for id: String in ids:
-			players.append(BattleUnit.new(GameData.character(id), 0, players.size()))
-		var e := BattleEngine.new(players, Tower.enemy_units(f), 7000 + k)
-		e.enable_tactics(Tower.tactics_rank(f))
-		if e.run_auto() == 0:
-			wins += 1
-	return wins
-
-
-func simulate_balance(n: int) -> void:
-	var rares := {"A (Orion)": GameData.nation_team("A", 3), "B (Grande Ourse)": GameData.nation_team("B", 3), "C (Sirius)": GameData.nation_team("C", 3)}
-	var teams := {"A (Orion)": GameData.nation_team("A"), "B (Grande Ourse)": GameData.nation_team("B"), "C (Sirius)": GameData.nation_team("C")}
-	print("\nSimulation d'équilibrage, roster v2 (%d combats par duel, IA des deux côtés)" % n)
-	for k: String in teams:
-		print("  %s : %s" % [k, ", ".join(teams[k].map(func(id: String) -> String: return GameData.character(id)["name"]))])
-	duel_table(teams, n)
-	print("Rares (personnages du MVP) :")
-	duel_table(rares, n)
-	# Même duels sans le triangle : sépare l'effet du triangle de celui de la composition.
-	var tri: Dictionary = GameData.rules()["triangle"]
-	var saved := [tri["dominant_crit_bonus"], tri["dominated_damage_mult"]]
-	tri["dominant_crit_bonus"] = 0
-	tri["dominated_damage_mult"] = 1.0
-	print("Sans le triangle des constellations :")
-	duel_table(teams, n)
-	tri["dominant_crit_bonus"] = saved[0]
-	tri["dominated_damage_mult"] = saved[1]
-	# Equipe mixte : un DPS, un soutien, un tank de nations différentes
-	var mixed := ["eirikr", "issa", "don_diego"]
-	var w2 := [0, 0]
-	for k in n:
-		var e := BattleEngine.new(mixed, rares["B (Grande Ourse)"], 5000 + k)
-		var w := e.run_auto()
-		if w in [0, 1]:
-			w2[w] += 1
-	print("  Mixte (Eiríkr, Issa, Don Diego) vs B (Rares) : %.1f %% de victoires" % (100.0 * w2[0] / n))
-
-
-func duel_table(teams: Dictionary, n: int) -> void:
-	var names := teams.keys()
-	for i in names.size():
-		for j in names.size():
-			if i >= j:
-				continue
-			var wins := [0, 0, 0]
-			var actions_per_side := 0.0
+func simulate_factions(n: int) -> void:
+	print("\nSimulation : équipes de faction (6 héros, niv. 80, 6★), %d combats par duel" % n)
+	var fs := HeroDb.faction_order()
+	var score := {}
+	var dur := 0.0
+	var fights := 0
+	for i in fs.size():
+		for j in range(i + 1, fs.size()):
+			var w := 0
 			for k in n:
-				# On alterne les côtés pour neutraliser l'avantage éventuel du slot.
-				var swap := k % 2 == 1
-				var left: Array = teams[names[j]] if swap else teams[names[i]]
-				var right: Array = teams[names[i]] if swap else teams[names[j]]
-				var e := BattleEngine.new(left, right, 1000 + k)
-				var w := e.run_auto()
-				if w == BattleEngine.DRAW:
-					wins[2] += 1
-				else:
-					var i_won := (w == 0) != swap
-					wins[0 if i_won else 1] += 1
-				var acts := 0
-				for u in e.units:
-					acts += u.actions_taken
-				actions_per_side += acts / 6.0
-			print("  %-18s vs %-18s : %5.1f %% / %5.1f %% (nuls %d) | ~%.1f tours par personnage" % [
-				names[i], names[j], 100.0 * wins[0] / n, 100.0 * wins[1] / n, wins[2], actions_per_side / n])
+				var a := team_of_faction(fs[i])
+				var b := team_of_faction(fs[j])
+				var e := RtBattle.new(a if k % 2 == 0 else b, b if k % 2 == 0 else a, 500 + k * 31 + i * 7 + j, {"timeout_by_hp": true})
+				e.record_events = false
+				var win := e.run()
+				var a_won := (win == 0) == (k % 2 == 0)
+				if a_won:
+					w += 1
+				dur += e.time
+				fights += 1
+			score[fs[i]] = int(score.get(fs[i], 0)) + w
+			score[fs[j]] = int(score.get(fs[j], 0)) + (n - w)
+			print("  %s contre %s : %d %%" % [fs[i], fs[j], int(100.0 * w / n)])
+	print("  victoires totales : ", score)
+	print("  durée moyenne : %.1f s" % (dur / fights))
+	check(dur / fights > 15.0 and dur / fights < 80.0, "durée moyenne des combats dans la cible (15-80 s)")
+
+
+## Joueur « type » : 2 SSR, 2 SR, 2 R au niveau de l'étape ; étoiles selon le chapitre (DT : on monte les
+## étoiles par les doublons au fil de la campagne).
+func expected_team(stage: int) -> Array:
+	var info := Campaign.stage_info(stage)
+	var ci := int(info["chapter_index"])
+	var lvl := int(info["level"])
+	var pool := [["adrian", 5], ["noor_el", 5], ["saraya", 4], ["jo_prince", 4], ["eirikr", 3], ["issa", 3]]
+	var n := Campaign.deploy_slots(stage - 1)
+	var ids := []
+	var stars := {}
+	for i in n:
+		ids.append(pool[i][0])
+		stars[pool[i][0]] = mini(HeroDb.max_star(int(pool[i][1])), int(pool[i][1]) + ci / 2 + (1 if ci >= 1 else 0))
+	var placed := HeroDb.auto_place(ids)
+	var out := []
+	for s: int in placed:
+		var id: String = placed[s]
+		out.append({"id": id, "level": mini(lvl + 2, HeroDb.max_level_for_star(stars[id])), "star": stars[id], "slot": s})
+	return out
+
+
+func simulate_campaign(n: int) -> void:
+	print("
+Simulation : campagne avec une équipe type (2 SSR, 2 SR, 2 R, niveau de l'étape + 2)")
+	for stage in [1, 6, 11, 12, 20, 32, 56, 70, 100, 140, 180, 220, 239, 240]:
+		var info := Campaign.stage_info(stage)
+		var wins := 0
+		var dur := 0.0
+		for k in n:
+			var e := RtBattle.new(expected_team(stage), Campaign.enemy_specs(stage), 900 + k * 17 + stage)
+			e.record_events = false
+			if e.run() == 0:
+				wins += 1
+			dur += e.time
+		print("  étape %s (niv. %d%s) : %d %%, %.0f s" % [info["number"], int(info["level"]), ", boss" if info["boss"] else "", int(100.0 * wins / n), dur / n])

@@ -1,17 +1,15 @@
 extends Node
-## Etat partagé entre les écrans : profil du joueur (sauvegarde locale), bannière, combat en cours.
-## Plus tard : synchronisation serveur.
+## État partagé entre les écrans : profil du joueur (sauvegarde locale), bannière, combat en cours.
 
 const MAIN_SAVE := "user://profil.json"
-const TRIAL_SAVE := "user://essai_prologue.json"  # partie d'essai du prologue (la vraie sauvegarde n'est pas touchée)
 var save_path := MAIN_SAVE  # -- --save=user://autre.json pour un profil de test
 
 var profile: Profile
 var gacha: Gacha
-var auto_battle := false
+var auto_battle := true
 var battle_speed := 1.0
-## Combat à lancer : {"mode": "tower", "floor": n}, {"mode": "prologue", "level": n}
-## ou {"mode": "test", "player": [ids], "enemy": [ids]}
+## Combat à lancer : {"mode": "campaign", "stage": n}, {"mode": "tower", "floor": n},
+## {"mode": "loot", "boss": id, "diff": i} ou {"mode": "test", "player": [specs], "enemy": [specs]}
 var battle: Dictionary = {}
 var rng := RandomNumberGenerator.new()
 ## Résultats de la dernière invocation (cinématique puis écran d'invocation).
@@ -24,43 +22,47 @@ var smoke_test := false
 
 func _ready() -> void:
 	rng.randomize()
-	for a in OS.get_cmdline_user_args():
+	var args := OS.get_cmdline_user_args()
+	for a in args:
 		if a.begins_with("--save="):
 			save_path = a.trim_prefix("--save=")
-	if "--smoke" in OS.get_cmdline_user_args():
+	if "--smoke" in args:
 		smoke_test = true
-		auto_battle = not "--manual" in OS.get_cmdline_user_args()  # --manual : captures des boutons de compétences
+		auto_battle = true
 		battle_speed = 3.0
-		profile = Profile.new_game()  # le test ne touche pas à la sauvegarde
-		battle = {"mode": "tower", "floor": 1}
-		if "--boss" in OS.get_cmdline_user_args():  # Prométhée (étage 12) : -- --smoke --boss
-			for id in ["mikhaila", "ghost", "montana"]:
-				profile.owned[id] = 1
-			profile.set_team(["montana", "mikhaila", "ghost"])
-			battle = {"mode": "tower", "floor": 12}
-		if "--loot" in OS.get_cmdline_user_args():  # boss de butin (Wyrm, Facile) : -- --smoke --loot
-			for id in ["mikhaila", "ghost", "montana"]:
-				profile.owned[id] = 1
-			profile.set_team(["montana", "ghost", "mikhaila"])
+		profile = Profile.new_game()
+		battle = {"mode": "campaign", "stage": 1}
+		if "--boss" in args:  # Prométhée avec une équipe 5★ : -- --smoke --boss
+			_smoke_team(["adrian", "mello", "noor_el", "montana", "mikhaila", "don_selah"], 30)
+			battle = {"mode": "campaign", "stage": 12}
+		if "--loot" in args:  # Expédition (Wyrm, palier 1) : -- --smoke --loot
+			_smoke_team(["adrian", "mello", "noor_el", "montana", "mikhaila", "don_selah"], 40)
 			battle = {"mode": "loot", "boss": "wyrm", "diff": 0}
-		for a in OS.get_cmdline_user_args():  # niveau du prologue : -- --smoke --prologue=<n>
-			if a.begins_with("--prologue="):
-				var lv := int(a.trim_prefix("--prologue="))
-				if lv >= 3:
-					for id in ["yass", "mello"]:
-						profile.owned[id] = 1
-					profile.set_team(["mello", "yass", "eirikr"])
-				profile.prologue_cleared = lv - 1
-				battle = {"mode": "prologue", "level": lv}
-		if "--v2" in OS.get_cmdline_user_args():  # combat du roster v2 : -- --smoke --v2
-			battle = {"mode": "test", "player": GameData.nation_team("A"), "enemy": GameData.nation_team("C")}
-		get_tree().create_timer(120.0).timeout.connect(func() -> void:
-			push_error("Test de fumée : le combat n'a pas fini en 120 s")
+		if "--six" in args:  # 6 contre 6 : -- --smoke --six
+			_smoke_team(["adrian", "mello", "noor_el", "montana", "mikhaila", "don_selah"], 60)
+			battle = {"mode": "campaign", "stage": 60}
+		get_tree().create_timer(240.0).timeout.connect(func() -> void:
+			push_error("Test de fumée : le combat n'a pas fini en 240 s")
 			get_tree().quit(1))
 	else:
 		load_profile()
-	gacha = Gacha.new("featured_montana")
+		for a in args:  # captures : -- --save=user://essai.json --demo=<étape>
+			if a.begins_with("--demo="):
+				_smoke_team(["adrian", "mello", "noor_el", "montana", "mikhaila", "don_selah"], 60)
+				battle = {"mode": "campaign", "stage": int(a.trim_prefix("--demo="))}
+	gacha = Gacha.new("standard")
 	gacha.set_state(profile.gacha_state)
+
+
+func _smoke_team(ids: Array, lvl: int) -> void:
+	profile.campaign_cleared = 30
+	for id: String in ids:
+		profile.add_hero(id, 6)
+		profile.levels[id] = lvl
+	profile.formation = {}
+	var placed := HeroDb.auto_place(ids)
+	for s: int in placed:
+		profile.formation[str(s)] = placed[s]
 
 
 func load_profile() -> void:
@@ -72,7 +74,7 @@ func load_profile() -> void:
 	if profile == null:
 		profile = Profile.new_game()
 	grant_notes = profile.apply_grants()
-	if gacha != null:  # changement de sauvegarde : garanties de ce profil
+	if gacha != null:
 		gacha.set_state(profile.gacha_state)
 	save()
 
@@ -87,23 +89,6 @@ func save() -> void:
 		f.store_string(JSON.stringify(profile.to_dict()))
 
 
-## Essai du prologue sur une partie à part ; la vraie sauvegarde reste intacte.
-func start_trial() -> void:
-	save()
-	save_path = TRIAL_SAVE
-	reset_profile()
-
-
-## Fin de l'essai : retour à la vraie sauvegarde.
-func end_trial() -> void:
-	save_path = MAIN_SAVE
-	load_profile()
-
-
-func in_trial() -> bool:
-	return save_path == TRIAL_SAVE
-
-
 func reset_profile() -> void:
 	profile = Profile.new_game()
 	profile.apply_grants()
@@ -111,17 +96,33 @@ func reset_profile() -> void:
 	save()
 
 
-## Change de bannière (les compteurs de garantie sont partagés entre bannières).
+func now() -> int:
+	return int(Time.get_unix_time_from_system())
+
+
+## Change de bannière (chaque bannière garde ses propres compteurs dans l'état du gacha).
 func set_banner(id: String) -> void:
 	var st := gacha.get_state()
 	gacha = Gacha.new(id)
 	gacha.set_state(st)
 
 
-## Invoque n fois si le joueur a assez d'Éclats de Vœu. Renvoie [] sinon.
+## Coût d'invocations : tickets de la bannière d'abord, puis Éclats de Vœu. Renvoie {} si impossible.
+func pull_cost(n: int) -> Dictionary:
+	var ticket := str(gacha.banner.get("ticket", "sceau"))
+	var have := profile.amount(ticket)
+	var use := mini(have, n)
+	var cost := {}
+	if use > 0:
+		cost[ticket] = use
+	if n - use > 0:
+		cost["eclat_de_voeu"] = (n - use) * int(GameData.gacha()["cost_eclats"])
+	return cost
+
+
 func pull(n: int) -> Array[Dictionary]:
-	var cost := n * int(GameData.progression()["pull_cost"])
-	if not profile.spend("eclat_de_voeu", cost):
+	var cost := pull_cost(n)
+	if not profile.pay(cost):
 		return []
 	var results := gacha.pull_many(n)
 	for r in results:
@@ -131,70 +132,64 @@ func pull(n: int) -> Array[Dictionary]:
 	return results
 
 
-func now() -> int:
-	return int(Time.get_unix_time_from_system())
-
-
-## Invocation x10 gratuite du prologue sur la bannière de départ (les garanties restent partagées).
-func free_multi() -> Array[Dictionary]:
-	if not profile.free_multi_due():
-		return []
-	var g := Gacha.new(str(Prologue.cfg()["banner"]))
-	g.set_state(gacha.get_state())
-	var results := g.pull_many(10)
-	gacha.set_state(g.get_state())
-	for r in results:
-		r.merge(profile.add_pull(r))
-	profile.prologue_pulls += 1
-	save()
-	last_pulls = results
-	return results
-
-
-## Lance un niveau du prologue (gratuit).
-func start_prologue(n: int) -> void:
-	battle = {"mode": "prologue", "level": n}
+func _go_battle(b: Dictionary) -> void:
+	battle = b
 	get_tree().change_scene_to_file("res://scenes/battle.tscn")
 
 
-## Lance un étage si l'énergie suffit (elle est rendue en cas de défaite). Renvoie false sinon.
-func start_tower_floor(number: int) -> bool:
-	var cost := profile.floor_cost(number)
-	if not profile.spend_energy(cost, now()):
-		return false
-	save()
-	battle = {"mode": "tower", "floor": number, "energy": cost}
-	get_tree().change_scene_to_file("res://scenes/battle.tscn")
-	return true
+func start_stage(n: int) -> void:
+	_go_battle({"mode": "campaign", "stage": n})
 
 
-## Lance un boss de butin au palier diff si l'énergie suffit.
+func start_tower_floor(number: int) -> void:
+	_go_battle({"mode": "tower", "floor": number})
+
+
 func start_loot(id: String, diff: int) -> bool:
-	var cost := int(LootBoss.cfg()["energy_cost"])
+	var cost := int(GameData.progression()["energy"]["loot_cost"])
 	if not profile.spend_energy(cost, now()):
 		return false
 	save()
-	battle = {"mode": "loot", "boss": id, "diff": diff, "energy": cost}
-	get_tree().change_scene_to_file("res://scenes/battle.tscn")
+	_go_battle({"mode": "loot", "boss": id, "diff": diff, "energy": cost})
 	return true
 
 
-## Equipes du combat en cours : [joueur, ennemis] (listes de BattleUnit).
-func battle_teams() -> Array:
-	var players: Array[BattleUnit] = []
-	var enemies: Array[BattleUnit] = []
-	if battle.get("mode", "") == "test":
-		for id: String in battle["player"]:
-			players.append(BattleUnit.new(GameData.character(id), 0, players.size()))
-		for id: String in battle["enemy"]:
-			enemies.append(BattleUnit.new(GameData.character(id), 1, enemies.size()))
-	else:
-		for id in profile.team:
-			players.append(profile.make_unit(id))
-		if battle.get("mode", "") == "loot":
-			enemies = LootBoss.enemy_units(battle["boss"], int(battle["diff"]))
-		elif battle.get("mode", "") == "prologue":
-			enemies = Prologue.enemy_units(int(battle["level"]))
-		else:
-			enemies = Tower.enemy_units(int(battle.get("floor", 1)))
-	return [players, enemies]
+## Équipes du combat en cours : [joueur, ennemis] au format de RtBattle.
+func battle_specs() -> Array:
+	var enemies := []
+	var mine := profile.battle_specs()
+	match str(battle.get("mode", "")):
+		"campaign":
+			enemies = Campaign.enemy_specs(int(battle.get("stage", 1)))
+		"tower":
+			enemies = Tower.enemy_specs(int(battle.get("floor", 1)))
+		"loot":
+			enemies = LootBoss.enemy_specs(str(battle["boss"]), int(battle["diff"]))
+		"test":
+			mine = battle["player"]
+			enemies = battle["enemy"]
+	return [mine, enemies]
+
+
+## Décor du combat en cours.
+func battle_decor() -> String:
+	match str(battle.get("mode", "")):
+		"campaign":
+			return str(Campaign.stage_info(int(battle.get("stage", 1))).get("decor", "dojo"))
+		"tower":
+			return str(Tower.floor_info(int(battle.get("floor", 1))).get("decor", "dojo"))
+		"loot":
+			return str(LootBoss.boss(str(battle["boss"])).get("decor", "dojo"))
+	return "dojo"
+
+
+func battle_title() -> String:
+	match str(battle.get("mode", "")):
+		"campaign":
+			var info := Campaign.stage_info(int(battle.get("stage", 1)))
+			return "%s  ·  %s" % [info.get("number", ""), info.get("name", "")]
+		"tower":
+			return "Tour  ·  Étage %d" % int(battle.get("floor", 1))
+		"loot":
+			return "%s  ·  %s" % [LootBoss.boss(str(battle["boss"]))["name"], LootBoss.difficulty(int(battle["diff"]))["name"]]
+	return "Combat"

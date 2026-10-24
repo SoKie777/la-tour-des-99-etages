@@ -1,57 +1,21 @@
 {
-  "_comment": "Taux de la fiche (pièces d'échecs) : Rare 70 % (cavalier/fou), Épique 25 % (tour), Légendaire 5 % (dame). Indicatifs, à régler avec l'économie. Garanties : Légendaire au plus tard à 80, Épique ou mieux toutes les 10. Bannière 'debut' (prologue, cachée) : deux x10 gratuites, aucun Légendaire avant la garantie à 20 ; 'scripted' : n-ième invocation sur cette bannière -> personnage donné (Yass, arme contre la Géode, puis Mello, arme contre la Géode).",
+  "_comment": "Invocation (modèle Dragon Traveler, docs/ANALYSE_DRAGON_TRAVELER.md §4). Raretés : 2 N (Pions d'encre), 3 R, 4 SR, 5 SSR. rates en %. pity_5 : SSR garanti au plus tard à cette invocation ; guarantee_4_every : SR ou mieux garanti toutes les N. Bannière standard : liste de souhaits (wishlist_unlock invocations au total, wishlist_size héros SSR, chacun wishlist_chance % quand un SSR sort). Bannière limitée : un SSR est toujours la vedette (featured_share = 100), compteur séparé et reporté. Coût : 1 Sceau (ticket) ou cost_eclats Éclats de Vœu par invocation.",
+  "cost_eclats": 150,
   "banners": {
     "standard": {
-      "name": "Appel de la Tour",
-      "cost_currency": "eclat_de_voeu",
-      "rates": {
-        "3": 70.0,
-        "4": 25.0,
-        "5": 5.0
-      },
-      "hard_pity_5": 80,
-      "guarantee_4_every": 10,
-      "featured": [],
-      "featured_multiplier": 1.0
+      "name": "Appel de la Tour", "ticket": "sceau",
+      "rates": {"5": 3.0, "4": 12.0, "3": 50.0, "2": 35.0},
+      "pity_5": 40, "guarantee_4_every": 10, "pity_key": "std",
+      "wishlist_unlock": 100, "wishlist_size": 5, "wishlist_chance": 20.0,
+      "featured": [], "featured_share": 0.0
     },
     "featured_montana": {
-      "name": "La Room de Montana",
-      "cost_currency": "eclat_de_voeu",
-      "rates": {
-        "3": 70.0,
-        "4": 25.0,
-        "5": 5.0
-      },
-      "hard_pity_5": 80,
-      "guarantee_4_every": 10,
-      "featured": [
-        "montana"
-      ],
-      "art": "res://assets/ui/banner_legendaires.png",
-      "splash": "res://assets/ui/splash_montana.png",
-      "featured_multiplier": 2.0
-    },
-    "debut": {
-      "name": "Premier Appel",
-      "cost_currency": "eclat_de_voeu",
-      "rates": {
-        "3": 75.0,
-        "4": 25.0,
-        "5": 0.0
-      },
-      "hard_pity_5": 20,
-      "guarantee_4_every": 10,
-      "featured": [
-        "mello",
-        "yass"
-      ],
-      "featured_multiplier": 1.0,
-      "hidden": true,
-      "free": true,
-      "scripted": {
-        "10": "yass",
-        "20": "mello"
-      }
+      "name": "La Room de Montana", "ticket": "sceau_destin",
+      "rates": {"5": 3.0, "4": 12.0, "3": 50.0, "2": 35.0},
+      "pity_5": 50, "guarantee_4_every": 10, "pity_key": "lim",
+      "featured": ["montana"], "featured_share": 100.0, "featured_4": ["ghost", "nyssa"], "featured_4_share": 50.0,
+      "art": "res://assets/ui/banner_legendaires.png", "splash": "res://assets/ui/splash_montana.png",
+      "unlock_pulls": 30
     }
   }
 }

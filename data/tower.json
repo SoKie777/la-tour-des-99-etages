@@ -1,44 +1,163 @@
 {
-  "_comment": "Ascension de la Tour. 'power' multiplie PV, ATK et DEF des ennemis (1.0 = stats de niveau max, comme les personnages du joueur). Récompenses : 'first' à la première victoire, 'each' à chaque victoire. Réglé par la simulation de tests/run_tests.gd.",
-  "universes": [
-    {
-      "id": "cite_acier", "name": "Cité d'Acier", "first_floor": 1, "decor": "acier", "boss_decor": "forge",
-      "floors": [
-        {"enemies": ["espion_lumiere", "issa"], "power": 1.0},
-        {"enemies": ["nidhogg", "espion_lumiere", "issa"], "power": 0.9},
-        {"enemies": ["general_metal", "issa"], "power": 1.1},
-        {"enemies": ["ymir", "nidhogg", "espion_lumiere"], "power": 0.95},
-        {"enemies": ["moussa", "issa", "mohamed"], "power": 0.85},
-        {"enemies": ["don_diego", "general_metal"], "power": 1.1, "elite": true},
-        {"enemies": ["eirikr", "ymir", "nidhogg"], "power": 0.85},
-        {"enemies": ["general_metal", "espion_lumiere", "don_diego"], "power": 0.95},
-        {"enemies": ["mohamed", "issa", "moussa"], "power": 1.05},
-        {"enemies": ["eirikr", "don_diego", "issa"], "power": 0.95},
-        {"enemies": ["general_metal", "mohamed", "nidhogg"], "power": 1.0},
-        {"enemies": [], "boss_unit": "promethee", "power": 1.0, "boss": "Prométhée"}
-      ]
-    },
-    {
-      "id": "foret_gemmes", "name": "Forêt des Gemmes", "first_floor": 13, "decor": "gemmes", "boss_decor": "geode",
-      "floors": [
-        {"enemies": ["yass", "tarkhan", "saraya"], "power": 0.9},
-        {"enemies": ["noor_el", "jo_prince", "flint"], "power": 0.9},
-        {"enemies": ["nyssa", "selene", "ghost"], "power": 0.95},
-        {"enemies": ["adrian", "mello", "yass"], "power": 0.95},
-        {"enemies": ["ezra", "flint", "jo_prince"], "power": 0.9},
-        {"enemies": ["montana", "mikhaila", "ghost"], "power": 1.0, "elite": true},
-        {"enemies": ["tarkhan", "saraya", "mello"], "power": 1.0},
-        {"enemies": ["noor_el", "ezra", "flint"], "power": 1.05},
-        {"enemies": ["selene", "nyssa", "mikhaila"], "power": 1.05},
-        {"enemies": ["adrian", "saraya", "yass"], "power": 1.0},
-        {"enemies": ["montana", "ezra", "mello"], "power": 1.1},
-        {"enemies": ["noor_el", "ezra", "adrian"], "power": 1.05, "elite": true},
-        {"enemies": [], "boss_unit": "geode", "power": 1.0, "boss": "L'Impératrice Géode"}
-      ]
-    }
-  ],
-  "rewards": {
-    "each": {"pieces_base": 300, "pieces_per_floor": 60, "relics": 1},
-    "first": {"eclat_de_voeu": 3, "eclat_de_voeu_elite": 6, "eclat_de_voeu_boss": 10}
+ "_comment": "La Tour des 99 Étages (mode à étages, comme les Ruines d'os de Wyrm de Dragon Traveler). Les étages sont générés (scripts/core/tower.gd) : niveau des ennemis level_base + level_per_floor × étage (plafond 100, puis puissance en plus), 6 ennemis tirés dans le groupe de l'univers, un étage Élite toutes les 'elite_every' (puissance ×elite_power), le dernier étage de chaque univers est un boss. Récompenses : 'first' à la première victoire, 'each' à chaque victoire.",
+ "level_base": 8,
+ "level_per_floor": 1.0,
+ "power_base": 0.95,
+ "power_per_floor": 0.004,
+ "power_over_100": 0.03,
+ "elite_every": 6,
+ "elite_power": 1.18,
+ "universes": [
+  {
+   "name": "Cité d'Acier",
+   "last": 12,
+   "decor": "acier",
+   "boss": "promethee",
+   "boss_decor": "forge",
+   "pool": [
+    "eirikr",
+    "issa",
+    "general_metal",
+    "espion_lumiere",
+    "don_diego",
+    "moussa",
+    "mohamed",
+    "ymir",
+    "nidhogg"
+   ]
+  },
+  {
+   "name": "Forêt des Gemmes",
+   "last": 25,
+   "decor": "gemmes",
+   "boss": "geode",
+   "boss_decor": "geode",
+   "pool": [
+    "yass",
+    "tarkhan",
+    "saraya",
+    "nidhogg",
+    "ymir",
+    "moussa",
+    "issa",
+    "jo_prince",
+    "flint"
+   ]
+  },
+  {
+   "name": "Désert de Verre",
+   "last": 38,
+   "decor": "sirius",
+   "boss": "serpent",
+   "pool": [
+    "noor_el",
+    "jo_prince",
+    "flint",
+    "mohamed",
+    "moussa",
+    "issa",
+    "ezra",
+    "don_selah"
+   ]
+  },
+  {
+   "name": "Abysses de Glace",
+   "last": 50,
+   "decor": "givre",
+   "boss": "wyrm",
+   "pool": [
+    "montana",
+    "ymir",
+    "selene",
+    "nyssa",
+    "ghost",
+    "eirikr",
+    "mikhaila",
+    "tarkhan"
+   ]
+  },
+  {
+   "name": "Archives des Mille Vérités",
+   "last": 63,
+   "decor": "orion",
+   "boss": "chronophage",
+   "pool": [
+    "ezra",
+    "yass",
+    "nyssa",
+    "saraya",
+    "espion_lumiere",
+    "ghost",
+    "mikhaila",
+    "adrian"
+   ]
+  },
+  {
+   "name": "Mer Céleste",
+   "last": 75,
+   "decor": "dojo",
+   "boss": "geode",
+   "boss_decor": "geode",
+   "pool": [
+    "noor_el",
+    "mikhaila",
+    "selene",
+    "flint",
+    "jo_prince",
+    "nyssa",
+    "mello",
+    "adrian"
+   ]
+  },
+  {
+   "name": "Royaume des Serments",
+   "last": 88,
+   "decor": "dojo",
+   "boss": "promethee",
+   "boss_decor": "forge",
+   "pool": [
+    "adrian",
+    "mello",
+    "ezra",
+    "don_selah",
+    "saraya",
+    "yass",
+    "ghost",
+    "tarkhan"
+   ]
+  },
+  {
+   "name": "Domaine des Clans",
+   "last": 99,
+   "decor": "forge",
+   "boss": "wyrm",
+   "pool": [
+    "montana",
+    "don_selah",
+    "noor_el",
+    "adrian",
+    "mello",
+    "ezra",
+    "mikhaila",
+    "tarkhan",
+    "nyssa"
+   ]
   }
+ ],
+ "rewards": {
+  "each": {
+   "pieces_base": 400,
+   "pieces_per_floor": 80,
+   "encre_base": 300,
+   "encre_per_floor": 60,
+   "relics": 1
+  },
+  "first": {
+   "eclat_de_voeu": 40,
+   "eclat_de_voeu_elite": 80,
+   "eclat_de_voeu_boss": 200,
+   "essence_boss": 60,
+   "sceau_destin_boss": 1
+  }
+ }
 }

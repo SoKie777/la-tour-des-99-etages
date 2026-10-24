@@ -1,7 +1,8 @@
 # CLAUDE.md — T99
 
 Jeu : **T99** (anciennement « La Tour des 99 Étages », qui reste le nom de la Tour dans l'univers).
-Gacha RPG 3v3 à barre d'action inspiré de Dislyte (sans sa partie musique).
+Gacha RPG en temps réel sur le modèle de **Dragon Traveler** depuis la v0.17 (analyse : `docs/ANALYSE_DRAGON_TRAVELER.md`) :
+6 héros sur grille 3 × 3, Overdrive à énergie commune, étoiles par doublons, campagne + Patrouille idle.
 Ne pas changer l'identifiant Android `com.tour99.mvp` : un nouvel identifiant installerait une autre appli (sauvegarde perdue). **Godot 4.7**, GDScript typé.
 L'utilisateur ne code pas : il se connecte ou télécharge quand c'est nécessaire (Mixamo, installations).
 Il parle français : écrire docs, commits et textes du jeu en français.
@@ -26,7 +27,10 @@ Mixamo → `assets/mixamo/anims/*.fbx` (Without Skin)
 - L'équilibrage est dans `data/*.json`, pas dans le code.
 - Référence du design : `docs/GDD.md`. En cas de conflit entre la Bible et le doc MVP, le doc MVP gagne.
 - Avant chaque commit : `godot --headless --path . --script res://tests/run_tests.gd -- --sims=100`
-  (0 échec) et `godot --headless --path . res://scenes/battle.tscn -- --smoke`.
+  (0 échec), `godot --headless --path . res://scenes/battle.tscn -- --smoke` (aussi `--boss`, `--loot`, `--six`)
+  et `godot --headless --path . res://tests/compile_check.tscn -- --save=user://essai_check.json`.
+- Captures et essais : toujours avec `--save=user://essai_*.json` pour ne pas toucher la vraie sauvegarde
+  (`tools/shot.gd`, `tools/playtest.gd`, `--demo=<étape>` donne une équipe 6★).
 
 ## Livraison
 Fin d'une grosse étape = incrémenter `VERSION` et pousser sur `main`. GitHub Actions publie l'APK dans
